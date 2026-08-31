@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Env files — never commit real secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local-only Claude Code permission cruft.
+# NOT .claude/ itself — .claude/settings.json and any bundled skills/commands
+# meant to be shared with the team should stay tracked.
+.claude/settings.local.json
+
+# Logs
+*.log
+npm-debug.log*

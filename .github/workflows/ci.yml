@@ -1,0 +1,41 @@
+# Lint and test every push and pull request against the main branch.
+#
+# No build step by default: most hosts (Vercel, Netlify, etc.) already build
+# on deploy, and a full build often duplicates type-checking that a build
+# step does anyway. Add one back here only if nothing else in your pipeline
+# actually builds the project, or if you need the build to gate merges
+# before a deploy step ever runs.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [{{PROMPT: main branch name, e.g. main or master}}]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # {{PROMPT: swap for your language's setup action, e.g.
+      #   actions/setup-node@v4, actions/setup-python@v5, etc.}}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "{{PROMPT: version}}"
+          cache: npm
+
+      - run: {{PROMPT: install command, e.g. npm ci}}
+
+      - run: {{PROMPT: lint command}}
+
+      - run: {{PROMPT: test command}}
