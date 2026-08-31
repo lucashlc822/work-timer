@@ -1,0 +1,71 @@
+/*
+ * Design tokens — the single source of truth for the app's visual language.
+ *
+ * Declared in Tailwind v4's `@theme`, so every token below automatically
+ * becomes a utility class (`--color-lavender-300` -> `bg-lavender-300`,
+ * `text-lavender-300`, `border-lavender-300`, ...). There is no separate
+ * Tailwind palette to keep in sync; this file *is* the palette.
+ *
+ * Art direction: soft pastel celestial. Deliberately NOT the black-and-neon
+ * sci-fi default — the hues are lavender, rose, and mint over a warm-tinted
+ * indigo night, and every accent stays desaturated enough to feel gentle
+ * during a 90-minute session rather than demanding attention.
+ */
+
+@theme {
+  /* --- Night: the ground the whole app sits on -------------------------- */
+  /* Indigo-tinted rather than neutral black; pure black reads as harsh and
+     makes the pastels look like they are floating rather than glowing. */
+  --color-night-950: #06050f;
+  --color-night-900: #0b0a1a;
+  --color-night-800: #141130;
+  --color-night-700: #1f1a42;
+  --color-night-600: #2d2557;
+
+  /* --- Lavender: primary accent ---------------------------------------- */
+  --color-lavender-200: #ded3f7;
+  --color-lavender-300: #c9b8f0;
+  --color-lavender-400: #ab93e6;
+  --color-lavender-500: #8f72d9;
+
+  /* --- Rose: secondary accent ------------------------------------------ */
+  --color-rose-200: #fad4e6;
+  --color-rose-300: #f3b8d4;
+  --color-rose-400: #e894bd;
+
+  /* --- Mint: tertiary accent, and the colour of a completed session ----- */
+  --color-mint-200: #c8f0e0;
+  --color-mint-300: #a8e6d0;
+  --color-mint-400: #7fd6b8;
+
+  /* --- Starlight -------------------------------------------------------- */
+  /* Stars vary along a colour-temperature axis from cool to warm. That
+     variation is what stops a generated starfield reading as programmer art,
+     so these are tokens rather than magic numbers in the renderer. */
+  --color-star-cool: #d6e8ff;
+  --color-star-core: #fffdf8;
+  --color-star-warm: #ffe9c4;
+
+  /* --- Text ------------------------------------------------------------- */
+  --color-ink-primary: #f4f1ff;
+  --color-ink-secondary: #b9b2d4;
+  /* ~4.3:1 on night-900. Decorative and large text only — never body copy. */
+  --color-ink-muted: #7c749b;
+
+  /* --- Semantic --------------------------------------------------------- */
+  --color-success: #a8e6d0;
+  /* A session lost by leaving. Muted on purpose: this should read as a soft
+     'aw', not an error state. The app is not angry at you. */
+  --color-faded: #e88898;
+
+  /* --- Radius ----------------------------------------------------------- */
+  --radius-soft: 0.75rem;
+  --radius-pill: 999px;
+
+  /* --- Motion ----------------------------------------------------------- */
+  /* Slow, gentle easing throughout. Nothing in a focus app should feel snappy
+     or urgent. All of these are neutralised under prefers-reduced-motion. */
+  --ease-gentle: cubic-bezier(0.33, 0.9, 0.35, 1);
+  --duration-drift: 40s;
+  --duration-twinkle: 4s;
+}

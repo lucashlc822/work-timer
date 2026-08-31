@@ -1,0 +1,12 @@
+dist
+dev-dist
+coverage
+node_modules
+package-lock.json
+public/*.png
+
+# Prose is maintained by hand. Prettier's markdown opinions (notably rewriting
+# *emphasis* to _emphasis_) create churn in the session log on every commit
+# without improving anything.
+*.md
+
