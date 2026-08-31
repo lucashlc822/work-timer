@@ -1,18 +1,20 @@
-# {{PROJECT_NAME}}
+# work-timer
 
 ## What this is
 
-{{PROMPT: One or two sentences — what the project does and who it's for.}}
+A focused-work timer app in the spirit of Forest — the user sets a timer to
+work, and lets it run instead of picking up other apps. Personal project;
+more features may get added as they're decided on.
 
-{{PROMPT: The stack — language, framework, database, hosting. Keep it to
-facts a new contributor (or future you) needs, not a sales pitch.}}
+Stack is not chosen yet. Constraint: no paid services — language, framework,
+database, and hosting all need to stay on free tiers/free tools.
 
 ## Working on this repo
 
-{{PROMPT: If developed from more than one machine, note the per-machine
-setup this implies — e.g. separate .env per device, separate dev database
-branch, generate migrations on one device only. If this is single-machine,
-delete this paragraph entirely rather than leaving it as dead framing.}}
+This is developed from more than one machine. Once a stack (and a database,
+if any) is chosen, record the per-machine implications here — e.g. a
+separate `.env` per device, a separate dev database branch per device, or
+generating migrations from one device only so they don't diverge.
 
 Read `NOTES.md` (newest entries first) plus `git log` at the start of a
 session. My general planning and collaboration norms live in
@@ -32,6 +34,10 @@ preemptively.
 Record a decision here once it's actually been made and would otherwise get
 re-litigated (a library choice, an architecture call, something explicitly
 rejected). Don't pre-populate this with guesses.
+
+- **No paid services.** Language, framework, database, and hosting choices
+  must stay on free tiers/free tools. Rule out anything requiring payment
+  when suggesting a stack.
 
 ## Plans include acceptance tests
 
