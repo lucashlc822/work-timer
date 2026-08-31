@@ -1,6 +1,6 @@
-# {{PROJECT_NAME}}
+# work-timer
 
-{{PROMPT: one-line pitch — what this does and who it's for.}}
+A focused-work timer app in the spirit of Forest, for personal use.
 
 ## What's already set up
 
@@ -20,7 +20,7 @@ README describes the actual project.
 
 ## Running it locally
 
-{{PROMPT: setup steps.}}
+Stack not chosen yet — setup steps will land here once it is.
 
 ## Where the real documentation lives
 
