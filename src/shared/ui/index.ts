@@ -1,0 +1,1 @@
+export { StarMark } from './StarMark';
