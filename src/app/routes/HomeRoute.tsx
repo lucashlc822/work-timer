@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { APP_NAME, APP_TAGLINE } from '@/shared/config';
 import { db, getLocalUserId } from '@/shared/db';
 import { getRuntime, type Runtime } from '@/shared/runtime';
+import { StarMark } from '@/shared/ui';
 
 /**
  * M0.5 placeholder.
@@ -61,13 +62,13 @@ export const HomeRoute = () => {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 p-8 text-center">
+      {/* Static stand-in for the generated sky that arrives in M2. */}
       <div className="relative flex h-40 w-40 items-center justify-center">
-        {/* Static stand-in for the generated sky that arrives in M2. */}
         <div
           aria-hidden="true"
-          className="bg-lavender-400/25 absolute inset-0 rounded-full blur-3xl"
+          className="bg-lavender-400/20 absolute inset-4 rounded-full blur-3xl"
         />
-        <img src="/favicon.svg" alt="" width={96} height={96} className="relative" />
+        <StarMark size={128} className="relative" />
       </div>
 
       <div className="space-y-2">
