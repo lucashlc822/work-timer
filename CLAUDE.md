@@ -93,6 +93,14 @@ in `NOTES.md`.
 - **The first `cargo` build takes several minutes** and downloads a few hundred
   crates. Subsequent builds are incremental. Slowness here is normal, not a
   broken setup.
+- **Don't run `git checkout` while `tauri dev` is running.** The watcher sees
+  `src-tauri/Cargo.toml` vanish mid-checkout, fails to rebuild, and the dev
+  process exits 101 with `could not find Cargo.toml`. Not an app crash — stop
+  the dev server before switching branches.
+- **CSS custom properties inside SVG gradient stops fail silently to black**
+  if they don't resolve. `shared/ui/StarMark` relies on them working; if a
+  gradient ever renders black, check that the token is defined on an ancestor
+  rather than suspecting the path data.
 
 ## Decisions already made — don't re-open these
 
