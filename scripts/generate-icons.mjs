@@ -187,19 +187,82 @@ const drawIcon = (size, inset) => {
   return encodePng(px, size);
 };
 
-mkdirSync(OUT_DIR, { recursive: true });
+// --- ICO encoding -----------------------------------------------------------
 
-const targets = [
+/**
+ * Pack PNGs into a Windows .ico.
+ *
+ * Since Vista, an .ico entry may hold a PNG verbatim rather than a raw DIB, so
+ * this is just a directory header pointing at the buffers we already have.
+ *
+ * @param {{ size: number, png: Buffer }[]} entries
+ */
+const encodeIco = (entries) => {
+  const HEADER = 6;
+  const ENTRY = 16;
+
+  const dir = Buffer.alloc(HEADER + ENTRY * entries.length);
+  dir.writeUInt16LE(0, 0); // reserved
+  dir.writeUInt16LE(1, 2); // type: icon
+  dir.writeUInt16LE(entries.length, 4);
+
+  let offset = dir.length;
+  entries.forEach(({ size, png }, i) => {
+    const at = HEADER + ENTRY * i;
+    // 0 encodes 256 — the field is a single byte.
+    dir[at] = size >= 256 ? 0 : size;
+    dir[at + 1] = size >= 256 ? 0 : size;
+    dir[at + 2] = 0; // palette entries
+    dir[at + 3] = 0; // reserved
+    dir.writeUInt16LE(1, at + 4); // colour planes
+    dir.writeUInt16LE(32, at + 6); // bits per pixel
+    dir.writeUInt32LE(png.length, at + 8);
+    dir.writeUInt32LE(offset, at + 12);
+    offset += png.length;
+  });
+
+  return Buffer.concat([dir, ...entries.map((e) => e.png)]);
+};
+
+// --- outputs ----------------------------------------------------------------
+
+const TAURI_ICON_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'src-tauri', 'icons');
+
+mkdirSync(OUT_DIR, { recursive: true });
+mkdirSync(TAURI_ICON_DIR, { recursive: true });
+
+// Web build: the PWA manifest still installs on desktop Chrome/Edge.
+const webTargets = [
   ['icon-192.png', 192, 0.28],
   ['icon-512.png', 512, 0.28],
-  // Maskable icons get cropped to a circle/squircle by the launcher, so the
-  // star has to sit well inside the 80% safe zone.
-  ['icon-maskable-512.png', 512, 0.42],
-  // iOS applies its own corner rounding to the apple-touch-icon.
-  ['apple-touch-icon.png', 180, 0.3],
 ];
 
-for (const [name, size, inset] of targets) {
+for (const [name, size, inset] of webTargets) {
   writeFileSync(join(OUT_DIR, name), drawIcon(size, inset));
   console.log(`wrote public/${name} (${size}x${size})`);
 }
+
+// Desktop build. Tauri looks for these names when bundling; a tighter inset
+// than the web icons because a window/taskbar icon is rendered small and the
+// star needs to stay readable at 32px.
+const tauriTargets = [
+  ['32x32.png', 32, 0.18],
+  ['128x128.png', 128, 0.22],
+  ['128x128@2x.png', 256, 0.22],
+  ['icon.png', 512, 0.24],
+];
+
+for (const [name, size, inset] of tauriTargets) {
+  writeFileSync(join(TAURI_ICON_DIR, name), drawIcon(size, inset));
+  console.log(`wrote src-tauri/icons/${name} (${size}x${size})`);
+}
+
+const icoSizes = [16, 32, 48, 256];
+writeFileSync(
+  join(TAURI_ICON_DIR, 'icon.ico'),
+  encodeIco(icoSizes.map((size) => ({ size, png: drawIcon(size, size <= 32 ? 0.14 : 0.22) }))),
+);
+console.log(`wrote src-tauri/icons/icon.ico (${icoSizes.join(', ')})`);
+
+// Note: icon.icns for macOS is not generated. It is only needed when bundling
+// on macOS, which is out of scope until Mac builds are set up.

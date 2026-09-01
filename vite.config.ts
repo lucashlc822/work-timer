@@ -24,6 +24,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Tauri points at a fixed dev URL, so a port collision must fail loudly
+  // rather than silently moving to 5174 and leaving the app window blank.
+  server: {
+    port: 5173,
+    strictPort: true,
+    watch: {
+      // Rust build artefacts are noisy and would trigger endless reloads.
+      ignored: ['**/src-tauri/**'],
+    },
+  },
+  // Tauri's own output is more useful than Vite's banner during `tauri dev`.
+  clearScreen: false,
   plugins: [
     react(),
     tailwindcss(),
@@ -32,7 +44,7 @@ export default defineConfig({
       // 'prompt', not 'autoUpdate': a service worker that reloads the page
       // mid-session would destroy an in-flight focus block. The user decides when.
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg'],
       manifest: {
         name: APP_NAME,
         short_name: APP_SHORT_NAME,
@@ -40,19 +52,14 @@ export default defineConfig({
         theme_color: NIGHT_900,
         background_color: NIGHT_900,
         display: 'standalone',
-        orientation: 'portrait',
         start_url: '/',
         scope: '/',
         categories: ['productivity', 'lifestyle'],
+        // No maskable icon: that purpose exists for Android launchers, and
+        // this build targets desktop browsers only.
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          {
-            src: 'icon-maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
         ],
       },
       workbox: {

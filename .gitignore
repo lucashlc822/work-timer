@@ -7,6 +7,11 @@ dist/
 build/
 .next/
 out/
+dev-dist/
+
+# Rust / Tauri build output. Large, slow to produce, fully reproducible.
+src-tauri/target/
+src-tauri/gen/
 
 # Env files — never commit real secrets
 .env
