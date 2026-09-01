@@ -1,10 +1,22 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { NIGHT_900 } from './design-tokens.mjs';
+import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from './brand.mjs';
+
+/**
+ * Substitutes the product name into index.html, which is otherwise static and
+ * would need editing by hand on every rename. Keeps `brand.mjs` the only place
+ * the name is written down.
+ */
+const injectBrand = (): PluginOption => ({
+  name: 'inject-brand',
+  transformIndexHtml: (html: string) =>
+    html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION),
+});
 
 export default defineConfig({
   resolve: {
@@ -15,15 +27,16 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    injectBrand(),
     VitePWA({
       // 'prompt', not 'autoUpdate': a service worker that reloads the page
       // mid-session would destroy an in-flight focus block. The user decides when.
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Work Timer',
-        short_name: 'Work Timer',
-        description: 'A focus timer where every completed session becomes a star.',
+        name: APP_NAME,
+        short_name: APP_SHORT_NAME,
+        description: APP_DESCRIPTION,
         theme_color: NIGHT_900,
         background_color: NIGHT_900,
         display: 'standalone',

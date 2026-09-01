@@ -1,4 +1,4 @@
-# work-timer
+# work-timer (product name: Starkeep)
 
 ## What this is
 
@@ -7,6 +7,11 @@ work, and lets it run instead of picking up other apps. Themed as a soft
 pastel night sky: each completed session becomes a star, and accumulated
 sessions form constellations. Personal project; more features may get added
 as they're decided on.
+
+**The product name is provisional.** It lives in `brand.mjs` and is read from
+there by the PWA manifest, `index.html`, and the React app — so rename by
+editing that file alone, and never hard-code the name anywhere else. The
+repository stays `work-timer` regardless.
 
 **Stack:** TypeScript + React + Vite, built as an installable PWA. Local-first
 on IndexedDB via Dexie; XState for the timer; Tailwind v4 with design tokens

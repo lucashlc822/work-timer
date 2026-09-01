@@ -12,6 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-08-31 — Named the app Starkeep (provisionally)
+
+**Status: added to the open M0 PR.** The M0 entry below flagged that the app
+had no name. It has one now, though it is explicitly not locked in.
+
+### Why Starkeep, and what was ruled out
+
+Checked three candidates by web search — not an authoritative trademark
+clearance, but enough to spot obvious collisions:
+
+- **Astra** — ruled out hard. `astra.app` is Topaz Labs' AI video upscaler,
+  there are several live USPTO software-class marks, and the Astra WordPress
+  theme is one of the most-installed themes on the web.
+- **Glimmer** — ruled out on findability. An App Store app is named exactly
+  that, plus a dating app, an Australian sustainability app, a creator
+  platform at glimmer.io, and an AI PDF tool. `glimmer.app` is parked on
+  GoDaddy with a for-sale page.
+- **Starbloom** — workable but compromised. `starbloom.app` is a live AI
+  hiring/ATS product, `starbloom.com` is broker-parked as a premium domain,
+  and STARBLOOM LTD is a registered UK company.
+- **Starjar** (bonus check) — dead on arrival, six-plus children's chore-chart
+  apps. Would miscategorise the app entirely.
+- **Starkeep** — returned nothing at all. Also the better name on merit:
+  "keep" means both to retain (you keep the stars you earn) and a stronghold,
+  which suits an app about defending your attention.
+
+**The bar here is lower than commercial trademark clearance**, and that was
+deliberate: the no-paid-services rule means no domain purchase, so the app
+will live on a free `*.pages.dev` subdomain. What actually matters is not
+being buried in search and not colliding with something famous.
+
+### How the rename was made cheap
+
+The name now lives in `brand.mjs` (with `brand.d.mts` for types), mirroring
+the `design-tokens.mjs` pattern. It is read by the PWA manifest and the HTML
+title/description (via a small `inject-brand` Vite plugin that substitutes
+`%APP_NAME%` into `index.html`) and by the React app through
+`src/shared/config/brand.ts`. Changing the name is a one-line edit to
+`brand.mjs`; nothing else hard-codes it.
+
+The repository stays `work-timer` — renaming a GitHub repo is a separate
+decision and nothing in the code depends on it.
+
+### Next
+
+- Name is provisional. If it changes, edit `brand.mjs` and nothing else.
+
+---
+
 ## 2026-08-30 — M0 foundation: installable PWA shell
 
 **Status: open PR.** First real code in the repo. Brainstormed the app from
@@ -86,6 +135,8 @@ default flips `lenient` → `strict` under mobile emulation.
 
 - **The app still has no name.** `work-timer` is the repo; "Work Timer" is a
   placeholder sitting in the manifest, `index.html`, and the icon generator.
+  **(Superseded 2026-08-31 — named Starkeep, provisionally; the name now lives
+  in `brand.mjs` alone. See the entry above.)**
 - **Cloudflare Pages is not connected yet** — it needs an account and a repo
   authorisation that has to be done by hand. The build output in `dist/` is
   ready for it.

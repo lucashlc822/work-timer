@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { APP_NAME, APP_TAGLINE } from '@/shared/config';
 import { db, getLocalUserId } from '@/shared/db';
 import { defaultAbandonmentPolicy, describeDevice, isStandalone } from '@/shared/lib';
 
@@ -44,9 +45,9 @@ export const HomeRoute = () => {
       </div>
 
       <div className="space-y-2">
-        <h1 className="text-ink-primary text-2xl font-medium tracking-wide">Work Timer</h1>
+        <h1 className="text-ink-primary text-2xl font-medium tracking-wide">{APP_NAME}</h1>
         <p className="text-ink-secondary max-w-xs text-sm">
-          Every session you finish becomes a star. The timer arrives in the next milestone.
+          {APP_TAGLINE} The timer arrives in the next milestone.
         </p>
       </div>
 

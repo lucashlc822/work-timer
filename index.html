@@ -12,12 +12,12 @@
          black bar, so a home-screen launch looks like a native app. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Work Timer" />
-    <meta
-      name="description"
-      content="A focus timer where every completed session becomes a star."
-    />
-    <title>Work Timer</title>
+    <!-- %APP_NAME% and %APP_DESCRIPTION% are substituted at build time from
+         brand.mjs by the inject-brand plugin in vite.config.ts, so the product
+         name is written down in exactly one place. -->
+    <meta name="apple-mobile-web-app-title" content="%APP_NAME%" />
+    <meta name="description" content="%APP_DESCRIPTION%" />
+    <title>%APP_NAME%</title>
   </head>
   <body>
     <div id="root"></div>

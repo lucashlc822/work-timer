@@ -1,8 +1,13 @@
-# work-timer
+# Starkeep
 
 A focus timer in the spirit of Forest, themed as a soft pastel night sky:
 commit to a block of focused time, and every session you finish becomes a
 star. Personal project.
+
+> The repository is still named `work-timer`. The product name is **not
+> final** — it lives in `brand.mjs` and nowhere else, so renaming the app is a
+> one-line edit rather than a hunt through the manifest, the page title, and
+> the UI.
 
 Built as an **installable PWA** — one codebase that runs as an app on an
 iPhone home screen, as a windowed app on Windows, and in any browser. That is
