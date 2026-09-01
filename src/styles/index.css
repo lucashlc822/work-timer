@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@layer base {
+  html {
+    /* The app is dark-only by design — it is a night sky. This tells the
+       browser to render form controls and scrollbars to match, rather than
+       leaving light-mode widgets on a dark page. */
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-night-900);
+    color: var(--color-ink-primary);
+    font-family: ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', system-ui, sans-serif;
+    /* Fills the safe area on an installed iOS PWA, so the sky reaches the
+       screen edges behind the notch and home indicator. */
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  /* Standalone-only: stop iOS rubber-band scrolling from revealing white
+     behind the app shell during a session. */
+  @media (display-mode: standalone) {
+    body {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-lavender-300);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Reduced motion is a hard requirement, not a nicety: the ambient sky
+   * drifts and twinkles continuously while a session runs, which is exactly
+   * the kind of persistent background motion that triggers vestibular
+   * symptoms. Everything animated must remain legible when stopped.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

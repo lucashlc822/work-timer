@@ -1,0 +1,12 @@
+# Normalise line endings.
+#
+# This project is developed from more than one machine, at least one of them
+# Windows. Without this, checkouts differ by line ending and git reports whole
+# files as changed when nothing meaningful did.
+#
+# `text=auto eol=lf` stores everything as LF in the repository and checks out
+# LF, so the two machines agree byte for byte.
+* text=auto eol=lf
+
+# Generated PNGs are binary — never touch them, and never try to diff them.
+*.png binary

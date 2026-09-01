@@ -1,16 +1,17 @@
-# Lint and test every push and pull request against the main branch.
+# Lint, typecheck, test, and build on every push and pull request.
 #
-# No build step by default: most hosts (Vercel, Netlify, etc.) already build
-# on deploy, and a full build often duplicates type-checking that a build
-# step does anyway. Add one back here only if nothing else in your pipeline
-# actually builds the project, or if you need the build to gate merges
-# before a deploy step ever runs.
+# The template's default advice is to skip the build step, on the grounds that
+# the host usually builds on deploy. It is kept here deliberately: `vite build`
+# is what generates the service worker and PWA manifest, so a change that
+# breaks the offline shell would otherwise pass CI and only surface on a real
+# device — which for an installed PWA means a broken app with no address bar
+# to reload from.
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [{{PROMPT: main branch name, e.g. main or master}}]
+    branches: [master]
 
 permissions:
   contents: read
@@ -20,22 +21,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-test:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
 
-      # {{PROMPT: swap for your language's setup action, e.g.
-      #   actions/setup-node@v4, actions/setup-python@v5, etc.}}
       - uses: actions/setup-node@v4
         with:
-          node-version: "{{PROMPT: version}}"
+          node-version: '22'
           cache: npm
 
-      - run: {{PROMPT: install command, e.g. npm ci}}
+      - run: npm ci
 
-      - run: {{PROMPT: lint command}}
+      - run: npm run lint
 
-      - run: {{PROMPT: test command}}
+      - run: npm run format:check
+
+      # Runs `tsc -b` before `vite build`, so this covers typechecking too.
+      - run: npm run build
+
+      - run: npm test
+
+      # The generated app icons are committed, so regenerating them must be a
+      # no-op. A failure here means the generator or the palette changed
+      # without `npm run icons` being re-run.
+      - name: Generated icons are up to date
+        run: |
+          npm run icons
+          git diff --exit-code --stat public/

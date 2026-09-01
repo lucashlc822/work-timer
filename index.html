@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- viewport-fit=cover lets the sky reach behind the notch and home
+         indicator on an installed iOS PWA. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0a1a" />
+    <!-- Renders the iOS status bar over the app's own background instead of a
+         black bar, so a home-screen launch looks like a native app. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- %APP_NAME% and %APP_DESCRIPTION% are substituted at build time from
+         brand.mjs by the inject-brand plugin in vite.config.ts, so the product
+         name is written down in exactly one place. -->
+    <meta name="apple-mobile-web-app-title" content="%APP_NAME%" />
+    <meta name="description" content="%APP_DESCRIPTION%" />
+    <title>%APP_NAME%</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
