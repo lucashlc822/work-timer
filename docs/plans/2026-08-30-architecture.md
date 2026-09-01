@@ -1,5 +1,22 @@
 # work-timer — architecture and build plan
 
+> **Partly superseded on 2026-08-31.** Two of this document's foundational
+> decisions were reversed after M0 shipped. It is kept intact rather than
+> rewritten, because the reasoning below explains why the code looked the way
+> it did, and the parts not listed here still stand.
+>
+> 1. **Mobile is out of scope; the app is a Tauri desktop app** (Windows now,
+>    macOS possible later), with the browser build kept alongside it. Every
+>    "PWA on iPhone" justification below therefore no longer applies — though
+>    the PWA machinery survives, because the browser build still uses it.
+> 2. **Leaving the app never forfeits a session.** The entire *Abandonment
+>    detection* section and acceptance tests O2 (4–7) are void. The timer runs
+>    on wall-clock time regardless of window state, and the only way to fail is
+>    to cancel deliberately. There is no `abandoned` outcome and no policy.
+>
+> Current decisions live in `CLAUDE.md`. The pivot's reasoning is in
+> `NOTES.md`.
+
 ## Context
 
 `work-timer` is a greenfield focus-timer app in the spirit of Forest: the user
@@ -122,6 +139,10 @@ is verified, not assumed.
 
 ## Abandonment detection
 
+> **(Superseded 2026-08-31 — this whole section is void. Leaving the app never
+> forfeits a session; only an explicit cancel does. Time away is still recorded
+> as `awayMs`, but purely as a statistic.)**
+
 Signals: `visibilitychange` (primary), plus `pagehide` and `freeze` for iOS.
 Record `lastHiddenAt`; on return compute the away duration from the clock, since
 JS was frozen and could not measure it live.
@@ -227,6 +248,8 @@ functional with zero network on first run.
    wall-clock delta regardless of how many intervals fired.
 
 **O2 — Abandonment is enforced on mobile and only recorded on desktop.**
+> **(Superseded 2026-08-31 — tests 4–7 are void. Replaced by: leaving never
+> forfeits, and only an explicit cancel fails a session.)**
 4. Mobile, strict: start a session, switch apps for longer than the grace period,
    return. *Pass:* session recorded `outcome: 'abandoned'`; no star awarded.
 5. Mobile: switch away for less than the grace period. *Pass:* session continues,

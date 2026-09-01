@@ -21,22 +21,20 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 
-import type { AbandonmentPolicy } from '../lib/platform';
-
 export type SessionMode = 'countdown' | 'pomodoro';
 
 /**
  * How a session ended.
  *
  * - `completed` — ran to the planned duration. Earns a star.
- * - `abandoned` — the user left the app past the grace period under a strict
- *   policy. Recorded, not hidden: an abandoned session is still data worth
- *   showing in stats.
- * - `cancelled` — the user deliberately stopped it. Distinct from `abandoned`
- *   because giving up on purpose and getting distracted are different things,
- *   and conflating them would make the stats lie.
+ * - `cancelled` — the user deliberately stopped it.
+ *
+ * There is deliberately no `abandoned` outcome. Leaving the app, closing the
+ * window, or locking the machine never forfeits a session — the timer runs on
+ * wall-clock time regardless. Giving up is an explicit act, so there is only
+ * one way to fail and it is always the user's own choice.
  */
-export type SessionOutcome = 'completed' | 'abandoned' | 'cancelled';
+export type SessionOutcome = 'completed' | 'cancelled';
 
 export interface SessionRow {
   /** Client-generated UUID. Stable from creation, so sync replay is idempotent. */
@@ -51,10 +49,14 @@ export interface SessionRow {
   endedAt: number | null;
   /** Null while in flight. */
   outcome: SessionOutcome | null;
-  /** Total ms spent with the app hidden. Recorded under both policies. */
+  /**
+   * Total ms spent with the app hidden or unfocused.
+   *
+   * Purely informational — it never affects whether a session succeeds. Kept
+   * so the M4 stats can say something honest about how a session went without
+   * ever being punitive about it.
+   */
   awayMs: number;
-  /** Policy in force when this session ran, so history stays interpretable. */
-  policy: AbandonmentPolicy;
   tagId: string | null;
   /** Deterministic input to the star generator. The star is the seed, not an image. */
   seed: string;

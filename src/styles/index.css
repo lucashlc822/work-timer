@@ -14,20 +14,20 @@
     background-color: var(--color-night-900);
     color: var(--color-ink-primary);
     font-family: ui-rounded, 'SF Pro Rounded', 'Segoe UI Variable Display', system-ui, sans-serif;
-    /* Fills the safe area on an installed iOS PWA, so the sky reaches the
-       screen edges behind the notch and home indicator. */
     min-height: 100dvh;
     overscroll-behavior-y: none;
+    /* The desktop window has no text to select and no images to drag; letting
+       either happen makes the webview feel like a web page rather than an app.
+       Inputs re-enable selection where it is actually wanted. */
+    user-select: none;
+    -webkit-user-select: none;
   }
 
-  /* Standalone-only: stop iOS rubber-band scrolling from revealing white
-     behind the app shell during a session. */
-  @media (display-mode: standalone) {
-    body {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-    }
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   :focus-visible {

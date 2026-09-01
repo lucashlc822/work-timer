@@ -1,11 +1,10 @@
 # Lint, typecheck, test, and build on every push and pull request.
 #
-# The template's default advice is to skip the build step, on the grounds that
-# the host usually builds on deploy. It is kept here deliberately: `vite build`
-# is what generates the service worker and PWA manifest, so a change that
-# breaks the offline shell would otherwise pass CI and only surface on a real
-# device — which for an installed PWA means a broken app with no address bar
-# to reload from.
+# Split into two jobs because they have very different costs. The web job is
+# fast and runs on Linux; the desktop job has to compile the Tauri dependency
+# tree, so it is cached aggressively and runs on Windows — the only platform
+# actually targeted, and cheaper than installing the GTK/WebKit stack a Linux
+# runner would need.
 name: CI
 
 on:
@@ -21,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -40,14 +39,42 @@ jobs:
       - run: npm run format:check
 
       # Runs `tsc -b` before `vite build`, so this covers typechecking too.
+      # The web build also generates the service worker, so a break in the
+      # offline shell fails here rather than on a user's machine.
       - run: npm run build
 
       - run: npm test
 
       # The generated app icons are committed, so regenerating them must be a
-      # no-op. A failure here means the generator or the palette changed
-      # without `npm run icons` being re-run.
+      # no-op. A failure means the generator or the palette changed without
+      # `npm run icons` being re-run.
       - name: Generated icons are up to date
         run: |
           npm run icons
-          git diff --exit-code --stat public/
+          git diff --exit-code --stat public/ src-tauri/icons/
+
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Keyed on Cargo.lock so the dependency tree is only recompiled when it
+      # actually changes. Without this the job takes ~15 minutes every run.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+
+      # `cargo check` rather than a full build: it catches every type and
+      # borrow error without paying for codegen and linking, which is the
+      # expensive half. Producing an actual installer is a release concern.
+      - name: Rust compiles
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings

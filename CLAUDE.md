@@ -13,11 +13,15 @@ there by the PWA manifest, `index.html`, and the React app — so rename by
 editing that file alone, and never hard-code the name anywhere else. The
 repository stays `work-timer` regardless.
 
-**Stack:** TypeScript + React + Vite, built as an installable PWA. Local-first
-on IndexedDB via Dexie; XState for the timer; Tailwind v4 with design tokens
-in `src/styles/tokens.css`. Supabase (Postgres + Auth + RLS) and Cloudflare
-Pages hosting arrive in M5 — neither is wired up yet. Constraint: no paid
-services, so everything stays on free tiers.
+**Stack:** TypeScript + React + Vite, shipped as a **Tauri desktop app** and
+also as a browser build from the same codebase. Local-first on IndexedDB via
+Dexie; XState for the timer; Tailwind v4 with design tokens in
+`src/styles/tokens.css`. Supabase (Postgres + Auth + RLS) arrives in M5 and is
+not wired up yet. Constraint: no paid services, so everything stays on free
+tiers/free tools.
+
+**Windows is the development target**; macOS is kept possible (nothing
+Windows-only) but is unverified. Mobile is out of scope entirely.
 
 The full architecture, data model, and milestone breakdown live in
 `docs/plans/2026-08-30-architecture.md`. Read it before making structural
@@ -27,7 +31,18 @@ changes.
 
 This is developed from more than one machine. Right now that costs nothing:
 the app needs **no environment variables at all**, because it runs entirely
-against IndexedDB with no backend. Clone, `npm install`, `npm run dev`.
+against IndexedDB with no backend.
+
+```
+npm install
+npm run tauri:dev    # the desktop app
+npm run dev          # the browser build
+```
+
+The desktop build additionally needs a Rust toolchain and the MSVC C++ build
+tools (`winget install Rustlang.Rustup` and the VS 2022 Build Tools with the
+VCTools workload). A machine without them can still run `npm run dev`, the
+tests, and the web build — only `tauri:*` needs Rust.
 
 `.gitattributes` forces LF line endings in the repository so the Windows and
 non-Windows checkouts agree byte for byte.
@@ -65,9 +80,19 @@ in `NOTES.md`.
 - **npm 11 leaves esbuild's postinstall unapproved** (`npm approve-scripts`
   warning on every install). Vite builds fine regardless — the warning is
   noise, not a broken install.
-- **iOS PWA storage can be evicted** by Safari after extended non-use. Not yet
-  mitigated; cloud sync in M5 is the fix. If test data vanishes from an iPhone
-  after a long gap, suspect this before suspecting the app.
+- **`npm run tauri:dev` needs port 5173 free.** Vite is set to `strictPort`, so
+  a stray dev server elsewhere makes the app window come up blank rather than
+  silently moving to 5174.
+- **The desktop app and the browser build have separate IndexedDB stores.**
+  Different origins — `tauri://localhost` versus `http://localhost:5173`. Data
+  written in one will not appear in the other. Not a bug.
+- **A client-side route would 404 in the packaged desktop app.** Tauri serves
+  the frontend over an asset protocol with no `index.html` fallback, so extra
+  windows are addressed with a query parameter (`?window=mini`) rather than a
+  path. Works identically in dev and production.
+- **The first `cargo` build takes several minutes** and downloads a few hundred
+  crates. Subsequent builds are incremental. Slowness here is normal, not a
+  broken setup.
 
 ## Decisions already made — don't re-open these
 
@@ -78,14 +103,22 @@ rejected). Don't pre-populate this with guesses.
 - **No paid services.** Language, framework, database, and hosting choices
   must stay on free tiers/free tools. Rule out anything requiring payment
   when suggesting a stack.
-- **PWA only — native iOS is rejected.** The App Store requires $99/year and a
-  Mac, which the rule above forbids. An installable web app covers iPhone,
-  Windows, and browser from one codebase. Don't propose React Native, Expo, or
-  Capacitor.
+- **Desktop only, via Tauri — mobile is out of scope.** Superseded the original
+  "PWA for iPhone" decision on 2026-08-31. Tauri was chosen over Electron for
+  bundle size (~10MB vs ~150MB) and idle memory (~40MB vs ~250MB), which
+  matters for something meant to sit running for hours. Don't propose React
+  Native, Expo, Capacitor, or Electron.
+- **The browser build stays alive alongside the desktop app.** The consequence
+  is permanent: every native capability needs a browser fallback. That seam
+  lives in `src/shared/runtime/` and nowhere else — feature code takes a
+  `Runtime` and never asks which host it is in.
+- **Unsupported capabilities are silent no-ops, not throws.** `isSupported` is
+  for hiding UI that would do nothing; calling an unsupported port is always
+  safe. This is what keeps `if (isDesktop)` out of feature code.
 - **Elapsed time is computed from timestamps, never accumulated from
-  `setInterval` ticks.** iOS freezes JavaScript when a PWA is backgrounded and
-  browsers throttle hidden tabs, so tick counting silently under-reports every
-  session. Use `src/shared/lib/clock.ts`.
+  `setInterval` ticks.** Browsers throttle hidden tabs, so tick counting
+  under-reports. It also makes background continuation free: there is no clock
+  to keep alive. Use `src/shared/lib/clock.ts`.
 - **Completed sessions are immutable.** This is what makes sync append-only
   and conflict-free. Same reasoning: currency is an append-only ledger
   (balance = `SUM(delta)`), and streaks are derived by query rather than
@@ -95,9 +128,14 @@ rejected). Don't pre-populate this with guesses.
 - **Feature slices are opaque to each other**, and `shared/` never imports
   from `features/` or `app/`. Enforced by `no-restricted-imports` in
   `eslint.config.js`, not just by convention.
-- **Abandonment is strict on mobile, lenient on desktop** — a product
-  judgement, not a technical limit. Desktop work legitimately spans windows,
-  so enforcing there would produce constant false forfeits.
+- **Leaving the app never forfeits a session.** Superseded the original
+  strict-on-mobile abandonment rule on 2026-08-31. Backgrounding, closing the
+  window, or locking the machine does not stop or fail a session — the timer
+  runs on wall-clock time regardless. **The only way to fail is to cancel
+  deliberately.** There is therefore no `abandoned` outcome, no grace period,
+  and no abandonment policy; don't reintroduce them.
+- **Time spent away is still recorded, but only as a stat.** `SessionRow.awayMs`
+  is informational and must never affect whether a session succeeds.
 
 ## Plans include acceptance tests
 

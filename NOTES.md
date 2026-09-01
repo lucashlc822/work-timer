@@ -12,6 +12,89 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-08-31 — Pivot: desktop-only Tauri app, and leaving no longer forfeits
+
+**Status: open PR (M0.5).** Two decisions reversed on the same day, both while
+planning M1. They are related: one of them is what made the other obvious.
+
+### Decision 1 — leaving the app never forfeits a session
+
+Planning M1's abandonment mechanic turned up a perverse edge. On a phone,
+**locking the screen and switching apps are indistinguishable to a web app** —
+both just report `hidden`. So strict abandonment would punish locking your
+phone and putting it in your pocket, which is the single best focus behaviour
+there is.
+
+The resolution was to drop the mechanic entirely: the timer runs on wall-clock
+time regardless of window state, and **the only way to fail is to cancel
+deliberately**. Honour system, closer to how Forest frames the commitment
+anyway.
+
+This turned out to be *less* work, not more, because elapsed time was already
+computed from timestamps. There is no clock to keep alive — on reopening, the
+app compares `startedAt` to now and knows where the session stands, including
+that it finished an hour ago. Background continuation came for free.
+
+Consequences: no grace period, no wake lock, no strict/lenient policy, no
+`abandoned` outcome, and `SessionRow.policy` deleted. `awayMs` survives as a
+pure statistic that must never affect success.
+
+### Decision 2 — desktop-only, via Tauri
+
+Mobile dropped completely. That removed the constraint the whole architecture
+was bent around — the PWA choice existed solely to reach an iPhone for free.
+
+**Tauri over Electron:** ~10MB bundle and ~40MB idle versus ~150MB and
+~250MB. For something meant to sit running for hours, that gap matters more
+than Electron's gentler setup.
+
+**The browser build stays**, which is the consequential half of the decision:
+every native capability now needs a browser fallback forever. That seam is
+`src/shared/runtime/` — four ports (notifications, tray, mini window,
+autostart) with a Tauri implementation and a web one, chosen once by
+`getRuntime()`. The rule that makes it pay: **unsupported is a silent no-op,
+not a throw**, so feature code calls `tray.setStatus(...)` unconditionally and
+simply has nothing happen on the web. `isSupported` exists only for hiding UI.
+
+Almost all of M0 survived — React app, tokens, Dexie, clock, ids, icon
+generator, lint boundaries, CI. Roughly 40 lines were genuinely wasted (touch
+detection, iOS meta tags and CSS, two icon sizes). One known limit disappeared
+outright: **iOS PWA storage eviction no longer applies**, since Tauri keeps
+IndexedDB in the app data directory.
+
+### Things worth remembering
+
+- **A client-side route would 404 in the packaged app.** Tauri serves the
+  frontend over an asset protocol with no `index.html` fallback, so `/mini`
+  works in dev and breaks in production. Extra windows are addressed with
+  `?window=mini` instead, and the mini timer is rendered as a *surface* rather
+  than a route — which is arguably the more honest model anyway.
+- **jsdom crept back in and cost 60s.** The first runtime test used
+  `// @vitest-environment jsdom` and took the suite from 1.7s to 62s, 56s of
+  it jsdom setup. Rewritten to stub `window` by hand in the `node`
+  environment: three lines, and the suite went back to 2.9s.
+- **The Windows tray has no persistent label**, only a tooltip — so a
+  glanceable countdown is macOS-only unless the remaining minutes are rendered
+  *into* the tray icon image. The procedural PNG generator could do that.
+  Deferred to M1.
+- Toolchain installed this session: Rust 1.98 via `winget Rustlang.Rustup`,
+  and VS 2022 Build Tools with the VCTools workload (MSVC 14.44, Windows SDK
+  10.0.26100). Neither was present.
+
+### Next
+
+- M1 is the timer, now considerably simpler than originally planned. Its
+  design is settled: countdown only, timestamps only, `endedAt` records the
+  *planned* end rather than when the app was reopened.
+- Tray countdown, mini-window contents, and the completion notification are
+  M1 work — the M0.5 shell only proves the seam.
+- Cloudflare Pages and iOS install verification from the M0 entry below are
+  **no longer relevant** — there is no iPhone target, and the desktop app
+  needs no hosting. Web hosting is only worth setting up if the browser build
+  is ever actually wanted somewhere.
+
+---
+
 ## 2026-08-31 — Named the app Starkeep (provisionally)
 
 **Status: added to the open M0 PR.** The M0 entry below flagged that the app
