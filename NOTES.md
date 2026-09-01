@@ -12,9 +12,75 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-09-01 — M0.5 landed, and the desktop shell is verified on screen
+
+**Status: merged (PRs #3 and #4).** The Tauri pivot from the entry below is in,
+and the OS-level behaviour it could not check in-session has now been confirmed
+by hand.
+
+### The unverified list from below is closed
+
+M0.5 shipped with five acceptance items that needed eyes on a screen, since
+nothing in this setup can observe an OS window. All five were checked and pass:
+the window itself, the tray icon and its menu, close-to-tray (X hides rather
+than exits), a real notification firing, and the autostart toggle.
+
+One genuine gap remains: **autostart has not survived an actual reboot.** The
+toggle flips and reports `on`, but the reboot test was deferred.
+
+### Two visual defects, found by looking at a screenshot
+
+Both were invisible to every automated check, because both are about *context*
+rather than correctness:
+
+- **The title bar rendered light** against a deep-indigo app. Windows themes it
+  from the system setting unless told otherwise; the window now declares
+  `"theme": "Dark"`.
+- **The in-app logo had a box around it.** It reused `favicon.svg`, which paints
+  an opaque rounded square behind the star. That is *correct* for a launcher
+  icon — it needs its own ground against arbitrary wallpaper — and wrong on a
+  page that is already night-coloured. Added `shared/ui/StarMark`, the star
+  alone, reading its colours from the design tokens.
+
+Worth knowing for any future SVG work: **CSS custom properties inside SVG
+gradient stops fail silently to black** when they don't resolve. Verified all
+six stops compute to real token values rather than assuming they would.
+
+### Environment fact worth not rediscovering
+
+**Running `git checkout` while `tauri dev` is up kills it.** The watcher saw
+`src-tauri/Cargo.toml` disappear mid-checkout and exited 101:
+
+    error: could not find `Cargo.toml` in ...\src-tauri or any parent directory
+
+Not an app bug — a dev watcher cannot survive its own source tree being swapped
+underneath it. Stop the dev process before switching branches. Now recorded in
+CLAUDE.md.
+
+Also confirmed: the CI Rust cache works. The desktop job went 6m40s cold to
+1m33s warm.
+
+### Housekeeping
+
+All four merged branches deleted from the remote; `master` is now the only
+branch, locally and remotely. Working tree clean, lint/build/27 tests green.
+
+### Next
+
+- **M1, the timer.** Nothing blocks it. Design is settled in the entry below:
+  countdown only, elapsed from timestamps, `endedAt` records the *planned* end
+  rather than when the app was reopened.
+- Two decisions deferred into M1: whether to render remaining minutes *into*
+  the tray icon image (Windows has no persistent tray label, only a tooltip),
+  and what the mini window actually displays.
+- Autostart's reboot check, whenever the machine next restarts.
+
+---
+
 ## 2026-08-31 — Pivot: desktop-only Tauri app, and leaving no longer forfeits
 
-**Status: open PR (M0.5).** Two decisions reversed on the same day, both while
+**Status: open PR (M0.5).** **(Superseded 2026-09-01 — merged as PR #3; see the
+entry above.)** Two decisions reversed on the same day, both while
 planning M1. They are related: one of them is what made the other obvious.
 
 ### Decision 1 — leaving the app never forfeits a session
