@@ -1,5 +1,7 @@
 mod deadline;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -47,6 +49,34 @@ pub(crate) fn set_tooltip(app: &tauri::AppHandle, status: Option<&str>) {
     }
 }
 
+/// What the main webview was last told about its own visibility.
+static MAIN_WEBVIEW_VISIBLE: AtomicBool = AtomicBool::new(true);
+
+/// Tell WebView2 whether the main window can actually be seen.
+///
+/// Hiding or minimising the *window* never reaches the WebView2 controller, so
+/// without this the page reports `document.visibilityState === 'visible'`
+/// while sitting in the tray: away time reads 0 and the repaint loop keeps
+/// running for nobody. `Webview::hide`/`show` call the controller's
+/// `SetIsVisible`, which is what makes WebView2 fire `visibilitychange` — and,
+/// as WebView2 recommends for minimised apps, throttle the hidden page. The
+/// session deadline is unaffected; it lives in a Rust thread (`deadline.rs`).
+///
+/// Deduplicated, because `Resized` fires continuously during a drag.
+fn set_main_webview_visible(app: &tauri::AppHandle, visible: bool) {
+    if MAIN_WEBVIEW_VISIBLE.swap(visible, Ordering::SeqCst) == visible {
+        return;
+    }
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+        let webview: &tauri::Webview = window.as_ref();
+        let _ = if visible {
+            webview.show()
+        } else {
+            webview.hide()
+        };
+    }
+}
+
 /// Bring the main window back from the tray, from a minimised state, or from
 /// behind other windows — whichever it happens to be in.
 fn show_main_window(app: &tauri::AppHandle) {
@@ -55,6 +85,7 @@ fn show_main_window(app: &tauri::AppHandle) {
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+    set_main_webview_visible(app, true);
 }
 
 pub fn run() {
@@ -111,22 +142,29 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                match window.label() {
-                    // Closing the main window hides to tray instead of quitting.
-                    // A session in progress must survive an accidental X, and
-                    // quitting stays available from the tray menu.
-                    MAIN_WINDOW => {
-                        api.prevent_close();
-                        let _ = window.hide();
-                    }
-                    // The mini timer is a companion window; closing it really
-                    // does mean close it.
-                    MINI_WINDOW => {}
-                    _ => {}
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => match window.label() {
+                // Closing the main window hides to tray instead of quitting.
+                // A session in progress must survive an accidental X, and
+                // quitting stays available from the tray menu.
+                MAIN_WINDOW => {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    set_main_webview_visible(window.app_handle(), false);
                 }
+                // The mini timer is a companion window; closing it really
+                // does mean close it.
+                MINI_WINDOW => {}
+                _ => {}
+            },
+            // Minimise and restore both arrive as a resize. A hidden (tray)
+            // window can also be resized, so visibility requires both.
+            WindowEvent::Resized(_) if window.label() == MAIN_WINDOW => {
+                let minimized = window.is_minimized().unwrap_or(false);
+                let shown = window.is_visible().unwrap_or(true);
+                set_main_webview_visible(window.app_handle(), shown && !minimized);
             }
+            _ => {}
         })
         .run(tauri::generate_context!())
         .expect("error while running Starkeep");
