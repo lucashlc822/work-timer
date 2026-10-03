@@ -12,6 +12,66 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-03 — M1 timer built; desktop acceptance still to run
+
+**Status: open PR #8 (`feat/m1-timer`).** Built from
+`docs/plans/2026-10-03-m1-timer.md`. Everything automatable passes, but the
+desktop-only acceptance cases haven't been run yet, so the PR is **not ready
+to merge**.
+
+### Where verification stands
+
+All automated checks pass: lint, typecheck, format, web build, 85 Vitest
+tests (54 new), `cargo clippy --all-targets -D warnings`, and 4 Rust unit
+tests. The browser build was exercised in the preview pane: resume after a
+reload, a 1-minute completion, cancel and cancel-dismiss, permission denied,
+and a second tab at `?window=mini` following a session started in the first.
+The PR body has the per-case table.
+
+**Not yet observed, all needing a person at `npm run tauri:dev`:** quit
+through the deadline (O1.2), minimise to tray and restore (O2.5), tray reset
+after cancel (O2.6), reload twice after completing hidden (O3.9), tray
+tooltip countdown (O4.12), notification within seconds of the deadline
+(O4.13), mini window always-on-top (O4.14), and a deliberate ~30s hide for
+`awayMs` (O6.17). Use the "1 min (dev)" preset.
+
+### Decisions made while building
+
+- **The autostart toggle survived** as a footer checkbox on the timer screen.
+  The plan said to remove the M0.5 diagnostics, but that screen was the only
+  place autostart could be changed.
+- **The Rust deadline commands are `async` on purpose.** Synchronous Tauri
+  commands run on the main thread, and tray updates are dispatched *to* the
+  main thread. A sync command waiting on the deadline lock while the worker
+  thread holds it and waits on the main thread would deadlock. Rationale is
+  in the module comment of `src-tauri/src/deadline.rs`.
+- **The deadline thread sleeps at most 5s at a time.** On Windows,
+  `thread::sleep` doesn't count time the machine spent suspended, so one long
+  sleep across a lid-close would wake late.
+- **Completion never disarms the host deadline; only cancel does.** On
+  desktop, a disarm sent when JS notices completion could race the Rust
+  thread and swallow the notification.
+- **The mini window shows `--:--` once the deadline passes**, even before the
+  main window records the completion. A hidden main window's timers are
+  throttled, so that write can lag by up to a minute.
+
+### Unconfirmed finding
+
+The completed browser run recorded `awayMs: 51999`, which equals the time
+from the reload to the deadline. The likely cause is that the preview pane
+was hidden from the user's view and the page therefore loaded as `hidden`. A
+cancelled run with no visibility changes recorded 0, so nothing suggests a
+bug, but this explanation hasn't been proven. Don't treat it as an
+environment fact until O6.17 is run deliberately.
+
+### Next
+
+- Run the desktop acceptance cases above and record the results on PR #8.
+  Merge only after they pass.
+- Autostart's reboot check, carried over from 2026-09-01.
+
+---
+
 ## 2026-09-01 — M0.5 landed, and the desktop shell is verified on screen
 
 **Status: merged (PRs #3 and #4).** The Tauri pivot from the entry below is in,
@@ -74,7 +134,8 @@ branch, locally and remotely. Working tree clean, lint/build/27 tests green.
   Start there.)**
 - Two decisions deferred into M1: whether to render remaining minutes *into*
   the tray icon image (Windows has no persistent tray label, only a tooltip),
-  and what the mini window actually displays.
+  and what the mini window actually displays. **(Superseded 2026-10-03 — both
+  decided in the M1 plan: tooltip only, and a read-only countdown.)**
 - Autostart's reboot check, whenever the machine next restarts.
 
 ---
