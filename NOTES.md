@@ -69,7 +69,9 @@ branch, locally and remotely. Working tree clean, lint/build/27 tests green.
 
 - **M1, the timer.** Nothing blocks it. Design is settled in the entry below:
   countdown only, elapsed from timestamps, `endedAt` records the *planned* end
-  rather than when the app was reopened.
+  rather than when the app was reopened. **(Added 2026-10-03 — the full plan,
+  with contracts and acceptance tests, is now `docs/plans/2026-10-03-m1-timer.md`.
+  Start there.)**
 - Two decisions deferred into M1: whether to render remaining minutes *into*
   the tray icon image (Windows has no persistent tray label, only a tooltip),
   and what the mini window actually displays.
