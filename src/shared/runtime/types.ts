@@ -55,6 +55,26 @@ export interface AutostartPort {
   setEnabled(enabled: boolean): Promise<void>;
 }
 
+/**
+ * Owns "this session ends at T" on behalf of the host.
+ *
+ * Exists because the webview cannot be trusted to keep time while hidden:
+ * WebView2 and browsers throttle timers in minimised or background windows,
+ * which is exactly when a completion notice matters. On desktop the deadline
+ * lives in a Rust thread that is never throttled; on the web it is a
+ * best-effort `setTimeout`.
+ *
+ * The JS timer still decides *that* a session completed (via `resumeVerdict`)
+ * — this port only covers the notice and the tray countdown.
+ */
+export interface CompletionPort {
+  isSupported: boolean;
+  /** Tell the host a session ends at `endsAt` (epoch ms). Replaces any previous arm. */
+  arm(options: { sessionId: string; endsAt: number; title: string; body: string }): Promise<void>;
+  /** Forget the deadline: no notice, tray back to the plain name. Idempotent. */
+  disarm(sessionId: string): Promise<void>;
+}
+
 export type RuntimeKind = 'desktop' | 'web';
 
 export interface Runtime {
@@ -63,6 +83,7 @@ export interface Runtime {
   tray: TrayPort;
   miniWindow: MiniWindowPort;
   autostart: AutostartPort;
+  completion: CompletionPort;
 }
 
 /**
@@ -94,4 +115,10 @@ export const unsupportedNotifications: NotificationPort = {
   isSupported: false,
   requestPermission: () => Promise.resolve(false),
   notify: () => Promise.resolve(),
+};
+
+export const unsupportedCompletion: CompletionPort = {
+  isSupported: false,
+  arm: () => Promise.resolve(),
+  disarm: () => Promise.resolve(),
 };

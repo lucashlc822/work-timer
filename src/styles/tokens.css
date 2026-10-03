@@ -54,7 +54,7 @@
 
   /* --- Semantic --------------------------------------------------------- */
   --color-success: #a8e6d0;
-  /* A session lost by leaving. Muted on purpose: this should read as a soft
+  /* A session ended early. Muted on purpose: this should read as a soft
      'aw', not an error state. The app is not angry at you. */
   --color-faded: #e88898;
 

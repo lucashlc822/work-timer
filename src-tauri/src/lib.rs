@@ -1,3 +1,5 @@
+mod deadline;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -26,12 +28,23 @@ fn set_tray_status(app: tauri::AppHandle, text: Option<String>) -> Result<(), St
         .tray_by_id(TRAY_ID)
         .ok_or_else(|| "tray icon not found".to_string())?;
 
-    let tooltip = match text {
+    tray.set_tooltip(Some(&tray_tooltip(text.as_deref())))
+        .map_err(|e| e.to_string())
+}
+
+fn tray_tooltip(status: Option<&str>) -> String {
+    match status {
         Some(status) => format!("Starkeep — {status}"),
         None => "Starkeep".to_string(),
-    };
+    }
+}
 
-    tray.set_tooltip(Some(&tooltip)).map_err(|e| e.to_string())
+/// Best-effort tooltip update for code that is not answering a command, such
+/// as the deadline thread. Tray text is cosmetic, so failures are dropped.
+pub(crate) fn set_tooltip(app: &tauri::AppHandle, status: Option<&str>) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_tooltip(Some(&tray_tooltip(status)));
+    }
 }
 
 /// Bring the main window back from the tray, from a minimised state, or from
@@ -57,7 +70,12 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![set_tray_status])
+        .manage(deadline::DeadlineState::default())
+        .invoke_handler(tauri::generate_handler![
+            set_tray_status,
+            deadline::arm_deadline,
+            deadline::disarm_deadline
+        ])
         .setup(|app| {
             let open_item = MenuItem::with_id(app, "open", "Open Starkeep", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

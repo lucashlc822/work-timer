@@ -1,3 +1,4 @@
+import { MiniCountdown } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 
 /**
@@ -10,8 +11,8 @@ import { APP_NAME } from '@/shared/config';
  * route like `/mini` would 404 in the packaged app while working perfectly in
  * dev.
  *
- * M0.5 ships the window and its chrome; the countdown it will display arrives
- * with the timer in M1.
+ * Read-only by design: cancelling is a deliberate act and belongs behind the
+ * main window's confirmation, not on a 240px floating panel.
  */
 export const MiniWindow = () => {
   const close = async () => {
@@ -23,14 +24,12 @@ export const MiniWindow = () => {
     <div
       // Frameless window: this region substitutes for the missing title bar.
       data-tauri-drag-region
-      className="bg-night-800 border-night-600 flex h-dvh w-dvw cursor-grab flex-col items-center justify-center gap-1 border"
+      className="bg-night-800 border-night-600 flex h-dvh w-dvw cursor-grab flex-col items-center justify-center gap-2 border"
     >
       <p data-tauri-drag-region className="text-ink-muted text-[10px] tracking-widest uppercase">
         {APP_NAME}
       </p>
-      <p data-tauri-drag-region className="text-ink-primary font-mono text-2xl">
-        --:--
-      </p>
+      <MiniCountdown />
       <button
         type="button"
         onClick={() => void close()}
