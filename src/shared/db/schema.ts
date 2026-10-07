@@ -80,6 +80,31 @@ export interface MetaRow {
   value: unknown;
 }
 
+export type ConstellationTier = 'easy' | 'medium' | 'hard';
+
+/**
+ * The user's choice to start building a constellation (M2).
+ *
+ * Append-only, like sessions: which stars belong to which constellation, and
+ * whether it is finished, are derived from sessions and these rows by the sky
+ * feature rather than stored. A choice is never edited — switching to another
+ * constellation is a new row.
+ */
+export interface ConstellationRow {
+  /** Client-generated UUID. */
+  id: string;
+  source: 'catalogue' | 'generated';
+  /** Catalogue key when `source` is `catalogue`. Keys are permanent. */
+  shapeId: string | null;
+  /** Generator seed when `source` is `generated`. */
+  seed: string | null;
+  tier: ConstellationTier;
+  /** Epoch ms. Sessions ending at or after this, before the next choice, belong to it. */
+  chosenAt: number;
+  clientCreatedAt: number;
+  syncedAt: number | null;
+}
+
 export const META_KEYS = {
   /** Id of the session currently running, or absent when idle. */
   activeSessionId: 'activeSessionId',
@@ -90,6 +115,7 @@ export const META_KEYS = {
 export type WorkTimerDb = Dexie & {
   sessions: EntityTable<SessionRow, 'id'>;
   meta: EntityTable<MetaRow, 'key'>;
+  constellations: EntityTable<ConstellationRow, 'id'>;
 };
 
 export const DB_NAME = 'work-timer';
@@ -106,6 +132,12 @@ export const createDb = (name: string = DB_NAME): WorkTimerDb => {
   db.version(1).stores({
     sessions: 'id, startedAt, tagId, syncedAt',
     meta: 'key',
+  });
+
+  // v2 (M2) — constellation choices. Purely additive: v1 rows are untouched.
+  // Indexed on chosenAt (the sky reads choices in order) and syncedAt (outbox).
+  db.version(2).stores({
+    constellations: 'id, chosenAt, syncedAt',
   });
 
   return db;

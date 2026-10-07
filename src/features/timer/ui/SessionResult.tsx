@@ -2,11 +2,13 @@ import { StarMark } from '@/shared/ui';
 
 import { formatDuration, formatTimeOfDay } from '../domain/format';
 import type { FinishedResult } from '../domain/timerMachine';
+import type { ResultInfo, TimerSlots } from './slots';
 
 interface Props {
   result: FinishedResult;
   error: string | null;
   onDone: () => void;
+  slots: TimerSlots;
 }
 
 /**
@@ -16,9 +18,16 @@ interface Props {
  * deadline, this is the first thing the user sees on relaunch — and "Finished
  * at 3:40 pm" is the honest answer, not the time they reopened the app.
  */
-export const SessionResult = ({ result, error, onDone }: Props) => {
+export const SessionResult = ({ result, error, onDone, slots }: Props) => {
   const { ending } = result;
   const completed = ending.outcome === 'completed';
+  const info: ResultInfo = {
+    sessionId: result.session.id,
+    seed: result.session.seed,
+    outcome: ending.outcome,
+    actualFocusS: ending.actualFocusS,
+  };
+  const customStar = completed ? slots.resultStar?.(info) : undefined;
 
   return (
     <div className="flex flex-col items-center gap-5 text-center">
@@ -29,10 +38,14 @@ export const SessionResult = ({ result, error, onDone }: Props) => {
             className="bg-mint-300/20 absolute inset-2 rounded-full blur-2xl"
           />
         )}
-        <StarMark
-          size={completed ? 80 : 48}
-          className={completed ? 'relative' : 'relative opacity-40'}
-        />
+        {customStar !== undefined ? (
+          <div className="relative">{customStar}</div>
+        ) : (
+          <StarMark
+            size={completed ? 80 : 48}
+            className={completed ? 'relative' : 'relative opacity-40'}
+          />
+        )}
       </div>
 
       <div className="space-y-1">
@@ -44,6 +57,8 @@ export const SessionResult = ({ result, error, onDone }: Props) => {
           {completed ? 'Finished' : 'Ended'} at {formatTimeOfDay(ending.endedAt)}
         </p>
       </div>
+
+      {slots.resultNote?.(info)}
 
       {error !== null && <p className="text-faded text-xs">{error}</p>}
 

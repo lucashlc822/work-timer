@@ -102,6 +102,11 @@ in `NOTES.md`.
   minimised, and no `visibilitychange` fires. `src-tauri/src/lib.rs` fixes this
   by calling the webview's own `hide()`/`show()` (WebView2's `SetIsVisible`)
   alongside the window's. Any new window that needs visibility must do the same.
+- **CSS transitions stall in Claude's browser pane while it is hidden.** The
+  pane renders no frames when it is not on screen, so a fade can sit at 0.89
+  opacity indefinitely; taking a screenshot renders frames and it completes.
+  Not an app bug — check the computed style after a screenshot before
+  believing a transition is broken.
 - **CSS custom properties inside SVG gradient stops fail silently to black**
   if they don't resolve. `shared/ui/StarMark` relies on them working; if a
   gradient ever renders black, check that the token is defined on an ancestor

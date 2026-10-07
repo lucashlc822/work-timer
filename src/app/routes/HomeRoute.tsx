@@ -1,33 +1,98 @@
 import { useEffect, useState } from 'react';
 
-import { TimerScreen } from '@/features/timer';
+import {
+  ConstellationStatus,
+  installDevTools,
+  NewStarNote,
+  SkyBackdrop,
+  StarGlyph,
+  StartHint,
+} from '@/features/sky';
+import { TimerScreen, type TimerSlots } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
 
 /**
- * The main window: the timer, with the app's few settings underneath.
+ * Sky content for the timer's slots. The two features never import each
+ * other; this is the one place they meet.
+ */
+const timerSlots: TimerSlots = {
+  startHint: (plannedS) => <StartHint plannedS={plannedS} />,
+  resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
+  resultNote: (result) =>
+    result.outcome === 'completed' ? <NewStarNote sessionId={result.sessionId} /> : null,
+};
+
+/**
+ * The main window: the timer in front of your night sky.
  *
- * Replaces the M0.5 diagnostics screen. The autostart toggle is kept — it was
- * the only place that setting could be changed — until a settings surface
+ * "View sky" fades the timer out — it stays mounted, so a running session is
+ * untouched — and hands the pointer to the sky so stars can be hovered and
+ * focused. The autostart toggle lives in the footer until a settings surface
  * exists to hold it.
  */
-export const HomeRoute = () => (
-  <main className="flex min-h-dvh flex-col items-center gap-8 px-6 pt-10 pb-6">
-    <header className="flex items-center gap-2">
-      <StarMark size={28} />
-      <h1 className="text-ink-secondary text-sm tracking-widest uppercase">{APP_NAME}</h1>
-    </header>
+export const HomeRoute = () => {
+  const [viewingSky, setViewingSky] = useState(false);
 
-    <section className="flex w-full flex-1 flex-col items-center justify-center">
-      <TimerScreen />
-    </section>
+  useEffect(installDevTools, []);
 
-    <footer>
-      <AutostartToggle />
-    </footer>
-  </main>
-);
+  useEffect(() => {
+    if (!viewingSky) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setViewingSky(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [viewingSky]);
+
+  return (
+    <>
+      <SkyBackdrop mode={viewingSky ? 'full' : 'hero'} />
+
+      <main
+        inert={viewingSky}
+        className={`relative z-10 flex min-h-dvh flex-col items-center gap-8 px-6 pt-10 pb-6 transition-opacity duration-500 ${
+          viewingSky ? 'pointer-events-none opacity-0' : ''
+        }`}
+      >
+        <header className="flex items-center gap-2">
+          <StarMark size={28} />
+          <h1 className="text-ink-secondary text-sm tracking-widest uppercase">{APP_NAME}</h1>
+        </header>
+
+        <section className="flex w-full flex-1 flex-col items-center justify-center pt-24">
+          <TimerScreen slots={timerSlots} />
+        </section>
+
+        <footer className="flex flex-col items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <ConstellationStatus />
+            <button
+              type="button"
+              onClick={() => setViewingSky(true)}
+              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+            >
+              View sky
+            </button>
+          </div>
+          <AutostartToggle />
+        </footer>
+      </main>
+
+      {viewingSky && (
+        <button
+          type="button"
+          autoFocus
+          onClick={() => setViewingSky(false)}
+          className="rounded-pill bg-night-800/80 border-night-600 text-ink-secondary hover:text-ink-primary fixed bottom-6 left-1/2 z-20 -translate-x-1/2 border px-5 py-2 text-xs backdrop-blur transition-colors"
+        >
+          Back to timer
+        </button>
+      )}
+    </>
+  );
+};
 
 const AutostartToggle = () => {
   const [autostart, setAutostart] = useState<AutostartPort | null>(null);
