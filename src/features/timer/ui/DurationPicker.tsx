@@ -12,11 +12,11 @@ import {
 /**
  * Preset lengths in one click, plus a custom slider.
  *
- * The dev-only 1-minute preset exists so acceptance tests finish in minutes;
+ * The dev-only 1- and 2-minute presets exist so acceptance tests finish in minutes;
  * `import.meta.env.DEV` is false in every production build, so it never ships.
  */
 const presets: readonly number[] = import.meta.env.DEV
-  ? [DEV_PRESET_MINUTES, ...PRESET_MINUTES]
+  ? [...DEV_PRESET_MINUTES, ...PRESET_MINUTES]
   : PRESET_MINUTES;
 
 interface Props {
@@ -45,7 +45,7 @@ export const DurationPicker = ({ minutes, onChange, disabled = false }: Props) =
               onChange(preset);
             }}
           >
-            {preset} min{preset === DEV_PRESET_MINUTES && ' (dev)'}
+            {preset} min{(DEV_PRESET_MINUTES as readonly number[]).includes(preset) && ' (dev)'}
           </Pill>
         ))}
         <Pill

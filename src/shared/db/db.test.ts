@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, type SessionRow, type WorkTimerDb } from './schema';
@@ -37,10 +38,30 @@ const aSession = (overrides: Partial<SessionRow> = {}): SessionRow => ({
 });
 
 describe('schema', () => {
-  it('opens at version 1', async () => {
+  it('opens at version 2', async () => {
     const db = withDb();
     await db.open();
-    expect(db.verno).toBe(1);
+    expect(db.verno).toBe(2);
+  });
+
+  // M2 O8.18 — an M1 install upgrades without losing anything.
+  it('upgrades a version 1 database without touching its rows', async () => {
+    const name = `test-${crypto.randomUUID()}`;
+    const v1 = new Dexie(name);
+    v1.version(1).stores({ sessions: 'id, startedAt, tagId, syncedAt', meta: 'key' });
+    const existing = aSession();
+    await v1.table('sessions').add(existing);
+    await v1.table('meta').put({ key: 'localUserId', value: 'user-1' });
+    v1.close();
+
+    const upgraded = createDb(name);
+    opened.push(upgraded);
+    await upgraded.open();
+
+    expect(upgraded.verno).toBe(2);
+    expect(await upgraded.sessions.toArray()).toEqual([existing]);
+    expect(await readMeta(upgraded, 'localUserId')).toBe('user-1');
+    expect(await upgraded.constellations.count()).toBe(0);
   });
 
   it('round-trips a session without losing fields', async () => {

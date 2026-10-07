@@ -52,3 +52,36 @@
     }
   }
 }
+
+/*
+ * Sky animations. Used only in the full-sky view, never behind a running
+ * timer, so an hours-long session does not pay for a continuously repainting
+ * SVG layer. The reduced-motion rule above neutralises both.
+ */
+@keyframes sky-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes sky-shimmer {
+  0%,
+  100% {
+    stroke-opacity: 0.5;
+  }
+  50% {
+    stroke-opacity: 0.95;
+  }
+}
+
+.sky-twinkle {
+  animation: sky-twinkle 4s ease-in-out infinite;
+}
+
+.sky-shimmer {
+  animation: sky-shimmer 6s ease-in-out infinite;
+}

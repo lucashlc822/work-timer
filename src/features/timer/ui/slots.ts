@@ -1,0 +1,25 @@
+import type { ReactNode } from 'react';
+
+/**
+ * Places in the timer's UI that the app can fill from other features.
+ *
+ * The timer must not import the sky (features are opaque to each other), but
+ * the result screen is exactly where a new star belongs. So `app/` composes
+ * them: it passes sky components in through these render props, and the timer
+ * only knows it is rendering "something" in a named place.
+ */
+export interface ResultInfo {
+  sessionId: string;
+  seed: string;
+  outcome: 'completed' | 'cancelled';
+  actualFocusS: number;
+}
+
+export interface TimerSlots {
+  /** Under the Start button. Receives the chosen length, in seconds. */
+  startHint?: (plannedS: number) => ReactNode;
+  /** Replaces the default star on a *completed* result. */
+  resultStar?: (result: ResultInfo) => ReactNode;
+  /** Under the result text, for both outcomes. */
+  resultNote?: (result: ResultInfo) => ReactNode;
+}

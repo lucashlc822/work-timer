@@ -11,14 +11,18 @@ import { CancelDialog } from './CancelDialog';
 import { CountdownDisplay } from './CountdownDisplay';
 import { DurationPicker } from './DurationPicker';
 import { SessionResult } from './SessionResult';
+import type { TimerSlots } from './slots';
 
 /**
  * The main window: pick a length, commit, and watch it run.
  *
  * Every number on screen is computed from `systemClock.now()` during render.
  * `useTick` only decides how often that happens.
+ *
+ * `slots` lets the app add content from other features (the sky) without the
+ * timer importing them — features stay opaque to each other.
  */
-export const TimerScreen = () => {
+export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
   const timer = useTimerSession();
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
   const [confirming, setConfirming] = useState(false);
@@ -34,7 +38,14 @@ export const TimerScreen = () => {
   }
 
   if (timer.status === 'finished' && timer.result !== null) {
-    return <SessionResult result={timer.result} error={timer.error} onDone={timer.dismiss} />;
+    return (
+      <SessionResult
+        result={timer.result}
+        error={timer.error}
+        onDone={timer.dismiss}
+        slots={slots}
+      />
+    );
   }
 
   if (inFlight && timer.session !== null) {
@@ -80,7 +91,7 @@ export const TimerScreen = () => {
 
   const starting = timer.status === 'starting';
   return (
-    <div className="flex w-full flex-col items-center gap-8">
+    <div className="flex w-full flex-col items-center gap-6">
       <DurationPicker minutes={minutes} onChange={setMinutes} disabled={starting} />
       <button
         type="button"
@@ -90,6 +101,7 @@ export const TimerScreen = () => {
       >
         Start {minutes} min
       </button>
+      {slots.startHint?.(minutesToSeconds(minutes))}
       {timer.error !== null && <p className="text-faded text-xs">{timer.error}</p>}
     </div>
   );

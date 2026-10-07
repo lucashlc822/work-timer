@@ -15,11 +15,13 @@ export const CUSTOM_STEP_MINUTES = 5;
 export const DEFAULT_MINUTES = 25;
 
 /**
- * A 1-minute preset so acceptance tests finish in minutes rather than half an
- * hour. The UI only offers it when `import.meta.env.DEV` is true, so it never
- * ships — kept here as data so the domain stays free of build-time globals.
+ * Short presets so acceptance tests finish in minutes rather than half an
+ * hour. Two of them because the sky's dev tier minimums are 1 and 2 minutes,
+ * so a 1-minute session can be aimed at a tier that needs 2. The UI only
+ * offers these when `import.meta.env.DEV` is true, so they never ship — kept
+ * here as data so the domain stays free of build-time globals.
  */
-export const DEV_PRESET_MINUTES = 1;
+export const DEV_PRESET_MINUTES = [1, 2] as const;
 
 /**
  * Snap an arbitrary custom value onto the allowed grid: rounded to the nearest
