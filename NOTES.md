@@ -12,6 +12,85 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-07 — M2 merged: the sky, with chosen and tiered constellations
+
+**Status: merged (PR #11, `0d1ab46`).** Built from
+`docs/plans/2026-10-06-m2-sky.md`, which was written in this session because
+the architecture doc only had a one-line row for M2. All 21 acceptance cases
+passed. The desktop ones were observed by hand on Windows, and per-case
+results are in the PR #11 description.
+
+### Product decisions, made with Lucas while planning
+
+The plan's tables hold the full reasoning. In short:
+
+- **The sky lives behind the timer.** "View sky" fades the timer out
+  (it stays mounted, so a running session is untouched). There is no new
+  route; a path would 404 on reload in the packaged app.
+- **The user picks the next constellation from a catalogue** of
+  hand-designed shapes *and* generated "wild" ones, side by side.
+- **Difficulty combines all three levers Lucas asked for.** Star count and a
+  minimum session length per star are the gates; total focus time is shown
+  and makes longer sessions' stars brighter. That split is **my
+  interpretation**, flagged for review in the plan, because three
+  independent gates would mostly duplicate each other.
+- **A simple unlock gate now** (medium after one easy, hard after one
+  medium). **M6 must fold this into its unlock system** rather than add a
+  second one.
+
+### The design choice that matters most: the sky is derived
+
+The only new stored fact is "at time T, the user chose constellation C":
+schema v2 adds an append-only `constellations` table. Which star sits in
+which slot, completion, wandering stars and unlocks are all recomputed by
+`deriveSky()` in `src/features/sky/domain/derive.ts`. Finishing a session
+writes nothing new, so completed sessions stay immutable and M5 sync stays
+append-only.
+
+The rule that makes it work: a session belongs to the choice whose window
+(its `chosenAt` up to the next choice) contains the session's **`endedAt`**.
+So a constellation chosen mid-session gets that session.
+
+### Things worth not rediscovering
+
+- **Points are stored in growth order.** Every star after the first
+  connects to an earlier one, so a half-built constellation is always one
+  connected figure. Tests enforce it for the catalogue and 200 generated
+  seeds per tier. **Catalogue keys are persisted, so never rename or remove
+  one.**
+- **The canvas and SVG use hex colours from `design-tokens.mjs`, never
+  `var(...)`.** The mirror grew to cover star and nebula colours; its drift
+  test was extended to match.
+- **Mixing nebula hues in one place turns them grey.** The first render
+  looked muddy until each cloud got a single hue. Faint gradients also band
+  visibly, so the nebula is dithered with seeded noise.
+- **Behind a running timer the SVG is static.** Twinkle and shimmer run only
+  in View sky, so an hours-long session doesn't pay for a repainting layer.
+  The canvas loop is capped at 24 fps and stops when hidden. Measured on
+  desktop: under 3% CPU visible; frame counter frozen in the tray.
+- **Claude's browser pane stalls CSS transitions while it is hidden**, which
+  briefly looked like View sky's fade was broken. Recorded in CLAUDE.md.
+- **Dev builds have `window.__starkeep.seed(n, minutes)` and `.frames()`**
+  for testing tiers and the frame loop. None of it reaches production; the
+  bundle was checked.
+
+### The desktop database contains test data
+
+The acceptance run seeded completed sessions (`device: 'dev/seed'`) and chose
+The Kite, The Lantern and The Great Heron. They are real rows in that
+machine's IndexedDB, so that sky is not a true history. If a clean sky
+matters before real use, clear them — not done yet.
+
+### Next
+
+- **M3, Pomodoro.** Open question for its plan: does a Pomodoro session make
+  one star, or one per work phase? It changes how stars fill constellations.
+- Autostart's reboot check, still carried over.
+- Optionally, a dev helper to clear `dev/seed` sessions and test choices
+  from the desktop sky.
+
+---
+
 ## 2026-10-06 — M1 merged after a desktop acceptance pass that caught one bug
 
 **Status: merged (PR #8, `91a3ce6`).** All 17 acceptance cases from
@@ -74,7 +153,7 @@ was never isolated.
 
 ### Next
 
-- **M2.** Nothing blocks it.
+- **M2.** Nothing blocks it. **(Done 2026-10-07 — merged as PR #11; see the entry above.)**
 - Autostart's reboot check, carried over again. The 2026-10-06 restart could
   not test it: "Launch at startup" was unticked on that machine. Tick it,
   restart, and see whether the app opens on its own.
