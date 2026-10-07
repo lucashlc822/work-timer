@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getRuntime, isDesktop, resetRuntimeForTests } from './index';
 import {
   unsupportedAutostart,
+  unsupportedCompletion,
   unsupportedMiniWindow,
   unsupportedNotifications,
   unsupportedTray,
@@ -81,6 +82,10 @@ describe('web runtime', () => {
       unsupportedNotifications.notify({ title: 'a', body: 'b' }),
     ).resolves.toBeUndefined();
     await expect(unsupportedNotifications.requestPermission()).resolves.toBe(false);
+    await expect(
+      unsupportedCompletion.arm({ sessionId: 's', endsAt: 0, title: 'a', body: 'b' }),
+    ).resolves.toBeUndefined();
+    await expect(unsupportedCompletion.disarm('s')).resolves.toBeUndefined();
   });
 });
 
@@ -138,5 +143,70 @@ describe('web notifications', () => {
     await runtime.notifications.notify({ title: 'a', body: 'b' });
 
     expect(construct).not.toHaveBeenCalled();
+  });
+});
+
+describe('web completion', () => {
+  const grantedNotification = () => {
+    const construct = vi.fn();
+    const Notification = Object.assign(construct, {
+      permission: 'granted',
+      requestPermission: vi.fn(),
+    });
+    stubWindow({ Notification });
+    return construct;
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('notifies once the deadline passes', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm({ sessionId: 's1', endsAt: 61_000, title: 'Done', body: 'b' });
+    vi.advanceTimersByTime(59_999);
+    expect(construct).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    expect(construct).toHaveBeenCalledWith('Done', { body: 'b' });
+  });
+
+  it('stays silent after a disarm', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm({ sessionId: 's1', endsAt: 61_000, title: 'Done', body: 'b' });
+    await runtime.completion.disarm('s1');
+    vi.advanceTimersByTime(120_000);
+
+    expect(construct).not.toHaveBeenCalled();
+  });
+
+  it('replaces an earlier arm rather than firing twice', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm({ sessionId: 's1', endsAt: 61_000, title: 'Done', body: 'b' });
+    await runtime.completion.arm({ sessionId: 's1', endsAt: 61_000, title: 'Done', body: 'b' });
+    vi.advanceTimersByTime(120_000);
+
+    expect(construct).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a disarm for a different session', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm({ sessionId: 's2', endsAt: 61_000, title: 'Done', body: 'b' });
+    await runtime.completion.disarm('s1');
+    vi.advanceTimersByTime(60_000);
+
+    expect(construct).toHaveBeenCalledTimes(1);
   });
 });

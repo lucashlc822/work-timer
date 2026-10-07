@@ -3,6 +3,7 @@ import {
   unsupportedMiniWindow,
   unsupportedNotifications,
   unsupportedTray,
+  type CompletionPort,
   type NotificationPort,
   type Runtime,
 } from './types';
@@ -53,10 +54,52 @@ const webNotifications = (): NotificationPort => {
   };
 };
 
-export const createWebRuntime = (): Runtime => ({
-  kind: 'web',
-  notifications: webNotifications(),
-  tray: unsupportedTray,
-  miniWindow: unsupportedMiniWindow,
-  autostart: unsupportedAutostart,
-});
+/**
+ * A `setTimeout` to the deadline, then a notification.
+ *
+ * Best-effort by nature: background tabs throttle timers to roughly once a
+ * minute, so a hidden tab's notice can arrive late. The session itself is
+ * unaffected — completion is decided from timestamps, not by this timer.
+ */
+const webCompletion = (notifications: NotificationPort): CompletionPort => {
+  let armed: { sessionId: string; timer: ReturnType<typeof setTimeout> } | null = null;
+
+  const clear = () => {
+    if (armed !== null) clearTimeout(armed.timer);
+    armed = null;
+  };
+
+  return {
+    isSupported: notifications.isSupported,
+
+    arm({ sessionId, endsAt, title, body }) {
+      clear();
+      const timer = setTimeout(
+        () => {
+          armed = null;
+          void notifications.notify({ title, body });
+        },
+        Math.max(0, endsAt - Date.now()),
+      );
+      armed = { sessionId, timer };
+      return Promise.resolve();
+    },
+
+    disarm(sessionId) {
+      if (armed?.sessionId === sessionId) clear();
+      return Promise.resolve();
+    },
+  };
+};
+
+export const createWebRuntime = (): Runtime => {
+  const notifications = webNotifications();
+  return {
+    kind: 'web',
+    notifications,
+    tray: unsupportedTray,
+    miniWindow: unsupportedMiniWindow,
+    autostart: unsupportedAutostart,
+    completion: webCompletion(notifications),
+  };
+};

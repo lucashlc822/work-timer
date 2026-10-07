@@ -97,6 +97,11 @@ in `NOTES.md`.
   `src-tauri/Cargo.toml` vanish mid-checkout, fails to rebuild, and the dev
   process exits 101 with `could not find Cargo.toml`. Not an app crash — stop
   the dev server before switching branches.
+- **WebView2 does not see its own window being hidden or minimised.** Without
+  help, `document.visibilityState` stays `'visible'` in the tray and when
+  minimised, and no `visibilitychange` fires. `src-tauri/src/lib.rs` fixes this
+  by calling the webview's own `hide()`/`show()` (WebView2's `SetIsVisible`)
+  alongside the window's. Any new window that needs visibility must do the same.
 - **CSS custom properties inside SVG gradient stops fail silently to black**
   if they don't resolve. `shared/ui/StarMark` relies on them working; if a
   gradient ever renders black, check that the token is defined on an ancestor

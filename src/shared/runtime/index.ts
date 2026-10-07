@@ -4,6 +4,7 @@ import type { Runtime } from './types';
 
 export type {
   AutostartPort,
+  CompletionPort,
   MiniWindowPort,
   NotificationPort,
   Runtime,

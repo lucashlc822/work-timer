@@ -7,7 +7,14 @@ import {
   sendNotification,
 } from '@tauri-apps/plugin-notification';
 
-import type { AutostartPort, MiniWindowPort, NotificationPort, Runtime, TrayPort } from './types';
+import type {
+  AutostartPort,
+  CompletionPort,
+  MiniWindowPort,
+  NotificationPort,
+  Runtime,
+  TrayPort,
+} from './types';
 
 /**
  * Tauri desktop implementation.
@@ -123,10 +130,34 @@ const desktopAutostart: AutostartPort = {
   },
 };
 
+const desktopCompletion: CompletionPort = {
+  isSupported: true,
+
+  async arm({ sessionId, endsAt, title, body }) {
+    try {
+      // The deadline lives in a Rust thread (src-tauri/src/deadline.rs): it
+      // keeps the tray countdown and fires the notice on time even while
+      // WebView2 is throttling this hidden window.
+      await invoke('arm_deadline', { sessionId, endsAt: Math.round(endsAt), title, body });
+    } catch {
+      /* the in-app result screen still records the completion */
+    }
+  },
+
+  async disarm(sessionId) {
+    try {
+      await invoke('disarm_deadline', { sessionId });
+    } catch {
+      /* nothing armed */
+    }
+  },
+};
+
 export const createDesktopRuntime = (): Runtime => ({
   kind: 'desktop',
   notifications: desktopNotifications,
   tray: desktopTray,
   miniWindow: desktopMiniWindow,
   autostart: desktopAutostart,
+  completion: desktopCompletion,
 });
