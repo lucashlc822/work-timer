@@ -12,12 +12,82 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-06 — M1 merged after a desktop acceptance pass that caught one bug
+
+**Status: merged (PR #8, `91a3ce6`).** All 17 acceptance cases from
+`docs/plans/2026-10-03-m1-timer.md` passed, the desktop ones observed by hand
+on Windows. The per-case results are in the PR #8 description.
+
+### The bug: WebView2 never knew its window was hidden
+
+The first desktop run of the away-time case (O6.17) recorded `awayMs: 0` for
+a 5-minute session spent almost entirely in the tray. A `visibilitychange`
+listener pasted into the webview console logged nothing across close-to-tray
+*or* minimise. That confirmed `document.visibilityState` stays `'visible'`
+whenever the Tauri *window* is hidden or minimised: neither action reaches
+WebView2's controller.
+
+The fix (`adb2694`) is in `src-tauri/src/lib.rs`. Alongside every window
+hide or show, and on every `Resized` event (which is how minimise and restore
+arrive), it also calls the *webview's* own `hide()`/`show()`. That goes down
+to WebView2's `SetIsVisible`, which is what fires `visibilitychange`. It is
+deduplicated with an `AtomicBool`, since `Resized` fires continuously during
+a drag. Two details worth not rediscovering:
+
+- `Manager::get_webview` is gated behind Tauri's `unstable` feature, but
+  `WebviewWindow` implements `AsRef<Webview>`, which gives the same access
+  without the feature.
+- Hiding the webview also lets WebView2 throttle the page, which is what
+  Microsoft recommends for minimised apps. It is safe here only because the
+  session deadline lives in the Rust thread (`deadline.rs`), not in JS timers.
+
+After the fix, the listener logged hidden/visible for both tray and
+minimise, and the re-run recorded `awayMs: 297319` for a session spent ~4m57s
+of 5m in the tray. Now recorded in CLAUDE.md's environment section.
+
+The JS side needed no change. The original design was right; it had just
+never been given a real visibility signal on desktop. One consequence: before
+the fix, the 4×/second repaint loop kept running in the tray for nothing.
+
+### How reloads were verified
+
+A correct resume after F5 looks exactly like F5 doing nothing. The countdown
+just carries on. So "it didn't go back to 1:00" proves nothing on its own.
+The check that settled it, pasted into the webview console right after F5:
+
+    [performance.getEntriesByType('navigation')[0].type, Math.round(performance.now() / 1000) + 's ago']
+
+`'reload'` with a small number proves a real reload happened. Use it for any
+future resume test.
+
+### Open question for M4: should time with the app quit count as away?
+
+The quit-through-deadline run (O1.2) recorded `awayMs: 0` despite the app
+being closed for over two minutes. Away time is only measured while the app
+is running and hidden, so time fully quit is invisible. The plan never said
+which is right. It is a stat only and cannot affect success, so this is a
+stats-design question for M4, not a bug.
+
+The 2026-10-03 entry's "unconfirmed finding" (`awayMs: 51999` in the browser
+pane) remains unconfirmed. Plausibly the pane was hidden from view, but it
+was never isolated.
+
+### Next
+
+- **M2.** Nothing blocks it.
+- Autostart's reboot check, carried over again. The 2026-10-06 restart could
+  not test it: "Launch at startup" was unticked on that machine. Tick it,
+  restart, and see whether the app opens on its own.
+
+---
+
 ## 2026-10-03 — M1 timer built; desktop acceptance still to run
 
 **Status: open PR #8 (`feat/m1-timer`).** Built from
 `docs/plans/2026-10-03-m1-timer.md`. Everything automatable passes, but the
 desktop-only acceptance cases haven't been run yet, so the PR is **not ready
-to merge**.
+to merge**. **(Superseded 2026-10-06 — all 17 cases passed after
+one fix; merged as PR #8. See the entry above.)**
 
 ### Where verification stands
 
@@ -67,7 +137,7 @@ environment fact until O6.17 is run deliberately.
 ### Next
 
 - Run the desktop acceptance cases above and record the results on PR #8.
-  Merge only after they pass.
+  Merge only after they pass. **(Done 2026-10-06.)**
 - Autostart's reboot check, carried over from 2026-09-01.
 
 ---
