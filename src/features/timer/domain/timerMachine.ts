@@ -2,51 +2,89 @@ import { assertEvent, assign, fromPromise, setup } from 'xstate';
 
 import type { Clock } from '@/shared/lib';
 
+import { isBreakOver } from './pomodoro';
 import { resumeVerdict } from './resume';
 import { cancelledEnding, completedEnding, isComplete } from './session';
-import type { ActiveSession, SessionDraft, SessionEnding } from './types';
+import type {
+  ActiveSession,
+  PomodoroRun,
+  RunSummary,
+  SessionDraft,
+  SessionEnding,
+  StartedSession,
+} from './types';
 
 /**
- * The timer's lifecycle: idle -> running -> finished.
+ * The timer's lifecycle: idle -> running -> finished, and for Pomodoro a loop
+ * of running -> onBreak -> breakOver -> running until the run ends.
  *
  * The machine owns *sequencing* only. Every time question ("is it done?",
- * "how much was focused?") is delegated to `session.ts` with the injected
- * clock, and every side effect (persistence, the host's completion deadline)
- * is a named actor or action that the caller provides. The defaults below
- * reject or do nothing, so a machine that was not wired up fails loudly in
- * tests instead of silently writing nowhere.
+ * "is the break over?") is delegated to `session.ts` and `pomodoro.ts` with
+ * the injected clock, and every side effect (persistence, the host's
+ * deadlines) is a named actor or action that the caller provides. The
+ * defaults below reject or do nothing, so a machine that was not wired up
+ * fails loudly in tests instead of silently writing nowhere.
  *
- * `starting`, `completing`, and `cancelling` are transient states that exist
- * only while the corresponding database write is in flight, so the UI can
- * never fire a second START or CANCEL into the gap.
+ * States ending in `-ing` (`starting`, `completing`, `skipping`, ...) are
+ * transient: they exist only while the corresponding database write is in
+ * flight, so the UI can never fire a second START, CANCEL or START_NEXT into
+ * the gap.
+ *
+ * Nothing moves from `breakOver` to `running` without START_NEXT. A block
+ * never starts on its own, so no star can be earned while the user is away.
  */
 
 export interface FinishedResult {
   session: ActiveSession;
   ending: SessionEnding;
+  /** Stars the run kept when this cancelled block ended it; null otherwise. */
+  runBlocksKept: number | null;
 }
 
 export interface TimerContext {
   clock: Clock;
   session: ActiveSession | null;
+  /** The Pomodoro run in flight, or null for a countdown or no run. */
+  run: PomodoroRun | null;
   /** Computed on entry to `completing`/`cancelling`, written by `finishSession`. */
   ending: SessionEnding | null;
+  /** The last finished session: the result screen, or the star on the break screen. */
   result: FinishedResult | null;
+  summary: RunSummary | null;
   error: string | null;
 }
 
 export type TimerEvent =
   | { type: 'START'; draft: SessionDraft }
-  | { type: 'RESUME'; session: ActiveSession }
+  | { type: 'RESUME'; session?: ActiveSession | undefined; run?: PomodoroRun | undefined }
   /** "It might be over now" — sent by repaints, deadlines, and visibility. Guarded, so spurious ones are harmless. */
   | { type: 'TICK_DUE' }
   | { type: 'CANCEL_CONFIRMED' }
-  | { type: 'DISMISS' };
+  | { type: 'DISMISS' }
+  | { type: 'SKIP_BREAK' }
+  | { type: 'START_NEXT' }
+  | { type: 'END_RUN' };
 
 export interface FinishInput {
   id: string;
   ending: SessionEnding;
 }
+
+export interface NextBlockInput {
+  runId: string;
+  tagId: string | null;
+}
+
+export interface SkipBreakInput {
+  runId: string;
+  now: number;
+}
+
+const notWired = (name: string) => () =>
+  Promise.reject(new Error(`timerMachine: ${name} was not provided`));
+
+const onBreakNow = (run: PomodoroRun | null, now: number): run is PomodoroRun =>
+  run?.break != null && !isBreakOver(run.break, now);
 
 export const timerMachine = setup({
   types: {
@@ -55,34 +93,60 @@ export const timerMachine = setup({
     input: {} as { clock: Clock },
   },
   actors: {
-    startSession: fromPromise<ActiveSession, SessionDraft>(() =>
-      Promise.reject(new Error('timerMachine: startSession was not provided')),
-    ),
-    finishSession: fromPromise<void, FinishInput>(() =>
-      Promise.reject(new Error('timerMachine: finishSession was not provided')),
-    ),
+    startSession: fromPromise<StartedSession, SessionDraft>(notWired('startSession')),
+    startNextBlock: fromPromise<StartedSession, NextBlockInput>(notWired('startNextBlock')),
+    /** Resolves to the run as it stands afterwards, or null when there is none. */
+    finishSession: fromPromise<PomodoroRun | null, FinishInput>(notWired('finishSession')),
+    skipBreak: fromPromise<PomodoroRun, SkipBreakInput>(notWired('skipBreak')),
+    endRun: fromPromise<RunSummary, { runId: string }>(notWired('endRun')),
   },
   actions: {
-    /** Tell the host the session ends at its planned end. Replaces any previous arm. */
-    armCompletion: (_, _params: { session: ActiveSession }) => {},
+    /**
+     * Tell the host the session ends at its planned end. Replaces any previous
+     * arm. For a Pomodoro block the host also chains the break after it, so
+     * the break's notice fires on time even if this webview is throttled.
+     */
+    armCompletion: (_, _params: { session: ActiveSession; run: PomodoroRun | null }) => {},
     /** Forget the host deadline. Only on cancel — a completion clears itself. */
     disarmCompletion: (_, _params: { sessionId: string }) => {},
+    /** Tell the host the run's current break ends at its end. Replaces any previous arm. */
+    armBreak: (_, _params: { run: PomodoroRun }) => {},
+    /** Forget the break deadline (skipped or run ended). */
+    disarmBreak: (_, _params: { run: PomodoroRun }) => {},
   },
   guards: {
     resumedComplete: ({ context, event }) => {
       assertEvent(event, 'RESUME');
-      return resumeVerdict(event.session, context.clock.now()).kind === 'completed';
+      return (
+        event.session !== undefined &&
+        resumeVerdict(event.session, context.clock.now()).kind === 'completed'
+      );
+    },
+    resumedSession: ({ event }) => {
+      assertEvent(event, 'RESUME');
+      return event.session !== undefined;
+    },
+    resumedOnBreak: ({ context, event }) => {
+      assertEvent(event, 'RESUME');
+      return onBreakNow(event.run ?? null, context.clock.now());
+    },
+    resumedRun: ({ event }) => {
+      assertEvent(event, 'RESUME');
+      return event.run !== undefined;
     },
     sessionComplete: ({ context }) =>
       context.session !== null && isComplete(context.session, context.clock.now()),
+    breakOver: ({ context }) => !onBreakNow(context.run, context.clock.now()),
   },
 }).createMachine({
   id: 'timer',
   context: ({ input }) => ({
     clock: input.clock,
     session: null,
+    run: null,
     ending: null,
     result: null,
+    summary: null,
     error: null,
   }),
   initial: 'idle',
@@ -94,17 +158,37 @@ export const timerMachine = setup({
           {
             guard: 'resumedComplete',
             target: 'completing',
-            actions: assign({ session: ({ event }) => event.session }),
+            actions: assign({
+              session: ({ event }) => event.session!,
+              run: ({ event }) => event.run ?? null,
+            }),
           },
           {
+            guard: 'resumedSession',
             target: 'running',
             actions: [
-              assign({ session: ({ event }) => event.session }),
+              assign({
+                session: ({ event }) => event.session!,
+                run: ({ event }) => event.run ?? null,
+              }),
               {
                 type: 'armCompletion',
-                params: ({ event }) => ({ session: event.session }),
+                params: ({ event }) => ({ session: event.session!, run: event.run ?? null }),
               },
             ],
+          },
+          {
+            guard: 'resumedOnBreak',
+            target: 'onBreak',
+            actions: [
+              assign({ run: ({ event }) => event.run! }),
+              { type: 'armBreak', params: ({ event }) => ({ run: event.run! }) },
+            ],
+          },
+          {
+            guard: 'resumedRun',
+            target: 'breakOver',
+            actions: assign({ run: ({ event }) => event.run! }),
           },
         ],
       },
@@ -120,10 +204,14 @@ export const timerMachine = setup({
         onDone: {
           target: 'running',
           actions: [
-            assign({ session: ({ event }) => event.output, error: null }),
+            assign({
+              session: ({ event }) => event.output.session,
+              run: ({ event }) => event.output.run,
+              error: null,
+            }),
             {
               type: 'armCompletion',
-              params: ({ event }) => ({ session: event.output }),
+              params: ({ event }) => ({ session: event.output.session, run: event.output.run }),
             },
           ],
         },
@@ -152,7 +240,38 @@ export const timerMachine = setup({
       invoke: {
         src: 'finishSession',
         input: ({ context }) => ({ id: context.session!.id, ending: context.ending! }),
-        onDone: { target: 'finished' },
+        onDone: [
+          // A Pomodoro block: straight into its break, with the new star on show.
+          {
+            guard: ({ context, event }) => onBreakNow(event.output, context.clock.now()),
+            target: 'onBreak',
+            actions: [
+              assign({
+                run: ({ event }) => event.output,
+                result: ({ context }) => ({
+                  session: context.session!,
+                  ending: context.ending!,
+                  runBlocksKept: null,
+                }),
+              }),
+              { type: 'armBreak', params: ({ event }) => ({ run: event.output! }) },
+            ],
+          },
+          // A block whose break had also run out while the app was away.
+          {
+            guard: ({ event }) => event.output !== null,
+            target: 'breakOver',
+            actions: assign({
+              run: ({ event }) => event.output,
+              result: ({ context }) => ({
+                session: context.session!,
+                ending: context.ending!,
+                runBlocksKept: null,
+              }),
+            }),
+          },
+          { target: 'finished' },
+        ],
         // The row is still in flight on disk, so the next launch resumes it and
         // tries again. Show the result regardless — the session *did* end.
         onError: {
@@ -179,12 +298,114 @@ export const timerMachine = setup({
 
     finished: {
       entry: assign({
-        result: ({ context }) => ({ session: context.session!, ending: context.ending! }),
+        result: ({ context }) => ({
+          session: context.session!,
+          ending: context.ending!,
+          runBlocksKept:
+            context.session!.runId !== null && context.ending!.outcome === 'cancelled'
+              ? (context.run?.blocksDone ?? 0)
+              : null,
+        }),
+        run: null,
       }),
       on: {
         DISMISS: {
           target: 'idle',
           actions: assign({ session: null, ending: null, result: null, error: null }),
+        },
+      },
+    },
+
+    onBreak: {
+      on: {
+        TICK_DUE: { guard: 'breakOver', target: 'breakOver' },
+        SKIP_BREAK: {
+          target: 'skipping',
+          actions: { type: 'disarmBreak', params: ({ context }) => ({ run: context.run! }) },
+        },
+        END_RUN: {
+          target: 'endingRun',
+          actions: { type: 'disarmBreak', params: ({ context }) => ({ run: context.run! }) },
+        },
+      },
+    },
+
+    skipping: {
+      invoke: {
+        src: 'skipBreak',
+        input: ({ context }) => ({ runId: context.run!.id, now: context.clock.now() }),
+        onDone: { target: 'breakOver', actions: assign({ run: ({ event }) => event.output }) },
+        // Still on disk as a running break, so a reload shows the break again.
+        onError: {
+          target: 'breakOver',
+          actions: assign({ error: 'Skipping the break could not be saved.' }),
+        },
+      },
+    },
+
+    breakOver: {
+      on: {
+        START_NEXT: { target: 'startingNext' },
+        END_RUN: { target: 'endingRun' },
+      },
+    },
+
+    startingNext: {
+      invoke: {
+        src: 'startNextBlock',
+        input: ({ context }) => ({
+          runId: context.run!.id,
+          tagId: context.result?.session.tagId ?? null,
+        }),
+        onDone: {
+          target: 'running',
+          actions: [
+            assign({
+              session: ({ event }) => event.output.session,
+              run: ({ event }) => event.output.run,
+              ending: null,
+              result: null,
+              error: null,
+            }),
+            {
+              type: 'armCompletion',
+              params: ({ event }) => ({ session: event.output.session, run: event.output.run }),
+            },
+          ],
+        },
+        onError: {
+          target: 'breakOver',
+          actions: assign({ error: 'The next block could not be started.' }),
+        },
+      },
+    },
+
+    endingRun: {
+      invoke: {
+        src: 'endRun',
+        input: ({ context }) => ({ runId: context.run!.id }),
+        onDone: {
+          target: 'runSummary',
+          actions: assign({ summary: ({ event }) => event.output, run: null, error: null }),
+        },
+        onError: {
+          target: 'breakOver',
+          actions: assign({ error: 'The run could not be ended.' }),
+        },
+      },
+    },
+
+    runSummary: {
+      on: {
+        DISMISS: {
+          target: 'idle',
+          actions: assign({
+            session: null,
+            ending: null,
+            result: null,
+            summary: null,
+            error: null,
+          }),
         },
       },
     },

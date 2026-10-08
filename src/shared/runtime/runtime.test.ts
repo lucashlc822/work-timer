@@ -209,4 +209,65 @@ describe('web completion', () => {
 
     expect(construct).toHaveBeenCalledTimes(1);
   });
+
+  const chained = {
+    sessionId: 's1',
+    endsAt: 61_000,
+    title: 'Done',
+    body: 'block',
+    then: { sessionId: 'break:r:1', endsAt: 121_000, title: 'Done', body: 'break', label: 'Break' },
+  };
+
+  it('fires a chained notice after the first, with no second arm', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm(chained);
+    vi.advanceTimersByTime(60_000);
+    expect(construct).toHaveBeenLastCalledWith('Done', { body: 'block' });
+
+    vi.advanceTimersByTime(60_000);
+    expect(construct).toHaveBeenLastCalledWith('Done', { body: 'break' });
+    expect(construct).toHaveBeenCalledTimes(2);
+  });
+
+  it('disarms the chained notice by its own id once the first has fired', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm(chained);
+    vi.advanceTimersByTime(60_000);
+    await runtime.completion.disarm('break:r:1');
+    vi.advanceTimersByTime(120_000);
+
+    expect(construct).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-arming the chained notice before the first fires keeps both notices', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm(chained);
+    vi.advanceTimersByTime(59_000);
+    await runtime.completion.arm(chained.then);
+    vi.advanceTimersByTime(120_000);
+
+    expect(construct).toHaveBeenCalledTimes(2);
+    expect(construct).toHaveBeenNthCalledWith(1, 'Done', { body: 'block' });
+  });
+
+  it('cancelling before the first fires drops the chain too', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const runtime = await getRuntime();
+
+    await runtime.completion.arm(chained);
+    await runtime.completion.disarm('s1');
+    vi.advanceTimersByTime(300_000);
+
+    expect(construct).not.toHaveBeenCalled();
+  });
 });

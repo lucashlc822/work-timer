@@ -9,6 +9,7 @@ import {
 
 import type {
   AutostartPort,
+  CompletionNotice,
   CompletionPort,
   MiniWindowPort,
   NotificationPort,
@@ -133,12 +134,16 @@ const desktopAutostart: AutostartPort = {
 const desktopCompletion: CompletionPort = {
   isSupported: true,
 
-  async arm({ sessionId, endsAt, title, body }) {
+  async arm({ then, ...first }) {
     try {
       // The deadline lives in a Rust thread (src-tauri/src/deadline.rs): it
       // keeps the tray countdown and fires the notice on time even while
-      // WebView2 is throttling this hidden window.
-      await invoke('arm_deadline', { sessionId, endsAt: Math.round(endsAt), title, body });
+      // WebView2 is throttling this hidden window. Each stage is a
+      // `deadline::Stage`, so its keys are the camelCase of that struct.
+      const stage = (n: CompletionNotice) => ({ ...n, endsAt: Math.round(n.endsAt) });
+      await invoke('arm_deadline', {
+        stages: then === undefined ? [stage(first)] : [stage(first), stage(then)],
+      });
     } catch {
       /* the in-app result screen still records the completion */
     }

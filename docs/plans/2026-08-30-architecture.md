@@ -155,6 +155,7 @@ JS was frozen and could not measure it live.
   the session. Same code path, different policy — exposed as a user setting with
   a per-platform default.
 - **Pomodoro breaks are exempt.** Leaving during a break is expected behavior.
+  *(Moot since abandonment was removed on 2026-08-31.)*
 
 The in-flight session is written to IndexedDB on every state transition, so a
 crash or reload resumes correctly rather than losing the block.
@@ -170,7 +171,9 @@ sessions          id uuid (client-generated), user_id, mode, planned_duration_s,
                   actual_focus_s, started_at, ended_at,
                   outcome ('completed'|'abandoned'|'cancelled'),
                   tag_id, seed, star_variant_id, device, client_created_at
-session_phases    id, session_id, kind ('work'|'short_break'|'long_break'),
+session_phases    -- NOT BUILT: superseded by M3 (docs/plans/2026-10-07-m3-pomodoro.md).
+                  -- Blocks are sessions with run_id/run_index; breaks aren't stored.
+                  id, session_id, kind ('work'|'short_break'|'long_break'),
                   index, started_at, ended_at, outcome        -- Pomodoro only
 tags              id, user_id, name, color, icon, archived_at -- soft delete, so
                                                                  old sessions keep
@@ -218,7 +221,7 @@ Each milestone is its own branch and PR, with its own acceptance pass.
 | **M0** | Foundation | Vite/TS/React skeleton, design tokens, feature-sliced layout, Dexie schema v1, CI filled in, deployed to Cloudflare Pages. **An installable empty PWA on iPhone and Windows.** |
 | **M1** | The timer | XState machine, timestamp-based truth, countdown mode, visibility/abandonment with grace, resume-after-reload. **A correct timer, deliberately ugly.** |
 | **M2** | The sky | Seeded generator, Canvas starfield, SVG constellation, session → star. **It becomes beautiful and rewarding.** |
-| **M3** | Pomodoro | Phase machine, break-exempt abandonment semantics |
+| **M3** | Pomodoro | Phase machine, break-exempt abandonment semantics. *Built as `docs/plans/2026-10-07-m3-pomodoro.md`: blocks are sessions, breaks are derived.* |
 | **M4** | Tags + stats | Tagging, dashboard charts |
 | **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim |
 | **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals |

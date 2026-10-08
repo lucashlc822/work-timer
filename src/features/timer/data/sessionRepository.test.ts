@@ -24,14 +24,14 @@ afterEach(async () => {
 });
 
 const START = 1_700_000_000_000;
-const draft = { plannedDurationS: 1500, tagId: null };
+const draft = { mode: 'countdown' as const, plannedDurationS: 1500, tagId: null };
 const ctx = () => ({ clock: createTestClock(START), device: 'desktop/app' });
 
 describe('startSession', () => {
   it('writes an in-flight row and points activeSessionId at it', async () => {
     const db = withDb();
 
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
 
     expect(session.startedAt).toBe(START);
     expect(await readMeta(db, META_KEYS.activeSessionId)).toBe(session.id);
@@ -44,6 +44,9 @@ describe('startSession', () => {
       awayMs: 0,
       device: 'desktop/app',
     });
+    // O7.23: a countdown is not part of any run.
+    expect(row).not.toHaveProperty('runId');
+    expect(row).not.toHaveProperty('runIndex');
   });
 
   // O3.11
@@ -59,7 +62,7 @@ describe('startSession', () => {
     const db = withDb();
     await writeMeta(db, META_KEYS.activeSessionId, 'no-such-session');
 
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
 
     expect(await readMeta(db, META_KEYS.activeSessionId)).toBe(session.id);
   });
@@ -68,7 +71,7 @@ describe('startSession', () => {
 describe('finishSession', () => {
   it('writes the ending and clears the active pointer', async () => {
     const db = withDb();
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
 
     await finishSession(db, session.id, {
       outcome: 'cancelled',
@@ -87,7 +90,7 @@ describe('finishSession', () => {
   // O3.10
   it('is a no-op the second time, leaving the row unchanged', async () => {
     const db = withDb();
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
     const first = { outcome: 'completed' as const, endedAt: START + 1_500_000, actualFocusS: 1500 };
 
     await finishSession(db, session.id, first);
@@ -105,9 +108,9 @@ describe('finishSession', () => {
 
   it('does not clear a pointer that belongs to a different session', async () => {
     const db = withDb();
-    const finished = await startSession(db, draft, ctx());
+    const { session: finished } = await startSession(db, draft, ctx());
     await finishSession(db, finished.id, { outcome: 'cancelled', endedAt: START, actualFocusS: 0 });
-    const current = await startSession(db, draft, ctx());
+    const { session: current } = await startSession(db, draft, ctx());
 
     await finishSession(db, finished.id, { outcome: 'cancelled', endedAt: START, actualFocusS: 0 });
 
@@ -118,7 +121,7 @@ describe('finishSession', () => {
 describe('loading the active session', () => {
   it('returns the in-flight session', async () => {
     const db = withDb();
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
 
     expect(await loadActiveSession(db)).toEqual(session);
     expect(await peekActiveSession(db)).toEqual(session);
@@ -141,7 +144,7 @@ describe('loading the active session', () => {
 describe('addAwayTime', () => {
   it('accumulates away time on an in-flight session', async () => {
     const db = withDb();
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
 
     await addAwayTime(db, session.id, 20_000);
     await addAwayTime(db, session.id, 10_000);
@@ -151,7 +154,7 @@ describe('addAwayTime', () => {
 
   it('never touches a finished session', async () => {
     const db = withDb();
-    const session = await startSession(db, draft, ctx());
+    const { session } = await startSession(db, draft, ctx());
     await finishSession(db, session.id, {
       outcome: 'completed',
       endedAt: START + 1_500_000,

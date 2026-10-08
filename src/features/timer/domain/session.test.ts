@@ -20,6 +20,9 @@ const START = 1_700_000_000_000;
 
 const aSession = (overrides: Partial<ActiveSession> = {}): ActiveSession => ({
   id: 'session-1',
+  mode: 'countdown',
+  runId: null,
+  runIndex: null,
   startedAt: START,
   plannedDurationS: 1500,
   seed: 'abcdef0123456789',
