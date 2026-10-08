@@ -12,6 +12,50 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-08 — M3 desktop pass done and merged; two dev-loop gotchas
+
+**Status: merged (PR #13 as `b4af186`; notes in PRs #14 and #15).** Lucas
+ran the six desktop-only M3 cases by hand with `npm run tauri:dev`; all
+passed, results are on PR #13. The 2026-10-07 entry below has the design.
+
+### The desktop database now holds Pomodoro test runs
+
+The hand run wrote real rows to the desktop app's IndexedDB: several
+`mode: 'pomodoro'` sessions with 1-minute blocks (dev lengths), one cancelled
+block, and the saved Pomodoro settings (1 / 1 / 2 min, long break every 2)
+in `meta`. Together with the M2 seed data noted on 2026-10-07, that sky is
+not a real history. If a clean desktop sky matters before real use, clear
+them — still not done.
+
+### Things worth not rediscovering
+
+- **Stopping a background `npm run tauri:dev` does not stop its children.**
+  Killing the npm process left `target\debug\starkeep.exe` and Vite
+  (`node …\vite\bin\vite.js`) running, with Vite still holding port 5173 —
+  which would blank the next `tauri:dev` window (CLAUDE.md: strictPort).
+  Check with `netstat -ano | grep ":5173 "` and stop the listed processes
+  before relaunching or switching branches. Now also in CLAUDE.md.
+- **Claude's Terminal panel can't run commands on this machine yet.** The
+  pwsh shell comes up, but Claude's shell integration fails to load
+  (`claude-desktop.ps1` not found under
+  `AppData\Roaming\Claude\terminal-shell-integration\pwsh\`), so
+  `run_in_terminal` never sees a prompt and gives up after 60 s. Long-running
+  commands were run as background processes instead. Likely an app install
+  issue, not a repo one.
+- **A tray Quit shows up as a clean exit** (code 0) plus a WebView2 line,
+  `Failed to unregister class Chrome_WidgetWin_0. Error = 1412`. That line
+  is routine shutdown noise, not a crash.
+
+### Next
+
+- **M4, tags and stats.** Questions for its plan, carried from earlier
+  entries: should time with the app fully quit count as away (2026-10-06),
+  and should `runId` get an index once stats query by run (M3 plan)?
+- Autostart's reboot check, still carried over.
+- Optionally, clear the test data from the desktop store (see above).
+
+---
+
 ## 2026-10-07 — M3 Pomodoro built; desktop acceptance still to run
 
 **Status: open PR #13 (`feat/m3-pomodoro`).** Planned and built in one
