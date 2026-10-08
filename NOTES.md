@@ -12,6 +12,85 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-07 — M3 Pomodoro built; desktop acceptance still to run
+
+**Status: open PR #13 (`feat/m3-pomodoro`).** Planned and built in one
+session from `docs/plans/2026-10-07-m3-pomodoro.md`. 18 of the 24 acceptance
+cases pass, either in the browser build or as unit tests. Six need the desktop
+app and have not been run, and by the norms they block the merge. Per-case
+results are in the PR #13 description.
+
+### Product decisions, made with Lucas while planning
+
+- **One star per completed focus block.** This settles the question the M2
+  entry left open.
+- **The next block waits for a click.** Focus → break is automatic, but
+  break → focus never is. That way no star can be earned while away.
+- **Fully custom lengths**: focus, short break, long break, and blocks per
+  long break, remembered in `meta`. One-minute lengths exist only in dev
+  builds and are labelled "(dev)".
+
+### The design choice that matters most: a block is just a session
+
+A focus block is an ordinary `SessionRow` with `mode: 'pomodoro'` plus two
+optional, unindexed fields, `runId` and `runIndex`. That means no Dexie
+version bump and no rewrite of any completed row. Breaks are not history. The
+only break state is the in-flight run in `meta.activeRun`, deleted when the
+run ends. Whether a break is over is derived from `break.startedAt +
+durationS`, never stored. Skip break works by shortening `durationS` to
+"now", which keeps it derived.
+
+The architecture doc's `session_phases` table is therefore **not built**.
+CLAUDE.md's decisions section and the architecture doc both say so now. The
+sky needed zero changes: blocks are sessions, so they fill constellations,
+and the "won't count toward…" hint works per block.
+
+### Things worth not rediscovering
+
+- **A block's break starts at the block's planned end**, in the same
+  transaction that completes it (`finishSession` in
+  `src/features/timer/data/sessionRepository.ts`). Quitting through a block
+  and its break therefore resumes straight to "Break's over".
+- **The host deadline chains the break.** `CompletionPort.arm` takes an
+  optional `then` notice, and the Rust thread (`src-tauri/src/deadline.rs`)
+  runs it as a second stage. The break's tray countdown and notice then need
+  nothing from a possibly throttled webview.
+- **A race caught while building:** the webview re-arms the break when it
+  sees a block complete. If it got there before the Rust thread fired the
+  block's own "Focus block done" notice, the generation bump would have
+  silently dropped that notice. Fix: **re-arming a notice the host already
+  holds is a no-op**, in Rust (`Armed::already_holds`) and in the web port.
+  Keep that rule if the port changes.
+- **The tray label** is `Break · N min left` during a break, from the new
+  optional `label` on the notice. Focus time stays plain `N min left`.
+- **Claude's browser pane counts as hidden** while it is not on screen, so
+  blocks run there record large `awayMs` values. That is the app reading
+  visibility correctly, not a bug.
+- **Vite's dev server reloads the page when source files change mid-test.**
+  It wiped a page-side helper once during the acceptance run. Harmless, and
+  it doubled as a free resume test.
+
+### Test data in the browser build
+
+To check the "too short" warning (case 5), the M2 helper
+`window.__starkeep.seed` added fake completed sessions to the **browser
+build's** IndexedDB, at origin `http://localhost:5173`, to unlock a Hard
+constellation. The desktop store is a different origin and was not touched.
+
+### Next
+
+- **Run cases 15, 18, 19, 20, 22 and the desktop half of 21 by hand** with
+  `npm run tauri:dev`:
+  - 15: quit through a block and its break, then relaunch.
+  - 18: a break spent in the tray adds no away time.
+  - 19 and 20: block-end and break-end notifications, and the tray text.
+  - 21: no notice fires after skipping a break or ending the run.
+  - 22: the mini window shows the break.
+  Record the results on PR #13, then merge if they pass.
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-07 — M2 merged: the sky, with chosen and tiered constellations
 
 **Status: merged (PR #11, `0d1ab46`).** Built from
@@ -84,7 +163,8 @@ matters before real use, clear them — not done yet.
 ### Next
 
 - **M3, Pomodoro.** Open question for its plan: does a Pomodoro session make
-  one star, or one per work phase? It changes how stars fill constellations.
+  one star, or one per work phase? It changes how stars fill constellations. **(Done 2026-10-07 — one star per
+  block; built as open PR #13, see the entry above.)**
 - Autostart's reboot check, still carried over.
 - Optionally, a dev helper to clear `dev/seed` sessions and test choices
   from the desktop sky.
