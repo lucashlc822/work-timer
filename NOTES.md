@@ -18,7 +18,10 @@ Once this file passes ~1,000 lines, archive older entries to
 session from `docs/plans/2026-10-07-m3-pomodoro.md`. 18 of the 24 acceptance
 cases pass, either in the browser build or as unit tests. Six need the desktop
 app and have not been run, and by the norms they block the merge. Per-case
-results are in the PR #13 description.
+results are in the PR #13 description. **(Superseded 2026-10-08 — the six
+desktop cases passed, observed by hand by Lucas with `npm run tauri:dev`;
+PR #13 merged as `b4af186`, all 24 cases passed. Next milestone: M4, tags and
+stats.)**
 
 ### Product decisions, made with Lucas while planning
 
@@ -86,7 +89,10 @@ constellation. The desktop store is a different origin and was not touched.
   - 19 and 20: block-end and break-end notifications, and the tray text.
   - 21: no notice fires after skipping a break or ending the run.
   - 22: the mini window shows the break.
-  Record the results on PR #13, then merge if they pass.
+  Record the results on PR #13, then merge if they pass. **(Done
+  2026-10-08 — all six passed and were recorded on PR #13, which merged as
+  `b4af186`. Not covered: a packaged `tauri build`, and End run during an
+  armed break on desktop, which shares Skip break's disarm path.)**
 - Autostart's reboot check, still carried over.
 
 ---
