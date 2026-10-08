@@ -2,7 +2,14 @@ import { clearMeta, META_KEYS, readMeta, writeMeta } from '@/shared/db';
 import type { SessionRow, WorkTimerDb } from '@/shared/db';
 import { newId, newSeed, type Clock } from '@/shared/lib';
 
-import type { ActiveSession, SessionDraft, SessionEnding } from '../domain/types';
+import { breakFor } from '../domain/pomodoro';
+import type {
+  ActiveSession,
+  PomodoroRun,
+  SessionDraft,
+  SessionEnding,
+  StartedSession,
+} from '../domain/types';
 
 /**
  * Persistence for the timer.
@@ -12,6 +19,10 @@ import type { ActiveSession, SessionDraft, SessionEnding } from '../domain/types
  * Every write that changes whether a session is in flight updates the row and
  * the pointer in one transaction, so the two can never disagree after a crash
  * between them.
+ *
+ * Pomodoro (M3) adds a second pointer, `META_KEYS.activeRun`, written in the
+ * same transactions: a block's completion and the start of the break after it
+ * land together, or not at all.
  */
 
 export interface StartContext {
@@ -30,8 +41,21 @@ export class ActiveSessionExistsError extends Error {
   }
 }
 
+export class ActiveRunExistsError extends Error {
+  readonly runId: string;
+
+  constructor(runId: string) {
+    super(`A Pomodoro run is already in progress (${runId}).`);
+    this.runId = runId;
+    this.name = 'ActiveRunExistsError';
+  }
+}
+
 const toActive = (row: SessionRow): ActiveSession => ({
   id: row.id,
+  mode: row.mode,
+  runId: row.runId ?? null,
+  runIndex: row.runIndex ?? null,
   startedAt: row.startedAt,
   plannedDurationS: row.plannedDurationS,
   seed: row.seed,
@@ -40,47 +64,97 @@ const toActive = (row: SessionRow): ActiveSession => ({
   awayMs: row.awayMs,
 });
 
-const isInFlight = (row: SessionRow | undefined): row is SessionRow =>
+export const isInFlight = (row: SessionRow | undefined): row is SessionRow =>
   row !== undefined && row.endedAt === null;
 
+/** The in-flight session the pointer names, or undefined (dangling counts as none). */
+export const readInFlight = async (db: WorkTimerDb): Promise<SessionRow | undefined> => {
+  const activeId = await readMeta<string>(db, META_KEYS.activeSessionId);
+  if (activeId === undefined) return undefined;
+  const row = await db.sessions.get(activeId);
+  return isInFlight(row) ? row : undefined;
+};
+
 /**
- * Create a session and make it the active one.
+ * Write a new in-flight row and point `activeSessionId` at it. Callers must
+ * already be inside a `sessions` + `meta` transaction and have checked that
+ * nothing else is in flight.
+ */
+export const addInFlightSession = async (
+  db: WorkTimerDb,
+  fields: Pick<SessionRow, 'plannedDurationS' | 'tagId'> &
+    ({ mode: 'countdown' } | { mode: 'pomodoro'; runId: string; runIndex: number }),
+  ctx: StartContext,
+): Promise<ActiveSession> => {
+  const now = ctx.clock.now();
+  const row: SessionRow = {
+    id: newId(),
+    actualFocusS: 0,
+    startedAt: now,
+    endedAt: null,
+    outcome: null,
+    awayMs: 0,
+    seed: newSeed(),
+    device: ctx.device,
+    clientCreatedAt: now,
+    syncedAt: null,
+    ...fields,
+  };
+  await db.sessions.add(row);
+  await writeMeta(db, META_KEYS.activeSessionId, row.id);
+  return toActive(row);
+};
+
+/**
+ * Create a session and make it the active one. A Pomodoro draft also creates
+ * the run, and the session is its first block.
  *
  * Rejects with `ActiveSessionExistsError` if a session is already in flight,
- * rather than silently starting a second. A dangling pointer (to a missing or
+ * or `ActiveRunExistsError` if a run is (even between blocks), rather than
+ * silently starting a second. A dangling pointer (to a missing or
  * already-finished row) does not count as active.
  */
 export const startSession = (
   db: WorkTimerDb,
   draft: SessionDraft,
   ctx: StartContext,
-): Promise<ActiveSession> =>
+): Promise<StartedSession> =>
   db.transaction('rw', db.sessions, db.meta, async () => {
-    const activeId = await readMeta<string>(db, META_KEYS.activeSessionId);
-    if (activeId !== undefined && isInFlight(await db.sessions.get(activeId))) {
-      throw new ActiveSessionExistsError(activeId);
+    const active = await readInFlight(db);
+    if (active !== undefined) throw new ActiveSessionExistsError(active.id);
+
+    if (draft.mode === 'countdown') {
+      const session = await addInFlightSession(
+        db,
+        { mode: 'countdown', plannedDurationS: draft.plannedDurationS, tagId: draft.tagId },
+        ctx,
+      );
+      return { session, run: null };
     }
 
-    const now = ctx.clock.now();
-    const row: SessionRow = {
-      id: newId(),
-      mode: 'countdown',
-      plannedDurationS: draft.plannedDurationS,
-      actualFocusS: 0,
-      startedAt: now,
-      endedAt: null,
-      outcome: null,
-      awayMs: 0,
-      tagId: draft.tagId,
-      seed: newSeed(),
-      device: ctx.device,
-      clientCreatedAt: now,
-      syncedAt: null,
-    };
+    const existing = await readMeta<PomodoroRun>(db, META_KEYS.activeRun);
+    if (existing !== undefined) throw new ActiveRunExistsError(existing.id);
 
-    await db.sessions.add(row);
-    await writeMeta(db, META_KEYS.activeSessionId, row.id);
-    return toActive(row);
+    const run: PomodoroRun = {
+      id: newId(),
+      startedAt: ctx.clock.now(),
+      settings: { ...draft.settings },
+      blocksDone: 0,
+      break: null,
+    };
+    await writeMeta(db, META_KEYS.activeRun, run);
+    const session = await addInFlightSession(
+      db,
+      {
+        mode: 'pomodoro',
+        plannedDurationS: run.settings.focusS,
+        tagId: draft.tagId,
+        runId: run.id,
+        runIndex: 1,
+      },
+      ctx,
+    );
+    return { session, run };
   });
 
 /**
@@ -113,13 +187,25 @@ export const loadActiveSession = (db: WorkTimerDb): Promise<ActiveSession | unde
 /**
  * Write a session's final fields and clear the active pointer.
  *
+ * For a Pomodoro block, the run moves on in the same transaction: a completed
+ * block bumps `blocksDone` and starts the break at the block's `endedAt`; a
+ * cancelled block ends the run. Resolves to the run as it now stands, or null
+ * when there is none (a countdown, or a run that just ended).
+ *
  * Idempotent: finishing a session that is already finished (or missing) leaves
- * the row untouched. That is what makes "reload twice after completing while
- * away" safe — both reloads resume, both try to finish, one write lands.
+ * the row *and the run* untouched. That is what makes "reload twice after
+ * completing while away" safe — both reloads resume, both try to finish, one
+ * write lands.
  */
-export const finishSession = (db: WorkTimerDb, id: string, end: SessionEnding): Promise<void> =>
+export const finishSession = (
+  db: WorkTimerDb,
+  id: string,
+  end: SessionEnding,
+): Promise<PomodoroRun | null> =>
   db.transaction('rw', db.sessions, db.meta, async () => {
     const row = await db.sessions.get(id);
+    let run = (await readMeta<PomodoroRun>(db, META_KEYS.activeRun)) ?? null;
+    const ownsRun = run !== null && row?.runId === run.id;
 
     if (isInFlight(row)) {
       await db.sessions.update(id, {
@@ -127,11 +213,24 @@ export const finishSession = (db: WorkTimerDb, id: string, end: SessionEnding): 
         endedAt: end.endedAt,
         actualFocusS: end.actualFocusS,
       });
+
+      if (run !== null && ownsRun) {
+        if (end.outcome === 'completed') {
+          const blocksDone = run.blocksDone + 1;
+          run = { ...run, blocksDone, break: breakFor(blocksDone, run.settings, end.endedAt) };
+          await writeMeta(db, META_KEYS.activeRun, run);
+        } else {
+          await clearMeta(db, META_KEYS.activeRun);
+          run = null;
+        }
+      }
     }
 
     if ((await readMeta<string>(db, META_KEYS.activeSessionId)) === id) {
       await clearMeta(db, META_KEYS.activeSessionId);
     }
+
+    return ownsRun ? run : null;
   });
 
 /**

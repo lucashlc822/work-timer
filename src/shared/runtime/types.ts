@@ -67,10 +67,29 @@ export interface AutostartPort {
  * The JS timer still decides *that* a session completed (via `resumeVerdict`)
  * — this port only covers the notice and the tray countdown.
  */
+export interface CompletionNotice {
+  /** Identifies the arm for `disarm`. Any unique string — a session id, or a break's id. */
+  sessionId: string;
+  /** Epoch ms. */
+  endsAt: number;
+  title: string;
+  body: string;
+  /** Shown before the tray countdown, e.g. "Break · 4 min left". Omitted: "4 min left". */
+  label?: string;
+}
+
 export interface CompletionPort {
   isSupported: boolean;
-  /** Tell the host a session ends at `endsAt` (epoch ms). Replaces any previous arm. */
-  arm(options: { sessionId: string; endsAt: number; title: string; body: string }): Promise<void>;
+  /**
+   * Tell the host a deadline is at `endsAt`. Replaces any previous arm.
+   *
+   * `then` chains a second deadline that the host arms by itself the moment
+   * the first fires — used for the break after a Pomodoro block, so the
+   * break's countdown and notice need nothing from a webview that may be
+   * throttled at that moment. After the first fires, `disarm` takes the
+   * chained notice's `sessionId`.
+   */
+  arm(options: CompletionNotice & { then?: CompletionNotice }): Promise<void>;
   /** Forget the deadline: no notice, tray back to the plain name. Idempotent. */
   disarm(sessionId: string): Promise<void>;
 }

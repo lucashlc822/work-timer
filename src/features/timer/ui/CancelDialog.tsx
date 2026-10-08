@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react';
 interface Props {
   /** e.g. "12 minutes" — what will be credited if the user confirms. */
   focusedSoFar: string;
+  /** For a Pomodoro block: stars the run has already earned, which it keeps. Null otherwise. */
+  runStarsKept?: number | null;
   onKeepGoing: () => void;
   onConfirm: () => void;
 }
@@ -14,7 +16,12 @@ interface Props {
  * choice must be the easy one, and ending a session should take a deliberate
  * second click.
  */
-export const CancelDialog = ({ focusedSoFar, onKeepGoing, onConfirm }: Props) => {
+export const CancelDialog = ({
+  focusedSoFar,
+  runStarsKept = null,
+  onKeepGoing,
+  onConfirm,
+}: Props) => {
   const keepGoingRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -41,6 +48,8 @@ export const CancelDialog = ({ focusedSoFar, onKeepGoing, onConfirm }: Props) =>
         <p id="cancel-body" className="text-ink-secondary text-sm">
           It will be saved as ended early, with the {focusedSoFar} you have focused so far. It
           won&rsquo;t become a star.
+          {runStarsKept !== null &&
+            ` This also ends the Pomodoro run; its ${runStarsKept} ${runStarsKept === 1 ? 'star stays' : 'stars stay'}.`}
         </p>
         <div className="flex flex-col gap-2">
           <button

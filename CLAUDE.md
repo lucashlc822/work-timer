@@ -154,6 +154,14 @@ rejected). Don't pre-populate this with guesses.
   and no abandonment policy; don't reintroduce them.
 - **Time spent away is still recorded, but only as a stat.** `SessionRow.awayMs`
   is informational and must never affect whether a session succeeds.
+- **Pomodoro focus blocks are ordinary sessions** (M3, 2026-10-07). One
+  completed block = one star; each block is a `SessionRow` with
+  `mode: 'pomodoro'`, `runId` and `runIndex`. Breaks are not stored as history
+  and there is no `session_phases` table — the only break state is the
+  in-flight run in `meta`, deleted when the run ends. Ending a block early
+  cancels that block and ends the run; earlier blocks keep their stars.
+- **The next Pomodoro block never starts without a click.** Focus → break is
+  automatic; break → focus is not, so no star can be earned while away.
 
 ## Plans include acceptance tests
 

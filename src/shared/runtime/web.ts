@@ -3,6 +3,7 @@ import {
   unsupportedMiniWindow,
   unsupportedNotifications,
   unsupportedTray,
+  type CompletionNotice,
   type CompletionPort,
   type NotificationPort,
   type Runtime,
@@ -63,25 +64,39 @@ const webNotifications = (): NotificationPort => {
  */
 const webCompletion = (notifications: NotificationPort): CompletionPort => {
   let armed: { sessionId: string; timer: ReturnType<typeof setTimeout> } | null = null;
+  /** Every notice of the current arm, so an identical re-arm can be ignored. */
+  let chain: CompletionNotice[] = [];
 
   const clear = () => {
     if (armed !== null) clearTimeout(armed.timer);
     armed = null;
   };
 
+  const holds = (n: CompletionNotice) =>
+    armed !== null && chain.some((c) => c.sessionId === n.sessionId && c.endsAt === n.endsAt);
+
   return {
     isSupported: notifications.isSupported,
 
-    arm({ sessionId, endsAt, title, body }) {
-      clear();
-      const timer = setTimeout(
-        () => {
-          armed = null;
-          void notifications.notify({ title, body });
-        },
-        Math.max(0, endsAt - Date.now()),
-      );
-      armed = { sessionId, timer };
+    arm({ then, ...first }) {
+      // Same rule as the desktop host: re-arming a notice already in this
+      // chain changes nothing, so it cannot cut off the one before it.
+      if (then === undefined && holds(first)) return Promise.resolve();
+
+      const schedule = (notice: CompletionNotice, next?: CompletionNotice) => {
+        clear();
+        const timer = setTimeout(
+          () => {
+            armed = null;
+            void notifications.notify({ title: notice.title, body: notice.body });
+            if (next !== undefined) schedule(next);
+          },
+          Math.max(0, notice.endsAt - Date.now()),
+        );
+        armed = { sessionId: notice.sessionId, timer };
+      };
+      chain = then === undefined ? [first] : [first, then];
+      schedule(first, then);
       return Promise.resolve();
     },
 

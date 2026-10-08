@@ -82,7 +82,7 @@ export const DurationPicker = ({ minutes, onChange, disabled = false }: Props) =
   );
 };
 
-const Pill = ({
+export const Pill = ({
   selected,
   disabled,
   onClick,

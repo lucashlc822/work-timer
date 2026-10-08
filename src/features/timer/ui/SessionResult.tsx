@@ -58,6 +58,12 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
         </p>
       </div>
 
+      {result.runBlocksKept !== null && (
+        <p className="text-ink-secondary text-sm">
+          Run ended — {result.runBlocksKept} {result.runBlocksKept === 1 ? 'star' : 'stars'} kept
+        </p>
+      )}
+
       {slots.resultNote?.(info)}
 
       {error !== null && <p className="text-faded text-xs">{error}</p>}

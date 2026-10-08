@@ -65,6 +65,54 @@ export interface SessionRow {
   clientCreatedAt: number;
   /** Epoch ms of last successful upload; null means the outbox still owns it. */
   syncedAt: number | null;
+  /**
+   * Pomodoro only (M3): the run this focus block belongs to. Absent on
+   * countdown sessions and on every row written before M3 — optional rather
+   * than nullable so that no completed row ever has to be rewritten, and
+   * unindexed so it needs no schema version.
+   */
+  runId?: string;
+  /** Pomodoro only: 1-based position of this block in its run. */
+  runIndex?: number;
+}
+
+/**
+ * Pomodoro lengths (M3). All durations in seconds.
+ *
+ * Stored twice: once as the user's saved preference, and once as a snapshot on
+ * each run, so editing the preference never changes a run already under way.
+ */
+export interface PomodoroSettingsRow {
+  focusS: number;
+  shortBreakS: number;
+  longBreakS: number;
+  /** A long break follows every Nth completed block. */
+  blocksPerLongBreak: number;
+}
+
+export interface RunBreakRow {
+  kind: 'short' | 'long';
+  /** Epoch ms — the planned end of the block before it, not when it was noticed. */
+  startedAt: number;
+  durationS: number;
+}
+
+/**
+ * The Pomodoro run in flight, held in `meta` under `activeRun` (M3).
+ *
+ * Not history: the run's blocks are ordinary `SessionRow`s carrying its id,
+ * and this row is deleted when the run ends. It exists only so a break —
+ * which is not a session — survives a reload. Whether a break is over is
+ * derived from `break.startedAt + durationS`, never stored.
+ */
+export interface PomodoroRunRow {
+  id: string;
+  startedAt: number;
+  settings: PomodoroSettingsRow;
+  /** Completed blocks so far. A cancelled block ends the run instead. */
+  blocksDone: number;
+  /** The break after the last completed block, or null while a block is running. */
+  break: RunBreakRow | null;
 }
 
 /**
@@ -110,6 +158,12 @@ export const META_KEYS = {
   activeSessionId: 'activeSessionId',
   /** Schema-independent install identity, used before an account exists. */
   localUserId: 'localUserId',
+  /** The Pomodoro run in flight (`PomodoroRunRow`), or absent. */
+  activeRun: 'activeRun',
+  /** The mode last chosen on the idle screen. */
+  timerMode: 'timerMode',
+  /** The user's saved `PomodoroSettingsRow`. */
+  pomodoroSettings: 'pomodoroSettings',
 } as const;
 
 export type WorkTimerDb = Dexie & {
