@@ -83,6 +83,10 @@ in `NOTES.md`.
 - **`npm run tauri:dev` needs port 5173 free.** Vite is set to `strictPort`, so
   a stray dev server elsewhere makes the app window come up blank rather than
   silently moving to 5174.
+- **Stopping `npm run tauri:dev` from outside doesn't stop its children.**
+  Killing the npm process leaves `target\debug\starkeep.exe` and Vite running,
+  with Vite still holding 5173. Check `netstat -ano | grep ":5173 "` and stop
+  the listed processes before relaunching or switching branches.
 - **The desktop app and the browser build have separate IndexedDB stores.**
   Different origins — `tauri://localhost` versus `http://localhost:5173`. Data
   written in one will not appear in the other. Not a bug.
