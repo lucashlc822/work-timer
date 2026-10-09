@@ -15,7 +15,15 @@ export interface ResultInfo {
   actualFocusS: number;
 }
 
+export interface TagPickerProps {
+  value: string | null;
+  onChange: (tagId: string | null) => void;
+  disabled: boolean;
+}
+
 export interface TimerSlots {
+  /** Where a session's tag is chosen: idle, running, and between blocks. */
+  tagPicker?: (props: TagPickerProps) => ReactNode;
   /** Under the Start button. Receives the chosen length, in seconds. */
   startHint?: (plannedS: number) => ReactNode;
   /** Replaces the default star on a *completed* result. */

@@ -18,17 +18,19 @@ export interface TimerPrefsState extends TimerPrefs {
   loaded: boolean;
   setMode: (mode: SessionMode) => void;
   setSettings: (settings: PomodoroSettings) => void;
+  setTagId: (tagId: string | null) => void;
 }
 
 /**
- * The idle screen's remembered choices: countdown or Pomodoro, and the
- * Pomodoro lengths. Saved on every change, so they survive a reload without
+ * The idle screen's remembered choices: countdown or Pomodoro, the Pomodoro
+ * lengths, and the last tag. Saved on every change, so they survive a reload without
  * the user having to start anything.
  */
 export const useTimerPrefs = (): TimerPrefsState => {
   const [prefs, setPrefs] = useState<TimerPrefs>({
     mode: 'countdown',
     settings: clampPomodoroSettings(DEFAULT_POMODORO, pomodoroLimits),
+    tagId: null,
   });
   const [loaded, setLoaded] = useState(false);
 
@@ -64,5 +66,7 @@ export const useTimerPrefs = (): TimerPrefsState => {
     [update],
   );
 
-  return { ...prefs, loaded, setMode, setSettings };
+  const setTagId = useCallback((tagId: string | null) => update({ tagId }), [update]);
+
+  return { ...prefs, loaded, setMode, setSettings, setTagId };
 };

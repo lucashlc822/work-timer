@@ -166,6 +166,18 @@ rejected). Don't pre-populate this with guesses.
   cancels that block and ends the run; earlier blocks keep their stars.
 - **The next Pomodoro block never starts without a click.** Focus → break is
   automatic; break → focus is not, so no star can be earned while away.
+- **A session's tag can change while it runs, and freezes when it ends** (M4,
+  2026-10-08). Tags are the one mutable table — rename, recolour, archive —
+  but a finished session's `tagId` is never rewritten. Tags are archived,
+  never deleted, so history keeps its labels. A run's tag lives on the run
+  (`PomodoroRunRow.tagId`) as well as on the block, so the next block has it
+  after a reload.
+- **Time with the app fully quit is not "away".** `awayMs` means running but
+  hidden or minimised (M4, 2026-10-08). Don't guess at quit time on relaunch.
+- **Stats are derived on every read, never stored.** A session's focus counts
+  toward the days its interval overlaps; counts, stars and the history list
+  belong to the period the session *started* in. Unfinished sessions are
+  excluded everywhere. Week starts Monday.
 
 ## Plans include acceptance tests
 

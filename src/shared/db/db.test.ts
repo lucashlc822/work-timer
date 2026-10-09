@@ -38,10 +38,10 @@ const aSession = (overrides: Partial<SessionRow> = {}): SessionRow => ({
 });
 
 describe('schema', () => {
-  it('opens at version 2', async () => {
+  it('opens at version 3', async () => {
     const db = withDb();
     await db.open();
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
   });
 
   // M2 O8.18 — an M1 install upgrades without losing anything.
@@ -58,10 +58,42 @@ describe('schema', () => {
     opened.push(upgraded);
     await upgraded.open();
 
-    expect(upgraded.verno).toBe(2);
+    expect(upgraded.verno).toBe(3);
     expect(await upgraded.sessions.toArray()).toEqual([existing]);
     expect(await readMeta(upgraded, 'localUserId')).toBe('user-1');
     expect(await upgraded.constellations.count()).toBe(0);
+    expect(await upgraded.tags.count()).toBe(0);
+  });
+
+  // M4 case 26 — an M2/M3 install upgrades to tags without losing anything.
+  it('upgrades a version 2 database without touching its rows', async () => {
+    const name = `test-${crypto.randomUUID()}`;
+    const v2 = new Dexie(name);
+    v2.version(1).stores({ sessions: 'id, startedAt, tagId, syncedAt', meta: 'key' });
+    v2.version(2).stores({ constellations: 'id, chosenAt, syncedAt' });
+    const existing = aSession();
+    const choice = {
+      id: 'c1',
+      source: 'catalogue',
+      shapeId: 'kite',
+      seed: null,
+      tier: 'easy',
+      chosenAt: 1_700_000_000_000,
+      clientCreatedAt: 1_700_000_000_000,
+      syncedAt: null,
+    };
+    await v2.table('sessions').add(existing);
+    await v2.table('constellations').add(choice);
+    v2.close();
+
+    const upgraded = createDb(name);
+    opened.push(upgraded);
+    await upgraded.open();
+
+    expect(upgraded.verno).toBe(3);
+    expect(await upgraded.sessions.toArray()).toEqual([existing]);
+    expect(await upgraded.constellations.toArray()).toEqual([choice]);
+    expect(await upgraded.tags.count()).toBe(0);
   });
 
   it('round-trips a session without losing fields', async () => {

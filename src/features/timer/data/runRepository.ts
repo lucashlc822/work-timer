@@ -63,7 +63,6 @@ export const loadActiveRun = (db: WorkTimerDb): Promise<PomodoroRun | undefined>
 export const startNextBlock = (
   db: WorkTimerDb,
   runId: string,
-  tagId: string | null,
   ctx: StartContext,
 ): Promise<StartedSession> =>
   db.transaction('rw', db.sessions, db.meta, async () => {
@@ -77,13 +76,28 @@ export const startNextBlock = (
       {
         mode: 'pomodoro',
         plannedDurationS: run.settings.focusS,
-        tagId,
+        tagId: run.tagId ?? null,
         runId: run.id,
         runIndex: run.blocksDone + 1,
       },
       ctx,
     );
     return { session, run };
+  });
+
+/**
+ * Change the run's tag between blocks, so the next block carries it. During a
+ * block, `setInFlightTag` does this together with the block's own row.
+ */
+export const setRunTag = (
+  db: WorkTimerDb,
+  runId: string,
+  tagId: string | null,
+): Promise<PomodoroRun> =>
+  db.transaction('rw', db.meta, async () => {
+    const run: PomodoroRun = { ...(await readRun(db, runId)), tagId };
+    await writeMeta(db, META_KEYS.activeRun, run);
+    return run;
   });
 
 /**
@@ -129,6 +143,8 @@ export const summariseRun = async (db: WorkTimerDb, runId: string): Promise<RunS
 export interface TimerPrefs {
   mode: SessionMode;
   settings: PomodoroSettings;
+  /** The tag the idle screen preselects; null for none. */
+  tagId: string | null;
 }
 
 /** Saved mode and Pomodoro lengths, clamped on the way out. */
@@ -138,9 +154,13 @@ export const readTimerPrefs = async (
 ): Promise<TimerPrefs> => {
   const mode = await readMeta<unknown>(db, META_KEYS.timerMode);
   const settings = await readMeta<Partial<PomodoroSettings>>(db, META_KEYS.pomodoroSettings);
+  const storedTag = await readMeta<unknown>(db, META_KEYS.lastTagId);
+  // A tag that is gone or archived reads as "no tag" rather than lingering.
+  const tag = typeof storedTag === 'string' ? await db.tags.get(storedTag) : undefined;
   return {
     mode: mode === 'pomodoro' ? 'pomodoro' : 'countdown',
     settings: clampPomodoroSettings(settings, limits),
+    tagId: tag !== undefined && tag.archivedAt === null ? tag.id : null,
   };
 };
 
@@ -148,4 +168,6 @@ export const saveTimerPrefs = (db: WorkTimerDb, prefs: TimerPrefs): Promise<void
   db.transaction('rw', db.meta, async () => {
     await writeMeta(db, META_KEYS.timerMode, prefs.mode);
     await writeMeta(db, META_KEYS.pomodoroSettings, prefs.settings);
+    if (prefs.tagId === null) await clearMeta(db, META_KEYS.lastTagId);
+    else await writeMeta(db, META_KEYS.lastTagId, prefs.tagId);
   });

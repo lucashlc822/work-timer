@@ -113,6 +113,12 @@ export interface PomodoroRunRow {
   blocksDone: number;
   /** The break after the last completed block, or null while a block is running. */
   break: RunBreakRow | null;
+  /**
+   * The tag every block of this run carries (M4). Optional because runs
+   * written by M3 lack it; absent reads as no tag. Held here, not only on the
+   * block, so the next block still knows it after a reload during a break.
+   */
+  tagId?: string | null;
 }
 
 /**
@@ -153,6 +159,29 @@ export interface ConstellationRow {
   syncedAt: number | null;
 }
 
+/** Palette keys, not hex values — the colours themselves live in tokens.css. */
+export type TagColor = 'lavender' | 'mint' | 'rose' | 'gold' | 'sky' | 'peach';
+
+/**
+ * A label for sessions (M4).
+ *
+ * Unlike sessions, tags are mutable: they can be renamed, recoloured and
+ * archived. Archiving is a soft delete, so old sessions keep their label.
+ * `updatedAt` exists so M5 can sync tags last-write-wins.
+ */
+export interface TagRow {
+  /** Client-generated UUID. */
+  id: string;
+  name: string;
+  color: TagColor;
+  createdAt: number;
+  /** Bumped on rename, recolour and (un)archive. */
+  updatedAt: number;
+  /** Epoch ms, or null while the tag is active. */
+  archivedAt: number | null;
+  syncedAt: number | null;
+}
+
 export const META_KEYS = {
   /** Id of the session currently running, or absent when idle. */
   activeSessionId: 'activeSessionId',
@@ -164,12 +193,15 @@ export const META_KEYS = {
   timerMode: 'timerMode',
   /** The user's saved `PomodoroSettingsRow`. */
   pomodoroSettings: 'pomodoroSettings',
+  /** The tag last chosen on the idle screen (M4), or absent. */
+  lastTagId: 'lastTagId',
 } as const;
 
 export type WorkTimerDb = Dexie & {
   sessions: EntityTable<SessionRow, 'id'>;
   meta: EntityTable<MetaRow, 'key'>;
   constellations: EntityTable<ConstellationRow, 'id'>;
+  tags: EntityTable<TagRow, 'id'>;
 };
 
 export const DB_NAME = 'work-timer';
@@ -192,6 +224,11 @@ export const createDb = (name: string = DB_NAME): WorkTimerDb => {
   // Indexed on chosenAt (the sky reads choices in order) and syncedAt (outbox).
   db.version(2).stores({
     constellations: 'id, chosenAt, syncedAt',
+  });
+
+  // v3 (M4) — tags. Purely additive: existing rows are untouched.
+  db.version(3).stores({
+    tags: 'id, createdAt, syncedAt',
   });
 
   return db;

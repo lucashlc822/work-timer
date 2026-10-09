@@ -46,6 +46,14 @@
   --color-star-core: #fffdf8;
   --color-star-warm: #ffe9c4;
 
+  /* --- Tag colours ------------------------------------------------------ */
+  /* The three the existing ramps could not supply. Together with lavender-400,
+     mint-300 and rose-400 they are the tag palette (shared/ui/tagColors.ts),
+     picked so adjacent pairs stay apart for colour-blind readers. */
+  --color-tag-gold: #e6c36a;
+  --color-tag-sky: #6aa7e8;
+  --color-tag-peach: #f0a070;
+
   /* --- Text ------------------------------------------------------------- */
   --color-ink-primary: #f4f1ff;
   --color-ink-secondary: #b9b2d4;

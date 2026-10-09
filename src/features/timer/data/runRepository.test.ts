@@ -12,6 +12,7 @@ import {
   peekActiveRun,
   readTimerPrefs,
   saveTimerPrefs,
+  setRunTag,
   skipBreak,
   startNextBlock,
 } from './runRepository';
@@ -19,6 +20,7 @@ import {
   ActiveRunExistsError,
   ActiveSessionExistsError,
   finishSession,
+  setInFlightTag,
   startSession,
 } from './sessionRepository';
 
@@ -102,7 +104,7 @@ describe('finishing a block', () => {
     const db = withDb();
     const { session: b1, run } = await startSession(db, pomodoro, ctx());
     await finishSession(db, b1.id, completed(START));
-    const { session: b2 } = await startNextBlock(db, run!.id, null, ctx(START + 2 * FOCUS_MS));
+    const { session: b2 } = await startNextBlock(db, run!.id, ctx(START + 2 * FOCUS_MS));
 
     const after = await finishSession(db, b2.id, {
       outcome: 'cancelled',
@@ -139,7 +141,7 @@ describe('between blocks', () => {
     const db = withDb();
     const runId = await runOnBreak(db);
 
-    const { session, run } = await startNextBlock(db, runId, null, ctx(START + FOCUS_MS + 1));
+    const { session, run } = await startNextBlock(db, runId, ctx(START + FOCUS_MS + 1));
 
     expect(session).toMatchObject({ runId, runIndex: 2 });
     expect(run).toMatchObject({ blocksDone: 1, break: null });
@@ -149,19 +151,15 @@ describe('between blocks', () => {
   it('will not start a block while one is already in flight', async () => {
     const db = withDb();
     const runId = await runOnBreak(db);
-    await startNextBlock(db, runId, null, ctx());
+    await startNextBlock(db, runId, ctx());
 
-    await expect(startNextBlock(db, runId, null, ctx())).rejects.toBeInstanceOf(
-      ActiveSessionExistsError,
-    );
+    await expect(startNextBlock(db, runId, ctx())).rejects.toBeInstanceOf(ActiveSessionExistsError);
     expect(await db.sessions.count()).toBe(2);
   });
 
   it('refuses a block for a run that does not exist', async () => {
     const db = withDb();
-    await expect(startNextBlock(db, 'no-run', null, ctx())).rejects.toBeInstanceOf(
-      NoActiveRunError,
-    );
+    await expect(startNextBlock(db, 'no-run', ctx())).rejects.toBeInstanceOf(NoActiveRunError);
     expect(await db.sessions.count()).toBe(0);
   });
 
@@ -239,9 +237,13 @@ describe('timer prefs', () => {
     const db = withDb();
     const settings = { focusS: 1800, shortBreakS: 420, longBreakS: 1200, blocksPerLongBreak: 3 };
 
-    await saveTimerPrefs(db, { mode: 'pomodoro', settings });
+    await saveTimerPrefs(db, { mode: 'pomodoro', settings, tagId: null });
 
-    expect(await readTimerPrefs(db, POMODORO_LIMITS)).toEqual({ mode: 'pomodoro', settings });
+    expect(await readTimerPrefs(db, POMODORO_LIMITS)).toEqual({
+      mode: 'pomodoro',
+      settings,
+      tagId: null,
+    });
   });
 
   it('defaults to countdown and clamps whatever was stored', async () => {
@@ -252,7 +254,79 @@ describe('timer prefs', () => {
     expect(await readTimerPrefs(db, POMODORO_LIMITS)).toEqual({
       mode: 'countdown',
       settings: { ...DEFAULT_POMODORO, focusS: 300 },
+      tagId: null,
     });
     expect((await readTimerPrefs(db, DEV_POMODORO_LIMITS)).settings.focusS).toBe(60);
+  });
+});
+
+describe('tags on a run', () => {
+  const tagged = (tagId: string | null) => ({ ...pomodoro, tagId });
+
+  // M4 case 9
+  it('the next block takes the run tag, and a run from before M4 yields none', async () => {
+    const db = withDb();
+    const { session, run } = await startSession(db, tagged('writing'), ctx());
+    await finishSession(db, session.id, completed(START));
+
+    const next = await startNextBlock(db, run!.id, ctx(START + FOCUS_MS));
+    expect(next.session.tagId).toBe('writing');
+    expect((await db.sessions.get(next.session.id))?.tagId).toBe('writing');
+
+    // A run row written by M3 has no tagId field at all.
+    const legacy = withDb();
+    const started = await startSession(legacy, pomodoro, ctx());
+    const { tagId: _omit, ...withoutTag } = (await peekActiveRun(legacy))!;
+    await writeMeta(legacy, META_KEYS.activeRun, withoutTag);
+    await finishSession(legacy, started.session.id, completed(START));
+    const block2 = await startNextBlock(legacy, started.run!.id, ctx(START + FOCUS_MS));
+    expect(block2.session.tagId).toBeNull();
+  });
+
+  // M4 case 8, the data half: a change during a break outlives a reload.
+  it('a tag set during a break is what the next block gets', async () => {
+    const db = withDb();
+    const { session, run } = await startSession(db, tagged('writing'), ctx());
+    await finishSession(db, session.id, completed(START));
+
+    await setRunTag(db, run!.id, 'reading');
+
+    expect((await peekActiveRun(db))?.tagId).toBe('reading');
+    const next = await startNextBlock(db, run!.id, ctx(START + FOCUS_MS));
+    expect(next.session.tagId).toBe('reading');
+    expect((await db.sessions.get(session.id))?.tagId).toBe('writing');
+  });
+
+  it('changing the tag mid-block moves the block and the run together', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, tagged('writing'), ctx());
+
+    expect(await setInFlightTag(db, session.id, 'reading')).toBe(true);
+
+    expect((await db.sessions.get(session.id))?.tagId).toBe('reading');
+    expect((await peekActiveRun(db))?.tagId).toBe('reading');
+  });
+
+  it('a prefs read drops a last tag that is archived or missing', async () => {
+    const db = withDb();
+    const base = { mode: 'countdown' as const, settings: DEFAULT_POMODORO };
+    const tag = {
+      id: 't1',
+      name: 'Writing',
+      color: 'mint' as const,
+      createdAt: 1,
+      updatedAt: 1,
+      archivedAt: null,
+      syncedAt: null,
+    };
+    await db.tags.add(tag);
+    await saveTimerPrefs(db, { ...base, tagId: 't1' });
+    expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBe('t1');
+
+    await db.tags.update('t1', { archivedAt: 2 });
+    expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBeNull();
+
+    await saveTimerPrefs(db, { ...base, tagId: 'gone' });
+    expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBeNull();
   });
 });

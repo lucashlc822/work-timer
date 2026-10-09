@@ -8,6 +8,8 @@ import {
   StarGlyph,
   StartHint,
 } from '@/features/sky';
+import { StatsView, installStatsDevTools } from '@/features/stats';
+import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
@@ -18,6 +20,7 @@ import { StarMark } from '@/shared/ui';
  * other; this is the one place they meet.
  */
 const timerSlots: TimerSlots = {
+  tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
   resultNote: (result) =>
@@ -27,33 +30,36 @@ const timerSlots: TimerSlots = {
 /**
  * The main window: the timer in front of your night sky.
  *
- * "View sky" fades the timer out — it stays mounted, so a running session is
- * untouched — and hands the pointer to the sky so stars can be hovered and
- * focused. The autostart toggle lives in the footer until a settings surface
- * exists to hold it.
+ * "View sky" and "Stats" fade the timer out — it stays mounted, so a running
+ * session is untouched. The sky hands the pointer to the stars so they can be
+ * hovered and focused; the stats are a scrollable panel over the dimmed sky.
+ * The autostart toggle lives in the footer until a settings surface exists to
+ * hold it.
  */
 export const HomeRoute = () => {
-  const [viewingSky, setViewingSky] = useState(false);
+  const [view, setView] = useState<'timer' | 'sky' | 'stats'>('timer');
+  const away = view !== 'timer';
 
   useEffect(installDevTools, []);
+  useEffect(installStatsDevTools, []);
 
   useEffect(() => {
-    if (!viewingSky) return;
+    if (view === 'timer') return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setViewingSky(false);
+      if (e.key === 'Escape') setView('timer');
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [viewingSky]);
+  }, [view]);
 
   return (
     <>
-      <SkyBackdrop mode={viewingSky ? 'full' : 'hero'} />
+      <SkyBackdrop mode={view === 'sky' ? 'full' : 'hero'} />
 
       <main
-        inert={viewingSky}
+        inert={away}
         className={`relative z-10 flex min-h-dvh flex-col items-center gap-8 px-6 pt-10 pb-6 transition-opacity duration-500 ${
-          viewingSky ? 'pointer-events-none opacity-0' : ''
+          away ? 'pointer-events-none opacity-0' : ''
         }`}
       >
         <header className="flex items-center gap-2">
@@ -70,21 +76,34 @@ export const HomeRoute = () => {
             <ConstellationStatus />
             <button
               type="button"
-              onClick={() => setViewingSky(true)}
+              onClick={() => setView('sky')}
               className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
             >
               View sky
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('stats')}
+              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+            >
+              Stats
             </button>
           </div>
           <AutostartToggle />
         </footer>
       </main>
 
-      {viewingSky && (
+      {view === 'stats' && (
+        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+          <StatsView />
+        </div>
+      )}
+
+      {away && (
         <button
           type="button"
           autoFocus
-          onClick={() => setViewingSky(false)}
+          onClick={() => setView('timer')}
           className="rounded-pill bg-night-800/80 border-night-600 text-ink-secondary hover:text-ink-primary fixed bottom-6 left-1/2 z-20 -translate-x-1/2 border px-5 py-2 text-xs backdrop-blur transition-colors"
         >
           Back to timer
