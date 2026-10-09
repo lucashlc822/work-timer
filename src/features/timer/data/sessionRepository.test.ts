@@ -9,6 +9,7 @@ import {
   finishSession,
   loadActiveSession,
   peekActiveSession,
+  setInFlightTag,
   startSession,
 } from './sessionRepository';
 
@@ -164,5 +165,32 @@ describe('addAwayTime', () => {
     await addAwayTime(db, session.id, 20_000);
 
     expect((await db.sessions.get(session.id))?.awayMs).toBe(0);
+  });
+});
+
+describe('setInFlightTag', () => {
+  it('changes the tag of a session in flight', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, draft, ctx());
+
+    expect(await setInFlightTag(db, session.id, 'writing')).toBe(true);
+
+    expect((await db.sessions.get(session.id))?.tagId).toBe('writing');
+  });
+
+  // M4 case 7 — a tag freezes when the session ends.
+  it('never touches a finished session', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, { ...draft, tagId: 'writing' }, ctx());
+    await finishSession(db, session.id, {
+      outcome: 'completed',
+      endedAt: START + 1_500_000,
+      actualFocusS: 1500,
+    });
+    const before = await db.sessions.get(session.id);
+
+    expect(await setInFlightTag(db, session.id, 'reading')).toBe(false);
+
+    expect(await db.sessions.get(session.id)).toEqual(before);
   });
 });

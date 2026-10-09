@@ -8,6 +8,7 @@ import {
   StarGlyph,
   StartHint,
 } from '@/features/sky';
+import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
@@ -18,6 +19,7 @@ import { StarMark } from '@/shared/ui';
  * other; this is the one place they meet.
  */
 const timerSlots: TimerSlots = {
+  tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
   resultNote: (result) =>

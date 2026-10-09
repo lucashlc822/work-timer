@@ -63,7 +63,9 @@ export type TimerEvent =
   | { type: 'DISMISS' }
   | { type: 'SKIP_BREAK' }
   | { type: 'START_NEXT' }
-  | { type: 'END_RUN' };
+  | { type: 'END_RUN' }
+  /** The write already landed; this brings the context in line with it. */
+  | { type: 'TAG_CHANGED'; tagId: string | null };
 
 export interface FinishInput {
   id: string;
@@ -72,7 +74,6 @@ export interface FinishInput {
 
 export interface NextBlockInput {
   runId: string;
-  tagId: string | null;
 }
 
 export interface SkipBreakInput {
@@ -101,6 +102,27 @@ export const timerMachine = setup({
     endRun: fromPromise<RunSummary, { runId: string }>(notWired('endRun')),
   },
   actions: {
+    /**
+     * Mirror a tag change that has already been persisted: onto the block in
+     * flight, and onto the run so the next block carries it.
+     */
+    applyTag: assign({
+      session: ({ context, event }) => {
+        assertEvent(event, 'TAG_CHANGED');
+        return context.session === null ? null : { ...context.session, tagId: event.tagId };
+      },
+      run: ({ context, event }) => {
+        assertEvent(event, 'TAG_CHANGED');
+        return context.run === null ? null : { ...context.run, tagId: event.tagId };
+      },
+    }),
+    /** Between blocks `session` is the finished block, which must stay as it ended. */
+    applyRunTag: assign({
+      run: ({ context, event }) => {
+        assertEvent(event, 'TAG_CHANGED');
+        return context.run === null ? null : { ...context.run, tagId: event.tagId };
+      },
+    }),
     /**
      * Tell the host the session ends at its planned end. Replaces any previous
      * arm. For a Pomodoro block the host also chains the break after it, so
@@ -224,6 +246,7 @@ export const timerMachine = setup({
 
     running: {
       on: {
+        TAG_CHANGED: { actions: 'applyTag' },
         TICK_DUE: { guard: 'sessionComplete', target: 'completing' },
         CANCEL_CONFIRMED: {
           target: 'cancelling',
@@ -318,6 +341,7 @@ export const timerMachine = setup({
 
     onBreak: {
       on: {
+        TAG_CHANGED: { actions: 'applyRunTag' },
         TICK_DUE: { guard: 'breakOver', target: 'breakOver' },
         SKIP_BREAK: {
           target: 'skipping',
@@ -345,6 +369,7 @@ export const timerMachine = setup({
 
     breakOver: {
       on: {
+        TAG_CHANGED: { actions: 'applyRunTag' },
         START_NEXT: { target: 'startingNext' },
         END_RUN: { target: 'endingRun' },
       },
@@ -353,10 +378,7 @@ export const timerMachine = setup({
     startingNext: {
       invoke: {
         src: 'startNextBlock',
-        input: ({ context }) => ({
-          runId: context.run!.id,
-          tagId: context.result?.session.tagId ?? null,
-        }),
+        input: ({ context }) => ({ runId: context.run!.id }),
         onDone: {
           target: 'running',
           actions: [

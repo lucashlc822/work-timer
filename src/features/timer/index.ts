@@ -3,4 +3,4 @@
  */
 export { TimerScreen } from './ui/TimerScreen';
 export { MiniCountdown } from './ui/MiniCountdown';
-export type { ResultInfo, TimerSlots } from './ui/slots';
+export type { ResultInfo, TagPickerProps, TimerSlots } from './ui/slots';

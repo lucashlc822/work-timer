@@ -7,11 +7,12 @@ import { db } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
 import { describeHost, getRuntime, type CompletionNotice, type Runtime } from '@/shared/runtime';
 
-import { endRun, loadActiveRun, skipBreak, startNextBlock } from '../data/runRepository';
+import { endRun, loadActiveRun, setRunTag, skipBreak, startNextBlock } from '../data/runRepository';
 import {
   addAwayTime,
   finishSession,
   loadActiveSession,
+  setInFlightTag,
   startSession,
 } from '../data/sessionRepository';
 import { formatDuration } from '../domain/format';
@@ -67,6 +68,8 @@ export interface TimerSession {
   startNext: () => void;
   skipBreak: () => void;
   endRun: () => void;
+  /** Change the tag of the block in flight, or of the run between blocks. */
+  setTag: (tagId: string | null) => void;
 }
 
 const clock = systemClock;
@@ -161,7 +164,7 @@ export const useTimerSession = (): TimerSession => {
           Promise.resolve().then(() => startSession(db, input, host())),
         ),
         startNextBlock: fromPromise<StartedSession, NextBlockInput>(({ input }) =>
-          Promise.resolve().then(() => startNextBlock(db, input.runId, input.tagId, host())),
+          Promise.resolve().then(() => startNextBlock(db, input.runId, host())),
         ),
         finishSession: fromPromise<PomodoroRun | null, FinishInput>(async ({ input }) => {
           await flushAway(input.ending.endedAt);
@@ -194,9 +197,12 @@ export const useTimerSession = (): TimerSession => {
   });
 
   const [snapshot, send] = useMachine(machine, { input: { clock } });
-  const { session, run, result, summary, error } = snapshot.context;
+  const { session, run, result, summary } = snapshot.context;
   const running = snapshot.matches('running');
   const onBreak = snapshot.matches('onBreak');
+  const betweenBlocks = onBreak || snapshot.matches('breakOver');
+  const [tagError, setTagError] = useState<string | null>(null);
+  const error = snapshot.context.error ?? tagError;
 
   useEffect(() => {
     sessionRef.current = session;
@@ -308,6 +314,32 @@ export const useTimerSession = (): TimerSession => {
     send({ type: 'START_NEXT' });
   }, [send]);
 
+  const sessionId = session?.id ?? null;
+  const runId = run?.id ?? null;
+  const setTag = useCallback(
+    (tagId: string | null) => {
+      void (async () => {
+        try {
+          // The write decides: a session that ended a moment ago refuses it,
+          // and then the screen must not pretend the tag moved.
+          if (running && sessionId !== null) {
+            if (!(await setInFlightTag(db, sessionId, tagId))) return;
+          } else if (betweenBlocks && runId !== null) {
+            await setRunTag(db, runId, tagId);
+          } else {
+            return;
+          }
+          setTagError(null);
+          send({ type: 'TAG_CHANGED', tagId });
+        } catch (e) {
+          console.error('Could not save the tag', e);
+          setTagError('The tag could not be saved.');
+        }
+      })();
+    },
+    [running, betweenBlocks, sessionId, runId, send],
+  );
+
   const confirmCancel = useCallback(() => send({ type: 'CANCEL_CONFIRMED' }), [send]);
   const dismiss = useCallback(() => send({ type: 'DISMISS' }), [send]);
   const skip = useCallback(() => send({ type: 'SKIP_BREAK' }), [send]);
@@ -355,5 +387,6 @@ export const useTimerSession = (): TimerSession => {
     startNext,
     skipBreak: skip,
     endRun: end,
+    setTag,
   };
 };

@@ -17,6 +17,7 @@ interface Props {
   error: string | null;
   busy: boolean;
   slots: TimerSlots;
+  onTagChange: (tagId: string | null) => void;
   onSkip: () => void;
   onStartNext: () => void;
   onEndRun: () => void;
@@ -35,6 +36,7 @@ export const BreakScreen = ({
   error,
   busy,
   slots,
+  onTagChange,
   onSkip,
   onStartNext,
   onEndRun,
@@ -55,6 +57,12 @@ export const BreakScreen = ({
           actualFocusS: result.ending.actualFocusS,
         };
   const star = info !== null ? slots.resultStar?.(info) : undefined;
+  // The run's tag, so a change here is what the next block will carry.
+  const tagPicker = slots.tagPicker?.({
+    value: run.tagId ?? null,
+    onChange: onTagChange,
+    disabled: busy,
+  });
 
   return (
     <div className="flex w-full flex-col items-center gap-5 text-center">
@@ -90,6 +98,7 @@ export const BreakScreen = ({
               End run
             </SecondaryButton>
           </div>
+          {tagPicker}
         </>
       ) : (
         <>
@@ -107,6 +116,7 @@ export const BreakScreen = ({
           >
             Start block {nextBlock}
           </button>
+          {tagPicker}
           {slots.startHint?.(run.settings.focusS)}
           <SecondaryButton onClick={onEndRun} disabled={busy}>
             End run

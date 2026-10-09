@@ -141,6 +141,7 @@ export const startSession = (
       settings: { ...draft.settings },
       blocksDone: 0,
       break: null,
+      tagId: draft.tagId,
     };
     await writeMeta(db, META_KEYS.activeRun, run);
     const session = await addInFlightSession(
@@ -231,6 +232,31 @@ export const finishSession = (
     }
 
     return ownsRun ? run : null;
+  });
+
+/**
+ * Change the tag of the session in flight. Resolves to whether it applied:
+ * a session that has already finished is left alone (completed sessions are
+ * immutable, and a tag frozen at the end is the whole rule).
+ *
+ * For a Pomodoro block the run's tag moves in the same transaction, so the
+ * blocks after this one carry it even across a reload during a break.
+ */
+export const setInFlightTag = (
+  db: WorkTimerDb,
+  id: string,
+  tagId: string | null,
+): Promise<boolean> =>
+  db.transaction('rw', db.sessions, db.meta, async () => {
+    const row = await db.sessions.get(id);
+    if (!isInFlight(row)) return false;
+    await db.sessions.update(id, { tagId });
+
+    const run = await readMeta<PomodoroRun>(db, META_KEYS.activeRun);
+    if (run !== undefined && row.runId === run.id) {
+      await writeMeta(db, META_KEYS.activeRun, { ...run, tagId });
+    }
+    return true;
   });
 
 /**

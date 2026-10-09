@@ -543,3 +543,62 @@ describe('timerMachine: resuming a run', () => {
     expect(h.actor.getSnapshot().matches('idle')).toBe(true);
   });
 });
+
+describe('timerMachine: tags', () => {
+  const startRun = async (h: ReturnType<typeof harness>) => {
+    h.actor.send({ type: 'START', draft: pomodoro });
+    await waitFor(h.actor, (st) => st.matches('running'));
+  };
+  const completeBlock = async (h: ReturnType<typeof harness>) => {
+    h.clock.advance(MIN);
+    h.actor.send({ type: 'TICK_DUE' });
+    await waitFor(h.actor, (st) => st.matches('onBreak'));
+  };
+
+  it('a tag change while running lands on the block and the run', async () => {
+    const h = harness();
+    await startRun(h);
+
+    h.actor.send({ type: 'TAG_CHANGED', tagId: 'reading' });
+
+    const { session, run } = h.actor.getSnapshot().context;
+    expect(session?.tagId).toBe('reading');
+    expect(run?.tagId).toBe('reading');
+  });
+
+  it('a tag change on a countdown lands on the session alone', async () => {
+    const h = harness();
+    h.actor.send({ type: 'START', draft: countdown() });
+    await waitFor(h.actor, (s) => s.matches('running'));
+
+    h.actor.send({ type: 'TAG_CHANGED', tagId: 'reading' });
+
+    const { session, run } = h.actor.getSnapshot().context;
+    expect(session?.tagId).toBe('reading');
+    expect(run).toBeNull();
+  });
+
+  it('a tag change during a break lands on the run and leaves the finished block alone', async () => {
+    const h = harness();
+    await startRun(h);
+    await completeBlock(h);
+
+    h.actor.send({ type: 'TAG_CHANGED', tagId: 'reading' });
+
+    const { session, run } = h.actor.getSnapshot().context;
+    expect(run?.tagId).toBe('reading');
+    expect(session?.tagId).toBeNull();
+  });
+
+  it('ignores a tag change once the session has finished', async () => {
+    const h = harness();
+    h.actor.send({ type: 'START', draft: countdown() });
+    await waitFor(h.actor, (s) => s.matches('running'));
+    h.actor.send({ type: 'CANCEL_CONFIRMED' });
+    await waitFor(h.actor, (s) => s.matches('finished'));
+
+    h.actor.send({ type: 'TAG_CHANGED', tagId: 'reading' });
+
+    expect(h.actor.getSnapshot().context.session?.tagId).toBeNull();
+  });
+});

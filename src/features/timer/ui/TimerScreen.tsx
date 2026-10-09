@@ -41,6 +41,17 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
 
   const keepGoing = useCallback(() => setConfirming(false), []);
 
+  // A tag chosen mid-session is also the one the idle screen remembers next.
+  const { setTag } = timer;
+  const { setTagId } = prefs;
+  const changeTag = useCallback(
+    (tagId: string | null) => {
+      setTag(tagId);
+      setTagId(tagId);
+    },
+    [setTag, setTagId],
+  );
+
   if (timer.status === 'loading' || !prefs.loaded) {
     return <p className="text-ink-muted text-sm">Opening…</p>;
   }
@@ -68,6 +79,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
         error={timer.error}
         busy={timer.busy}
         slots={slots}
+        onTagChange={changeTag}
         onSkip={timer.skipBreak}
         onStartNext={timer.startNext}
         onEndRun={timer.endRun}
@@ -93,6 +105,12 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
           {formatDuration(session.plannedDurationS)} · ends at{' '}
           {formatTimeOfDay(plannedEndAt(session))}
         </p>
+
+        {slots.tagPicker?.({
+          value: session.tagId,
+          onChange: changeTag,
+          disabled: timer.status !== 'running',
+        })}
 
         <div className="flex flex-wrap items-center justify-center gap-2">
           {timer.runtime?.miniWindow.isSupported === true && (
@@ -129,6 +147,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
+      {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
       {pomodoro ? (
         <PomodoroSettingsPanel
           settings={prefs.settings}
@@ -145,8 +164,8 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
         onClick={() =>
           timer.start(
             pomodoro
-              ? { mode: 'pomodoro', settings: prefs.settings, tagId: null }
-              : { mode: 'countdown', plannedDurationS: plannedS, tagId: null },
+              ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId }
+              : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId },
           )
         }
         className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-10 py-3 text-base transition-colors disabled:opacity-60"
