@@ -78,3 +78,28 @@ jobs:
       # expensive half. Producing an actual installer is a release concern.
       - name: Rust compiles
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+  # The server's rules — row-level security between users, invite-only
+  # sign-up, insert-only sessions, last-write-wins tags — are what keep one
+  # person's data away from another's, so they are tested against a real
+  # Postgres on every change. GitHub's Linux runners have Docker, which the
+  # local Supabase stack needs.
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start the local Supabase stack
+        run: npx supabase start
+
+      - name: Database tests (pgTAP)
+        run: npx supabase test db

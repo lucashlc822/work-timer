@@ -1,4 +1,12 @@
-export { createDb, db, DB_NAME, META_KEYS } from './schema';
+export {
+  accountDbName,
+  bindAccountDb,
+  createDb,
+  db,
+  deleteAccountDb,
+  LEGACY_DB_NAME,
+  META_KEYS,
+} from './schema';
 export type {
   ConstellationRow,
   ConstellationTier,

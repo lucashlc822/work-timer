@@ -54,8 +54,8 @@ it.
 | Session model | Both countdown and Pomodoro, user's choice per session |
 | Visuals | Procedural — Canvas for the sky, SVG for the constellation |
 | Abandonment | Strict on mobile, honor system on desktop (a setting, per-platform default) |
-| Accounts | Guest-first; account optional and claims local history |
-| Sign-in | Google OAuth + email magic link (Apple Sign-In needs the same $99) |
+| Accounts | Guest-first; account optional and claims local history **(Superseded 2026-10-08 by M5: an account is required, sign-up is invite-only, and there are no guests to claim from.)** |
+| Sign-in | Google OAuth + email magic link (Apple Sign-In needs the same $99) **(Superseded 2026-10-08 by M5: email + password, with confirmation and password reset by a 6-digit code typed into the app.)** |
 | v1 scope | Tags, streaks + daily goals, unlockable star variants, stats dashboard |
 
 ## Stack
@@ -224,7 +224,8 @@ Each milestone is its own branch and PR, with its own acceptance pass.
 | **M2** | The sky | Seeded generator, Canvas starfield, SVG constellation, session → star. **It becomes beautiful and rewarding.** |
 | **M3** | Pomodoro | Phase machine, break-exempt abandonment semantics. *Built as `docs/plans/2026-10-07-m3-pomodoro.md`: blocks are sessions, breaks are derived.* |
 | **M4** | Tags + stats | Tagging, dashboard charts. *Built as `docs/plans/2026-10-08-m4-tags-stats.md`: archivable tags chosen before or during a session, and a week / month / all-time stats view derived from sessions.* |
-| **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim |
+| **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim. *Built as `docs/plans/2026-10-08-m5-accounts-sync.md`: invite-only accounts, one local store per account, no claim step (no guests).* |
+| **Release** | Ship to friends and family | Windows installer on GitHub Releases, Tauri auto-updates, the web version on a free host (also the Mac answer). Added 2026-10-08. |
 | **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals |
 
 **On sequencing — worth pushing back on if you disagree.** You asked for accounts
@@ -291,6 +292,8 @@ functional with zero network on first run.
     disabled; the sky remains legible.
 18. Open the app for the first time with no account. *Pass:* a focus session can
     be started in one tap, with no signup wall.
+    **(Superseded 2026-10-08 by M5: the app now requires an account, so there is
+    deliberately a sign-in screen first.)**
 
 ## Known constraints to accept up front
 

@@ -16,9 +16,15 @@ repository stays `work-timer` regardless.
 **Stack:** TypeScript + React + Vite, shipped as a **Tauri desktop app** and
 also as a browser build from the same codebase. Local-first on IndexedDB via
 Dexie; XState for the timer; Tailwind v4 with design tokens in
-`src/styles/tokens.css`. Supabase (Postgres + Auth + RLS) arrives in M5 and is
-not wired up yet. Constraint: no paid services, so everything stays on free
+`src/styles/tokens.css`. Supabase (Postgres + Auth + row-level security) is the
+server, from M5: every person signs in, and their history syncs across their
+devices. Constraint: no paid services, so everything stays on free
 tiers/free tools.
+
+**Audience: Lucas plus invited friends and family**, on Windows (the desktop
+app) and in a browser (the web version, which is also the answer for Mac
+users). Build for other people's data and other people's older app versions,
+not just one person's two machines.
 
 **Windows is the development target**; macOS is kept possible (nothing
 Windows-only) but is unverified. Mobile is out of scope entirely.
@@ -29,15 +35,22 @@ changes.
 
 ## Working on this repo
 
-This is developed from more than one machine. Right now that costs nothing:
-the app needs **no environment variables at all**, because it runs entirely
-against IndexedDB with no backend.
+This is developed from more than one machine. Each machine runs its own
+**local Supabase stack** for development, which needs **Docker Desktop**
+running:
 
 ```
 npm install
+npx supabase start   # the local server (first run downloads images)
 npm run tauri:dev    # the desktop app
 npm run dev          # the browser build
 ```
+
+Both dev commands read `.env.development.local`, which points at the local
+stack; `.env.example` explains every env file. Without it the app shows "This
+build isn't connected to a server" — tests and `npm run build` still pass with
+no env at all. `supabase/README.md` covers the everyday Supabase commands, the
+local test accounts, and setting up the hosted project.
 
 The desktop build additionally needs a Rust toolchain and the MSVC C++ build
 tools (`winget install Rustlang.Rustup` and the VS 2022 Build Tools with the
@@ -47,9 +60,10 @@ tests, and the web build — only `tauri:*` needs Rust.
 `.gitattributes` forces LF line endings in the repository so the Windows and
 non-Windows checkouts agree byte for byte.
 
-When Supabase lands in M5, each machine gets its own `.env` pointing at its
-own Supabase project, and migrations get generated on one machine only so
-they don't diverge. Update this paragraph then.
+Release builds read `.env.production.local`, which points at the **one hosted
+Supabase project** everyone shares (superseding the earlier plan of one
+project per machine: cross-device sync needs a shared server). Migrations are
+generated on one machine only, so the two histories never diverge.
 
 Read `NOTES.md` (newest entries first) plus `git log` at the start of a
 session. My general planning and collaboration norms live in
@@ -111,6 +125,27 @@ in `NOTES.md`.
   opacity indefinitely; taking a screenshot renders frames and it completes.
   Not an app bug — check the computed style after a screenshot before
   believing a transition is broken.
+- **The local Supabase stack needs Docker Desktop running.** `npx supabase start`
+  failing with a pipe or engine error means Docker isn't up, not a broken
+  config. Every email the local stack "sends" lands in the fake inbox at
+  `http://127.0.0.1:54324` (its API: `/api/v1/messages`); Studio is at
+  `http://127.0.0.1:54323`.
+- **The hosted free tier pauses after ~7 days with no activity.** The app keeps
+  working offline and can't sync until the project is restored from the
+  dashboard. Not a sync bug.
+- **Supabase's built-in email only reaches the project's own team.** The hosted
+  project sends through Gmail as custom SMTP (~500 emails/day). A friend not
+  getting a code is an SMTP setting first, an app bug second.
+- **supabase-js reports every HTTP 500 as `AuthRetryableFetchError`**, the same
+  class it uses for "no network". A refused sign-up (the invite trigger)
+  arrives that way, so the error's message, not its name, decides what to tell
+  the person (`features/account/domain/auth.ts`).
+- **A database function with `set search_path = ''` can't see citext's `=`.**
+  Comparing citext values there silently falls back to case-sensitive text
+  comparison. Compare `lower(...)` explicitly (the pgTAP suite caught this).
+- **Claude's browser pane doesn't keep site data across a reboot.** Its
+  IndexedDB and `localStorage` come back empty, so local test accounts have to
+  sign in again. Not data loss in the app.
 - **CSS custom properties inside SVG gradient stops fail silently to black**
   if they don't resolve. `shared/ui/StarMark` relies on them working; if a
   gradient ever renders black, check that the token is defined on an ancestor
@@ -174,6 +209,23 @@ rejected). Don't pre-populate this with guesses.
   after a reload.
 - **Time with the app fully quit is not "away".** `awayMs` means running but
   hidden or minimised (M4, 2026-10-08). Don't guess at quit time on relaunch.
+- **An account is required; there are no guests** (M5, 2026-10-08). Supersedes
+  the architecture doc's guest-first design. Sign-up is **invite-only**
+  (`public.invites`, managed with `npm run invite`), by email and password,
+  with the address confirmed — and a forgotten password reset — by a 6-digit
+  code typed into the app. No links or browser redirects.
+- **Each account has its own local store** (`work-timer-account-<userId>`).
+  Sign-out hides it behind the sign-in screen and reloads; two people on one
+  computer never share data. History from before M5 (`work-timer`) was
+  deliberately not carried over and is never opened.
+- **Server migrations stay backward compatible once the app is released.**
+  Never drop or rename a column an older app reads or writes, give new
+  columns a default or allow null, and never add a check that rejects what an
+  older app sends. Friends won't all update on the same day.
+- **The server enforces the rules, not the app.** Row-level security limits
+  every row to its owner; sessions and constellation choices are insert-only;
+  tags and settings are last-write-wins on `updated_at`; `server_updated_at` is
+  stamped by the server. All of it is covered by `supabase/tests` (pgTAP).
 - **Stats are derived on every read, never stored.** A session's focus counts
   toward the days its interval overlaps; counts, stars and the history list
   belong to the period the session *started* in. Unfinished sessions are
