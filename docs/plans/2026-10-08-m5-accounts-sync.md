@@ -204,3 +204,26 @@ an app-wide gate, an invite system) **and** a sync engine, where subtle
 data-loss and data-leak bugs hide (marking rows synced, cursors, races between
 windows, row-level security between friends). **Stay on the stronger-reasoning
 model (Opus) for all three PRs.**
+
+## As built — PR 1
+
+- **Invite enforcement** is the `before insert` trigger on `auth.users`, as
+  planned. The newer auth hook exists in this CLI, but the trigger needs no
+  dashboard switch on the hosted project, so friends are protected as soon as
+  the migration is pushed.
+- **Two bugs caught by the acceptance pass, fixed before the PR:**
+  - The invite check compared citext with `=` inside a function whose
+    `search_path` is empty, which silently became a case-sensitive text
+    comparison. Now `lower()` on both sides (pgTAP case "invites match
+    case-insensitively").
+  - supabase-js reports every HTTP 500 as `AuthRetryableFetchError`, so an
+    uninvited sign-up was shown as "Couldn't reach the server". The classifier
+    now reads the message first and treats only status 0 and 502–504 as
+    offline; the observed error shape is a unit test.
+- **The pgTAP suite already covers case 18's rules** (written with the schema,
+  since the tables all land in PR 1); PR 2 adds the client side.
+- **Case 11's "status reads Offline"** needs the sync status, which is PR 2.
+  PR 1 verified the rest: an offline relaunch with an expired token opens
+  straight into the account, the running session resumes, and the app stays
+  signed in until the server is back (then refreshes the token by itself).
+

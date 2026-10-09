@@ -204,15 +204,25 @@ export type WorkTimerDb = Dexie & {
   tags: EntityTable<TagRow, 'id'>;
 };
 
-export const DB_NAME = 'work-timer';
+/**
+ * The single store every build used before accounts existed (M0–M4). Since M5
+ * it is never opened: each account has its own store, and history from before
+ * accounts was deliberately not carried over. Kept as a name so nothing ever
+ * reuses it by accident.
+ */
+export const LEGACY_DB_NAME = 'work-timer';
 
-export const createDb = (name: string = DB_NAME): WorkTimerDb => {
+/** The local store for one account. Two people on one machine never share one. */
+export const accountDbName = (userId: string): string => `work-timer-account-${userId}`;
+
+export const createDb = (name: string): WorkTimerDb => {
   const db = new Dexie(name) as WorkTimerDb;
 
   // v1 (M0) — sessions and the meta store.
   //
   // Indexed: startedAt for chronological history and streak queries, tagId for
-  // per-tag stats, syncedAt so the outbox can find unsynced rows cheaply.
+  // per-tag stats. (The syncedAt index cannot find unsynced rows: IndexedDB
+  // never indexes null, so the M5 outbox scans instead.)
   // `outcome` is deliberately not indexed: it is null for exactly one row at a
   // time and low-cardinality otherwise, so an index would not pay for itself.
   db.version(1).stores({
@@ -234,4 +244,32 @@ export const createDb = (name: string = DB_NAME): WorkTimerDb => {
   return db;
 };
 
-export const db = createDb();
+/** Stands in for `db` until an account's store is bound, and says so loudly. */
+const unbound = new Proxy({} as WorkTimerDb, {
+  get: (_target, property) => {
+    throw new Error(
+      `No account store is open (tried to read db.${String(property)}). ` +
+        'The app must bind one with bindAccountDb() before rendering anything that uses it.',
+    );
+  },
+});
+
+/**
+ * The signed-in account's local store.
+ *
+ * A live binding: every module that imports `db` sees the store once
+ * `bindAccountDb` has run, which the app does before it renders anything that
+ * reads data. Before that, any use throws instead of silently writing to the
+ * wrong place. Switching accounts reloads the window rather than rebinding, so
+ * no live query or timer can keep hold of the previous account's store.
+ */
+export let db: WorkTimerDb = unbound;
+
+export const bindAccountDb = (userId: string): WorkTimerDb => {
+  db = createDb(accountDbName(userId));
+  return db;
+};
+
+/** Delete an account's local store (after the account itself is deleted). */
+export const deleteAccountDb = (userId: string): Promise<void> =>
+  Dexie.delete(accountDbName(userId));

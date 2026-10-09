@@ -8,12 +8,15 @@ import {
   StarGlyph,
   StartHint,
 } from '@/features/sky';
+import { AccountPanel } from '@/features/account';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
+
+import { useAccount } from '../accountContext';
 
 /**
  * Sky content for the timer's slots. The two features never import each
@@ -37,7 +40,8 @@ const timerSlots: TimerSlots = {
  * hold it.
  */
 export const HomeRoute = () => {
-  const [view, setView] = useState<'timer' | 'sky' | 'stats'>('timer');
+  const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'account'>('timer');
+  const { account, signOut } = useAccount();
   const away = view !== 'timer';
 
   useEffect(installDevTools, []);
@@ -88,6 +92,13 @@ export const HomeRoute = () => {
             >
               Stats
             </button>
+            <button
+              type="button"
+              onClick={() => setView('account')}
+              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+            >
+              Account
+            </button>
           </div>
           <AutostartToggle />
         </footer>
@@ -96,6 +107,12 @@ export const HomeRoute = () => {
       {view === 'stats' && (
         <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
           <StatsView />
+        </div>
+      )}
+
+      {view === 'account' && (
+        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+          <AccountPanel email={account.email} onSignOut={signOut} />
         </div>
       )}
 
