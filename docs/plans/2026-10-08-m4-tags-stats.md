@@ -273,3 +273,19 @@ No multi-file architectural refactor (two new slices following the sky's
 pattern, small additive timer changes) and no tricky debugging expected. The
 one subtle piece — the run's tag surviving a reload — is specified above.
 **Switch to the faster model (Sonnet) for execution.**
+
+## As built — differences from this plan
+
+- **Tag palette** changed before merge; see the Tag palette row above.
+- **`splitFocusByDay` was not written.** `aggregate.ts` has one primitive,
+  `overlapMs(session, from, to)`, that `focusBuckets`, `focusByTag` and `totals`
+  all use, which is what keeps the tag breakdown summing to the headline total.
+  Case 19 is tested through `focusBuckets`.
+- **`totals.avgSessionS`** averages the full focus of sessions that *started* in
+  the period; `totals.focusS` includes focus spilled in from the day before.
+  They differ only when a session crosses the period boundary.
+- **Tag changes** go through `setInFlightTag` / `setRunTag` and report whether
+  the write applied; `TAG_CHANGED` is sent only when it did, so a session that
+  ended a moment earlier never shows a tag it did not get.
+- **Dev tools** also gained `__starkeep.clearSeeded()`; the sky's dev helper now
+  merges into `window.__starkeep` rather than replacing it.

@@ -175,9 +175,10 @@ session_phases    -- NOT BUILT: superseded by M3 (docs/plans/2026-10-07-m3-pomod
                   -- Blocks are sessions with run_id/run_index; breaks aren't stored.
                   id, session_id, kind ('work'|'short_break'|'long_break'),
                   index, started_at, ended_at, outcome        -- Pomodoro only
-tags              id, user_id, name, color, icon, archived_at -- soft delete, so
-                                                                 old sessions keep
-                                                                 their label
+tags              id, user_id, name, color, created_at, updated_at, archived_at
+                  -- soft delete, so old sessions keep their label.
+                  -- As built in M4: `color` is a palette key, there is no `icon`,
+                  -- and `updated_at` exists so M5 can sync tags last-write-wins.
 star_variants     id, name, rarity, unlock_cost, palette jsonb -- global catalogue
 unlocks           user_id, star_variant_id, unlocked_at
 currency_ledger   id, user_id, delta, reason, session_id, created_at -- append-only
@@ -222,7 +223,7 @@ Each milestone is its own branch and PR, with its own acceptance pass.
 | **M1** | The timer | XState machine, timestamp-based truth, countdown mode, visibility/abandonment with grace, resume-after-reload. **A correct timer, deliberately ugly.** |
 | **M2** | The sky | Seeded generator, Canvas starfield, SVG constellation, session → star. **It becomes beautiful and rewarding.** |
 | **M3** | Pomodoro | Phase machine, break-exempt abandonment semantics. *Built as `docs/plans/2026-10-07-m3-pomodoro.md`: blocks are sessions, breaks are derived.* |
-| **M4** | Tags + stats | Tagging, dashboard charts |
+| **M4** | Tags + stats | Tagging, dashboard charts. *Built as `docs/plans/2026-10-08-m4-tags-stats.md`: archivable tags chosen before or during a session, and a week / month / all-time stats view derived from sessions.* |
 | **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim |
 | **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals |
 
