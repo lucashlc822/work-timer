@@ -12,6 +12,82 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-08 — M5 two-thirds done: invite-only accounts and sync
+
+**Status: PRs #19 (accounts) and #20 (sync) merged; PR 3 not started.**
+Planned and built from `docs/plans/2026-10-08-m5-accounts-sync.md`; per-case
+results are in the PR #19 and #20 descriptions, and both PRs' as-built notes
+are at the bottom of the plan. #21 (lint ignores `src-tauri/target`) also merged.
+
+### Product decisions, made with Lucas while planning
+
+The app is for **Lucas plus invited friends and family**, not one person's
+two machines (Lucas's correction mid-planning — design for other people's
+data and other people's older app versions). From that:
+
+- **An account is required; no guests.** Supersedes the architecture doc's
+  guest-first design. Email + password; email confirmation and password
+  reset by a **6-digit code typed into the app** (no links or redirects).
+- **Invite-only sign-up** (`npm run invite -- add <email>`).
+- **One local store per account** (`work-timer-account-<userId>`); sign-out
+  keeps it. **History from before M5 was not carried over** — the old
+  `work-timer` store is never opened.
+- **Sending email:** Lucas's Gmail as custom SMTP on the hosted project
+  (Supabase's built-in email only reaches the project team).
+- **Mac users get the web version**, installed as a web app. No macOS build.
+- **Release (installer, auto-update, web hosting) is its own milestone** after M5.
+- **Development runs on a local Supabase stack** (Docker); release builds
+  talk to **one shared hosted project**.
+
+### Things worth not rediscovering
+
+- **Docker Desktop is now required for development** (`npx supabase start`).
+  Setting it up on this machine needed `wsl --install --no-distribution` in an
+  admin PowerShell and a reboot; firmware virtualization was already on. The
+  other machine will need the same.
+- **Bugs the acceptance passes caught, all fixed before merge:**
+  - The invite check compared citext with `=` inside a function whose
+    `search_path` is empty, so it silently became case-sensitive.
+  - supabase-js labels every HTTP 500 `AuthRetryableFetchError` (same class as
+    "no network"), so an uninvited sign-up said "Couldn't reach the server".
+  - A batch refused as "not valid yet" (a fast device clock) stopped the whole
+    sync; now rows retry one at a time and only that one waits.
+  - pgTAP fixtures reused the test-account emails and broke once those
+    accounts existed locally; they now use `rls-a@` / `rls-b@`.
+- **Driving the app from scripts:** scripted `focus()`/`blur()` don't fire in a
+  background window, so a rename that "didn't save" in a script is the script.
+  Use real input in the browser pane, or `Emulation.setFocusEmulationEnabled`
+  over the DevTools protocol (added to the scratch `cdp.mjs`).
+  `Network.emulateNetworkConditions` gives a true offline test.
+- **The packaged app's origin is `http://tauri.localhost`**, not
+  `tauri://localhost` (CLAUDE.md corrected). It has its own storage.
+- **Claude's browser pane lost its site data across the reboot**; the M4
+  browser test data is gone. Not app data loss.
+- **The real adapter has an integration test** against the local stack, off
+  by default — command in `supabase/README.md`.
+
+### Test data on the local stack
+
+Two local test accounts (`a@test.local`, `b@test.local`; password in
+`supabase/README.md`) with a handful of sessions, two "Newer" tags left by the
+integration test, and the tag "Focus". `npx supabase db reset` wipes it all.
+The desktop app's and the browser pane's account stores mirror it.
+
+### Next
+
+- **M5 PR 3:** live updates (Supabase Realtime triggering a pull), settings
+  sync (mode + Pomodoro lengths, last-write-wins), delete-account (typed
+  confirmation), and the `app_config.min_client_version` "Please update" check.
+  Acceptance cases 23–26. Stay on Opus.
+- **Case 29, by hand, Lucas:** create the free hosted Supabase project and run
+  the steps in `supabase/README.md` ("Setting up the hosted project"),
+  including the Gmail app password, which needs 2-step verification. I can't
+  do this one.
+- **The other machine** needs Docker Desktop (with WSL) before it can run the app in development.
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-08 — M4 merged: archivable tags and a stats view
 
 **Status: merged (PR #17 as `ccc10f4`); all 29 acceptance cases passed.**
@@ -121,12 +197,17 @@ sessions from the desktop pass. It still holds the M2 and M3 test sessions
 noted in the 2026-10-08 entry below. The unfinished Pomodoro run left over
 from the M3 desktop pass (it was sitting on "Break's over, Start block 2") was
 ended with "End run" to get a clean idle screen; that wrote no session.
+**(Superseded 2026-10-08 — since M5 both stores are the legacy `work-timer`
+database, which is never opened again; the test data no longer shows
+anywhere.)**
 
 ### Next
 
 - Autostart's reboot check, still carried over.
 - **M5 (accounts and sync).** Note for its plan: tags are mutable, so they
   need last-write-wins on `updatedAt`, unlike sessions.
+  **(Superseded 2026-10-08 — built in PR #20: tags sync last-write-wins on
+  `updated_at`.)**
 
 ---
 
@@ -144,6 +225,7 @@ block, and the saved Pomodoro settings (1 / 1 / 2 min, long break every 2)
 in `meta`. Together with the M2 seed data noted on 2026-10-07, that sky is
 not a real history. If a clean desktop sky matters before real use, clear
 them — still not done.
+**(Superseded 2026-10-08 — moot: M5 never opens the pre-account store.)**
 
 ### Things worth not rediscovering
 
@@ -173,6 +255,7 @@ them — still not done.
   in the entry above.)**
 - Autostart's reboot check, still carried over.
 - Optionally, clear the test data from the desktop store (see above).
+  **(Superseded 2026-10-08 — moot: M5 never opens the pre-account store.)**
 
 ---
 
