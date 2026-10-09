@@ -12,6 +12,85 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-08 — M4 merged: archivable tags and a stats view
+
+**Status: merged (PR #17 as `ccc10f4`), with the two desktop acceptance cases
+not yet run.** Built from `docs/plans/2026-10-08-m4-tags-stats.md`. 27 of 29
+acceptance cases passed (unit tests or the browser build); cases 28 and 29
+need `npm run tauri:dev` by hand and were not run before the merge. Per-case
+results are in the PR #17 description.
+
+### Product decisions, made with Lucas while planning
+
+- **A tag can change while a session runs, and freezes when it ends.** That
+  keeps finished sessions immutable, which M5 sync relies on.
+- **Calendar week or month, pageable, plus All time.** Weeks start Monday.
+- **Time with the app fully quit is not "away".** This closes the open
+  question from 2026-10-06. No code changed.
+- **No `runId` index.** No stat queries by run. This closes the M3 plan's
+  question.
+
+### Things worth not rediscovering
+
+- **A latent M3 bug, fixed here.** `startNextBlock` used to take the tag from
+  the machine's in-memory `result`, which is gone after a reload during a
+  break, so block 2 would have lost its tag. It was invisible while every tag
+  was null. The run now carries `PomodoroRunRow.tagId`, written in the same
+  transaction as the block's own `tagId` (`setInFlightTag` in
+  `sessionRepository.ts`; `setRunTag` for breaks). Acceptance case 8 reloads
+  during a break to guard it.
+- **The tag palette was changed mid-build, after the dataviz validator
+  failed it.** The first draft was six pale existing tokens (blush vs cool,
+  ΔE 6.5 for normal vision). The shipped set is lavender, mint, rose plus
+  three new tokens (`--color-tag-gold`, `-sky`, `-peach`). It passes colour-blind
+  and normal-vision separation, but still fails the validator's lightness-band
+  and chroma-floor checks because the app is deliberately pastel. A tag's
+  name is always printed next to its colour, so colour is never the only cue.
+  If the colours ever look wrong on the real screen, that is the known
+  trade-off, not an oversight.
+- **Tags are the one mutable table.** They carry `updatedAt` so M5 can sync
+  them last-write-wins; sessions stay append-only, and a finished session's
+  `tagId` is never rewritten.
+- **Dexie reports its version times ten.** `indexedDB.open('work-timer')`
+  shows `version: 30` for schema v3. Not a bad upgrade.
+- **Recent weeks showing "Ended early: 0" was chance.** In the seeded data
+  the last cancelled session happened to be on 25 Sep. Checked against the raw
+  rows before assuming the stats were wrong.
+- **The browser tool's `javascript_exec` times out at 45 s.** A script that
+  polls longer keeps running in the page but its result is lost. Poll the
+  database in short calls. Poll for the *outcome* in the database, not for
+  text in the page: a regex for "star" matched the app name "STARKEEP" and
+  returned instantly.
+- **Dev helpers now share one object.** The sky's `installDevTools` used to
+  replace `window.__starkeep`, which would have wiped the stats helpers
+  depending on load order. Both now merge. `__starkeep.seedHistory(days)`
+  writes sessions marked `device: 'dev/seed'`, and `clearSeeded()` removes
+  exactly those. Seeded sessions are ordinary completed sessions, so they
+  also appear as stars in the sky.
+
+### Test data left behind
+
+The **browser build's** store (`http://localhost:5173`) now has four tags
+(Writing, Reading, Admin, Focus) and a handful of sessions from the
+acceptance pass. The 82 seeded sessions were removed. The **desktop** store
+was not touched by this session, so it still holds the M2 and M3 test data
+noted in the 2026-10-08 entry below.
+
+### Next
+
+- **Run cases 28 and 29 by hand** with `npm run tauri:dev` and record the
+  results on PR #17 (it is already merged, so a comment is enough):
+  - 28: create a tag, run a 1-minute tagged session, open Stats. It should
+    appear in the week's bars, the tag breakdown and the history.
+  - 29: change the tag while the window is minimised to the tray, then
+    restore. The mini window should be unaffected.
+  If either fails, it gets its own fix branch.
+- Autostart's reboot check, still carried over.
+- **M5 (accounts and sync).** Note for its plan: tags are mutable, so they
+  need last-write-wins on `updatedAt`, unlike sessions.
+
+---
+
 ## 2026-10-08 — M3 desktop pass done and merged; two dev-loop gotchas
 
 **Status: merged (PR #13 as `b4af186`; notes in PRs #14 and #15).** Lucas
@@ -51,6 +130,8 @@ them — still not done.
 - **M4, tags and stats.** Questions for its plan, carried from earlier
   entries: should time with the app fully quit count as away (2026-10-06),
   and should `runId` get an index once stats query by run (M3 plan)?
+  **(Superseded 2026-10-08 — M4 merged as PR #17; both questions are answered
+  in the entry above.)**
 - Autostart's reboot check, still carried over.
 - Optionally, clear the test data from the desktop store (see above).
 
@@ -276,6 +357,7 @@ being closed for over two minutes. Away time is only measured while the app
 is running and hidden, so time fully quit is invisible. The plan never said
 which is right. It is a stat only and cannot affect success, so this is a
 stats-design question for M4, not a bug.
+**(Superseded 2026-10-08 — decided: quit time is not away. See the M4 entry.)**
 
 The 2026-10-03 entry's "unconfirmed finding" (`awayMs: 51999` in the browser
 pane) remains unconfirmed. Plausibly the pane was hidden from view, but it
