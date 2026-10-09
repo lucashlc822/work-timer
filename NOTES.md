@@ -14,11 +14,12 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ## 2026-10-08 — M4 merged: archivable tags and a stats view
 
-**Status: merged (PR #17 as `ccc10f4`), with the two desktop acceptance cases
-not yet run.** Built from `docs/plans/2026-10-08-m4-tags-stats.md`. 27 of 29
-acceptance cases passed (unit tests or the browser build); cases 28 and 29
-need `npm run tauri:dev` by hand and were not run before the merge. Per-case
-results are in the PR #17 description.
+**Status: merged (PR #17 as `ccc10f4`); all 29 acceptance cases passed.**
+Built from `docs/plans/2026-10-08-m4-tags-stats.md`. 27 of 29 cases passed
+(unit tests or the browser build) before the merge, with per-case results in
+the PR #17 description. Cases 28 and 29, the desktop ones, were not run
+before the merge; they were run afterwards, the same day, against
+`npm run tauri:dev` and passed (see "The desktop pass" below).
 
 ### Product decisions, made with Lucas while planning
 
@@ -68,23 +69,61 @@ results are in the PR #17 description.
   exactly those. Seeded sessions are ordinary completed sessions, so they
   also appear as stars in the sky.
 
+### The desktop pass (cases 28 and 29)
+
+Run by Claude, not by hand, by driving the real desktop window over
+WebView2's remote-debugging port. Observed results:
+
+- **28 passed.** A 1-minute countdown tagged "Desktop check", started through
+  the picker, completed with that tag. Stats showed it in the week's bars
+  (Thu 8 Oct), in the tag breakdown ("Desktop check · 1 min") and as the top
+  history row. The older M2/M3 desktop test sessions appear there too.
+- **29 passed.** A 2-minute tagged countdown with the mini window popped out.
+  The main window was closed (hides to the tray): its `visibilityState` went
+  `hidden` and its countdown froze, while the mini window kept counting
+  (01:15 to 01:09 over 6 s). After restoring, the main countdown caught up to
+  match the mini window, 23,242 ms of away time had been recorded, and
+  changing the tag to "Second tag" mid-session left the mini window
+  unaffected. The finished row was `completed` with "Second tag" frozen on it
+  and `awayMs` 23242.
+- **What this does not cover.** It was scripted DOM interaction, not mouse
+  clicks, and nobody looked at the screen, so layout and look on the desktop
+  window are unchecked. "Hidden to the tray" was done by posting `WM_CLOSE`
+  (what the close button does) and "restore" by launching the exe a second
+  time (the single-instance handler calls the same `show_main_window` as the
+  tray menu). Clicking the real tray icon, and minimising, were not tried.
+  The tag was changed after restoring, not while the window was hidden.
+- **Cosmetic, not filed:** one minute against five hours shows "0%" in the tag
+  breakdown, because `percentOf` rounds to a whole percent.
+
+### How to drive the desktop app from a script
+
+- Set `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`
+  before `npm run tauri:dev`. `http://127.0.0.1:9222/json` then lists the main
+  window and, once popped out, the mini window (`?window=mini`) as separate
+  pages. Node 24's built-in `WebSocket` is enough to send the Chrome DevTools
+  Protocol `Runtime.evaluate` and run JavaScript in them.
+- Under `tauri dev` the window's origin is `http://localhost:5173`, not
+  `tauri://localhost` (that is the packaged app). It is still a different
+  WebView2 profile from Claude's browser pane, so the two stores stay apart.
+- Stop everything afterwards with the process list, as CLAUDE.md says:
+  killing the npm process alone leaves `starkeep.exe` and Vite running.
+
 ### Test data left behind
 
-The **browser build's** store (`http://localhost:5173`) now has four tags
-(Writing, Reading, Admin, Focus) and a handful of sessions from the
-acceptance pass. The 82 seeded sessions were removed. The **desktop** store
-was not touched by this session, so it still holds the M2 and M3 test data
-noted in the 2026-10-08 entry below.
+The **browser build's** store (`http://localhost:5173` in Claude's browser
+pane) has four tags (Writing, Reading, Admin, Focus) and a handful of
+sessions from the browser acceptance pass. The 82 seeded sessions were
+removed.
+
+The **desktop** store gained two tags ("Desktop check", "Second tag") and two
+sessions from the desktop pass. It still holds the M2 and M3 test sessions
+noted in the 2026-10-08 entry below. The unfinished Pomodoro run left over
+from the M3 desktop pass (it was sitting on "Break's over, Start block 2") was
+ended with "End run" to get a clean idle screen; that wrote no session.
 
 ### Next
 
-- **Run cases 28 and 29 by hand** with `npm run tauri:dev` and record the
-  results on PR #17 (it is already merged, so a comment is enough):
-  - 28: create a tag, run a 1-minute tagged session, open Stats. It should
-    appear in the week's bars, the tag breakdown and the history.
-  - 29: change the tag while the window is minimised to the tray, then
-    restore. The mini window should be unaffected.
-  If either fails, it gets its own fix branch.
 - Autostart's reboot check, still carried over.
 - **M5 (accounts and sync).** Note for its plan: tags are mutable, so they
   need last-write-wins on `updatedAt`, unlike sessions.
