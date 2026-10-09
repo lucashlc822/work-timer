@@ -227,3 +227,26 @@ model (Opus) for all three PRs.**
   straight into the account, the running session resumes, and the app stays
   signed in until the server is back (then refreshes the token by itself).
 
+## As built — PR 2
+
+- **Settings sync moved to PR 3** with live updates and delete-account, so
+  this PR is only the engine and the three history tables. The engine's
+  order (tags → constellations → sessions) leaves room for settings last.
+- **One refused row never blocks the others.** A batch is refused as a whole,
+  so on a content refusal *or* a "not valid yet" refusal (a session the server
+  thinks ended in the future because the device clock runs fast), the batch is
+  retried one row at a time. Refused rows are set aside in
+  `META_KEYS.syncRejected` and shown as "N items couldn't be backed up";
+  not-yet-valid ones stay queued. The first version only fell back on the
+  first kind, which would have let one fast-clock session hold back every
+  other upload — caught by a unit test before the PR.
+- **The real adapter has an integration test** (`supabaseRemote.integration`,
+  off by default) that checks the error sorting against what Postgres
+  actually returns.
+- **Status wording:** "Offline" when the device has no network
+  (`navigator.onLine` false); "Couldn't reach the server" when it does but the
+  server doesn't answer (stopped, paused, or down). Case 11's offline check is
+  satisfied by the first; the acceptance run shows both.
+- **The packaged app's origin is `http://tauri.localhost`** (CLAUDE.md said
+  `tauri://localhost`; corrected).
+

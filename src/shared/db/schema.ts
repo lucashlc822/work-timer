@@ -195,6 +195,19 @@ export const META_KEYS = {
   pomodoroSettings: 'pomodoroSettings',
   /** The tag last chosen on the idle screen (M4), or absent. */
   lastTagId: 'lastTagId',
+  /**
+   * Sync (M5): per table, the newest `server_updated_at` already pulled
+   * (`Partial<Record<table, string>>`). Server time, never this device's clock.
+   */
+  syncCursors: 'syncCursors',
+  /** Sync (M5): epoch ms of the last sync that finished without an error. */
+  lastSyncedAt: 'lastSyncedAt',
+  /**
+   * Sync (M5): ids the server refused for their content, per table
+   * (`Partial<Record<table, string[]>>`). Skipped by later pushes so one bad
+   * row can't block the rest; shown to the person as "couldn't be backed up".
+   */
+  syncRejected: 'syncRejected',
 } as const;
 
 export type WorkTimerDb = Dexie & {

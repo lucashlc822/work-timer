@@ -12,7 +12,7 @@ import {
  * Persistence for tags.
  *
  * Tags are the one mutable table: rename, recolour and archive all rewrite
- * the row and bump `updatedAt`. Validation runs inside the write transaction
+ * the row, bump `updatedAt`, and clear `syncedAt` so sync uploads the change. Validation runs inside the write transaction
  * so two quick creates can't both pass the duplicate check.
  */
 
@@ -69,7 +69,11 @@ export const renameTag = (db: WorkTimerDb, id: string, name: string, clock: Cloc
     const all = await db.tags.toArray();
     const reason = validateTagName(name, all, id);
     if (reason !== null) throw new TagNameInvalidError(reason);
-    await db.tags.update(id, { name: normalizeTagName(name), updatedAt: clock.now() });
+    await db.tags.update(id, {
+      name: normalizeTagName(name),
+      updatedAt: clock.now(),
+      syncedAt: null,
+    });
   });
 
 export const recolorTag = (
@@ -79,7 +83,7 @@ export const recolorTag = (
   clock: Clock,
 ): Promise<void> =>
   db.transaction('rw', db.tags, async () => {
-    await db.tags.update(id, { color, updatedAt: clock.now() });
+    await db.tags.update(id, { color, updatedAt: clock.now(), syncedAt: null });
   });
 
 /**
@@ -95,7 +99,7 @@ export const setArchived = (
   db.transaction('rw', db.tags, async () => {
     const now = clock.now();
     if (archived) {
-      await db.tags.update(id, { archivedAt: now, updatedAt: now });
+      await db.tags.update(id, { archivedAt: now, updatedAt: now, syncedAt: null });
       return;
     }
     const all = await db.tags.toArray();
@@ -104,5 +108,5 @@ export const setArchived = (
     const reason = validateTagName(row.name, all, id);
     if (reason !== null) throw new TagNameInvalidError(reason);
     if (countActive(all) >= MAX_ACTIVE_TAGS) throw new TagLimitError();
-    await db.tags.update(id, { archivedAt: null, updatedAt: now });
+    await db.tags.update(id, { archivedAt: null, updatedAt: now, syncedAt: null });
   });

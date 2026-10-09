@@ -22,6 +22,13 @@ npx supabase migration new <name>   # create a new migration file
 npm run invite -- add <email> --local    # allow an address to sign up locally
 ```
 
+The sync adapter has an integration test against the local stack, off by
+default. With the stack running and `a@test.local` signed up once:
+
+```
+SUPABASE_IT=1 SUPABASE_IT_KEY=<publishable key from `npx supabase status`> npx vitest run supabaseRemote.integration
+```
+
 Generate migrations on **one machine only**, so the two machines' histories
 never diverge. Once the app has been released to other people, every new
 migration must be backward compatible: never drop or rename a column an older

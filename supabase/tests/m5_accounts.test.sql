@@ -12,15 +12,17 @@ set search_path = public, extensions;
 select plan(38);
 
 -- --- fixtures (as superuser) ------------------------------------------------
+-- Addresses of their own, so the suite also runs on a local stack where the
+-- acceptance-test accounts (a@test.local, b@test.local) already exist.
 
-insert into public.invites (email) values ('a@test.local'), ('b@test.local');
+insert into public.invites (email) values ('rls-a@test.local'), ('rls-b@test.local');
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
   ('00000000-0000-0000-0000-000000000000', 'aaaaaaaa-0000-4000-8000-000000000001',
-   'authenticated', 'authenticated', 'a@test.local', now(), now()),
+   'authenticated', 'authenticated', 'rls-a@test.local', now(), now()),
   ('00000000-0000-0000-0000-000000000000', 'bbbbbbbb-0000-4000-8000-000000000002',
-   'authenticated', 'authenticated', 'b@test.local', now(), now());
+   'authenticated', 'authenticated', 'rls-b@test.local', now(), now());
 
 create function pg_temp.act_as(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims',
@@ -39,7 +41,7 @@ select throws_ok(
 select lives_ok(
   $$ insert into auth.users (instance_id, id, aud, role, email)
      values ('00000000-0000-0000-0000-000000000000', gen_random_uuid(),
-             'authenticated', 'authenticated', 'A@TEST.LOCAL') $$,
+             'authenticated', 'authenticated', 'RLS-A@TEST.LOCAL') $$,
   'invites match case-insensitively');
 
 -- Case 4: invites are invisible to every client role.
@@ -217,7 +219,7 @@ insert into public.tags (id, name, color, created_at, updated_at)
 select lives_ok($$ select public.delete_my_account() $$, 'B can delete their own account');
 reset role;
 
-select is((select count(*)::int from auth.users where email = 'b@test.local'), 0,
+select is((select count(*)::int from auth.users where email = 'rls-b@test.local'), 0,
   'B''s user is gone');
 select is((select count(*)::int from public.tags where user_id = 'bbbbbbbb-0000-4000-8000-000000000002'), 0,
   'B''s rows are gone with it');

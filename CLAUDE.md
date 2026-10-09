@@ -101,9 +101,11 @@ in `NOTES.md`.
   Killing the npm process leaves `target\debug\starkeep.exe` and Vite running,
   with Vite still holding 5173. Check `netstat -ano | grep ":5173 "` and stop
   the listed processes before relaunching or switching branches.
-- **The desktop app and the browser build have separate IndexedDB stores.**
-  Different origins — `tauri://localhost` versus `http://localhost:5173`. Data
-  written in one will not appear in the other. Not a bug.
+- **The desktop app and the browser build have separate IndexedDB stores.** The
+  packaged app's origin is `http://tauri.localhost` on Windows; `tauri dev`
+  loads `http://localhost:5173` but in its own WebView2 profile. Local data
+  written in one never appears in another — since M5 the same account's data
+  reaches each of them only through sync. Not a bug.
 - **A client-side route would 404 in the packaged desktop app.** Tauri serves
   the frontend over an asset protocol with no `index.html` fallback, so extra
   windows are addressed with a query parameter (`?window=mini`) rather than a
@@ -143,6 +145,16 @@ in `NOTES.md`.
 - **A database function with `set search_path = ''` can't see citext's `=`.**
   Comparing citext values there silently falls back to case-sensitive text
   comparison. Compare `lower(...)` explicitly (the pgTAP suite caught this).
+- **Sync waits on purpose.** An upload runs about 2 s after a change, and a
+  pull runs on start, when the window becomes visible, when the connection
+  returns, and every 5 minutes (live updates arrive in M5's third PR). A
+  change from another device not showing for a few minutes is the schedule,
+  not a bug — "Sync now" in the Account panel runs a round immediately.
+- **Scripted `focus()`/`blur()` don't fire in a background window.** When
+  driving the app from DevTools (browser pane or WebView2 remote debugging),
+  a rename field's save-on-blur never runs unless the page has focus. Use real
+  input in the browser pane, or `Emulation.setFocusEmulationEnabled` over the
+  DevTools protocol. A rename that "didn't save" in a script is this first.
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.

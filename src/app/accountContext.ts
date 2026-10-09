@@ -1,11 +1,13 @@
 import { createContext, useContext } from 'react';
 
-import type { SignedInAccount } from '@/features/account';
+import type { SignedInAccount, SyncStatusView } from '@/features/account';
 
 /** The signed-in account, for anything rendered inside `AuthGate`. */
 export interface AccountContextValue {
   account: SignedInAccount;
   signOut: () => Promise<void>;
+  sync: SyncStatusView;
+  syncNow: () => void;
 }
 
 export const AccountContext = createContext<AccountContextValue | null>(null);
