@@ -9,6 +9,8 @@ export type {
   SessionMode,
   SessionOutcome,
   SessionRow,
+  TagColor,
+  TagRow,
   WorkTimerDb,
 } from './schema';
 
