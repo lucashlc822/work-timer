@@ -5,7 +5,11 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'coverage', 'node_modules'] },
+  // src-tauri/target holds Rust build output, including compressed copies of
+  // the web assets after a release build — never source, never lintable.
+  {
+    ignores: ['dist', 'dev-dist', 'coverage', 'node_modules', 'src-tauri/target', 'src-tauri/gen'],
+  },
 
   {
     files: ['**/*.{ts,tsx}'],
