@@ -3,8 +3,12 @@ import { useState } from 'react';
 
 import { db, META_KEYS, readMeta } from '@/shared/db';
 
+import { SyncStatus, type SyncStatusView } from './SyncStatus';
+
 interface Props {
   email: string | null;
+  sync: SyncStatusView;
+  onSyncNow: () => void;
   onSignOut: () => Promise<void>;
 }
 
@@ -23,7 +27,7 @@ const useBusy = (): boolean =>
   );
 
 /** Who is signed in, what is stored about them, and signing out. */
-export const AccountPanel = ({ email, onSignOut }: Props) => {
+export const AccountPanel = ({ email, sync, onSyncNow, onSignOut }: Props) => {
   const busy = useBusy();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +50,8 @@ export const AccountPanel = ({ email, onSignOut }: Props) => {
         <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Account</h2>
         <p className="text-ink-primary text-base">{email ?? 'Signed in'}</p>
       </header>
+
+      <SyncStatus status={sync} onSyncNow={onSyncNow} />
 
       <section className="bg-night-800/70 border-night-600 flex flex-col gap-2 rounded-xl border p-4 text-sm">
         <h3 className="text-ink-primary">About your data</h3>

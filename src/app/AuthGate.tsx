@@ -5,7 +5,8 @@ import { clearLastUserId, getSupabase, readStoredAccount, writeLastUserId } from
 import { APP_NAME } from '@/shared/config';
 import { bindAccountDb } from '@/shared/db';
 
-import { AccountContext, type AccountContextValue } from './accountContext';
+import { AccountContext } from './accountContext';
+import { useSync } from './useSync';
 
 /**
  * Nothing in the app runs until someone is signed in.
@@ -83,15 +84,35 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  const value: AccountContextValue = {
-    account: gate.account,
-    signOut: async () => {
-      const client = getSupabase();
-      if (client !== null) await signOut(client);
-      clearLastUserId();
-      reload();
-    },
-  };
+  return (
+    <SignedIn
+      account={gate.account}
+      signOut={async () => {
+        const client = getSupabase();
+        if (client !== null) await signOut(client);
+        clearLastUserId();
+        reload();
+      }}
+    >
+      {children}
+    </SignedIn>
+  );
+};
 
-  return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
+/** The signed-in app, with sync running for the whole time it is mounted. */
+const SignedIn = ({
+  account,
+  signOut,
+  children,
+}: {
+  account: SignedInAccount;
+  signOut: () => Promise<void>;
+  children: ReactNode;
+}) => {
+  const { syncNow, ...sync } = useSync();
+  return (
+    <AccountContext.Provider value={{ account, signOut, sync, syncNow }}>
+      {children}
+    </AccountContext.Provider>
+  );
 };

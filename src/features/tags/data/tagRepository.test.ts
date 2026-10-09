@@ -103,4 +103,26 @@ describe('tagRepository', () => {
     await createTag(db, { name: 'Writing', color: 'rose' }, clock);
     expect(await outcomeOf(setArchived(db, old.id, false, clock))).toBe('duplicate');
   });
+
+  // M5: every edit must be uploaded again.
+  it('every edit clears syncedAt so sync uploads it', async () => {
+    const db = withDb();
+    const clock = createTestClock();
+    const tag = await createTag(db, { name: 'Writing', color: 'mint' }, clock);
+    const markSynced = () => db.tags.update(tag.id, { syncedAt: 1 });
+    const synced = async () => (await listTags(db))[0]?.syncedAt;
+
+    await markSynced();
+    await renameTag(db, tag.id, 'Essays', clock);
+    expect(await synced()).toBeNull();
+    await markSynced();
+    await recolorTag(db, tag.id, 'rose', clock);
+    expect(await synced()).toBeNull();
+    await markSynced();
+    await setArchived(db, tag.id, true, clock);
+    expect(await synced()).toBeNull();
+    await markSynced();
+    await setArchived(db, tag.id, false, clock);
+    expect(await synced()).toBeNull();
+  });
 });
