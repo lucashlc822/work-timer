@@ -166,7 +166,7 @@ const PanelLink = ({ onClick, children }: { onClick: () => void; children: React
 );
 
 /** New tags default to the next unused-looking colour, so a first few look distinct. */
-const COLOR_ORDER: readonly TagColor[] = ['lavender', 'rose', 'mint', 'warm', 'cool', 'blush'];
+const COLOR_ORDER: readonly TagColor[] = ['lavender', 'mint', 'rose', 'gold', 'sky', 'peach'];
 
 const NewTagForm = ({ taken, onCreated }: { taken: number; onCreated: (id: string) => void }) => {
   const [name, setName] = useState('');

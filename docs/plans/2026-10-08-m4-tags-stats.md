@@ -31,7 +31,7 @@ on branch `feat/m4-tags-stats`, as for M1–M3.
 | Cancelled sessions | Their `actualFocusS` **counts** toward focus time; they're counted as "ended early", earn no star. In-flight sessions (`endedAt === null`) are excluded everywhere. | Focus that happened is real; the star is the only reward gated on completion. |
 | Day boundaries | Built with local `Date` arithmetic (`new Date(y, m, d)`), never `+ 86_400_000`. | Correct across DST changes. |
 | Tag fields | `name`, `color` (a palette **key**, not hex), `archivedAt`, no icon. | Keys let the palette change in tokens.css without touching rows. Icon dropped until a design needs it. |
-| Tag palette | 6 keys → tokens: `lavender` (lavender-300), `rose` (rose-300), `mint` (mint-300), `warm` (star-warm), `cool` (star-cool), `blush` (rose-200). Lives in `shared/ui/tagColors.ts`, since both `tags` and `stats` render it. | Feature slices can't import each other; `shared/ui` is the legal meeting point. |
+| Tag palette | 6 keys: `lavender` (lavender-400), `mint` (mint-300), `rose` (rose-400), and three new tokens `gold`, `sky`, `peach` (`--color-tag-*`). Lives in `shared/ui/tagColors.ts`, since both `tags` and `stats` render it. **Revised during the build:** the first draft (six pale existing tokens) failed the dataviz validator's separation checks (blush vs cool ΔE 6.5 for normal vision). This set passes CVD separation (worst adjacent ΔE 11.1) and normal-vision separation (≥ 21); it still fails the validator's lightness-band and chroma-floor checks, because the app is deliberately pastel, so a tag's name is always printed beside its colour. | Feature slices can't import each other; `shared/ui` is the legal meeting point. |
 | Tag name rules | Trimmed, 1–24 chars, unique case-insensitively among **non-archived** tags. Max 20 active tags. | Keeps the picker a single row/popover. |
 | Deleting tags | **Archive only** (soft delete). Archived tags vanish from the picker, keep their name/colour in stats and history. Un-archive offered in the manager. | The architecture doc's design; old sessions keep their label. |
 | Tags are mutable rows | Yes (rename/recolor/archive), unlike sessions. `TagRow.updatedAt` added now so M5 can sync them last-write-wins. | Flag for M5, not a problem for M4. |
@@ -47,7 +47,7 @@ on branch `feat/m4-tags-stats`, as for M1–M3.
 ### Storage — `src/shared/db/schema.ts`
 
 ```ts
-export type TagColor = 'lavender' | 'rose' | 'mint' | 'warm' | 'cool' | 'blush';
+export type TagColor = 'lavender' | 'mint' | 'rose' | 'gold' | 'sky' | 'peach';
 
 export interface TagRow {
   id: string;            // client UUID

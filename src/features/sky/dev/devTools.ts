@@ -17,10 +17,11 @@ import { frameCount } from '../hooks/useFrameLoop';
  *   few seconds apart while the window is hidden to confirm the loop stopped.
  */
 export const install = (): void => {
-  Object.assign(window, {
-    __starkeep: {
-      seed: (count = 1, minutes = 25) => seedCompletedSessions(db, count, minutes, systemClock),
-      frames: frameCount,
-    },
-  });
+  // Merged, not assigned: other features add their own helpers to the same object.
+  const host = window as unknown as { __starkeep?: Record<string, unknown> };
+  host.__starkeep = {
+    ...host.__starkeep,
+    seed: (count = 1, minutes = 25) => seedCompletedSessions(db, count, minutes, systemClock),
+    frames: frameCount,
+  };
 };

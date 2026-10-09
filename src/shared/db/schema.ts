@@ -160,7 +160,7 @@ export interface ConstellationRow {
 }
 
 /** Palette keys, not hex values — the colours themselves live in tokens.css. */
-export type TagColor = 'lavender' | 'rose' | 'mint' | 'warm' | 'cool' | 'blush';
+export type TagColor = 'lavender' | 'mint' | 'rose' | 'gold' | 'sky' | 'peach';
 
 /**
  * A label for sessions (M4).
