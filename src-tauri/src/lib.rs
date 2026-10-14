@@ -1,4 +1,5 @@
 mod deadline;
+mod no_service_worker;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -96,6 +97,9 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_main_window(app);
         }))
+        // Retires a service worker an older build registered, before any page
+        // script runs (see the module for why the exe has to do this).
+        .plugin(no_service_worker::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
