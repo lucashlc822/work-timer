@@ -12,6 +12,81 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-13 — M5 finished: live updates, settings sync, delete account, version check
+
+**Status: merged (PR #23 as `a6568ec`); cases 23–28 passed, 29 still Lucas's.**
+Planned and built from `docs/plans/2026-10-08-m5-accounts-sync.md`; per-case
+results are in the PR #23 description and the plan has an "As built — PR 3"
+section. No server migration — PR 1's schema already had everything.
+
+### Decisions made while building
+
+- **`package.json` is the app version** (now 0.1.0, matching
+  `tauri.conf.json`; a test fails if they drift). `app_config.min_client_version`
+  is compared against it, so raise that minimum only after the matching
+  release is out. A malformed minimum is ignored, never blocks sync.
+- **Synced settings live in `meta`, not a table**: `timerMode` +
+  `pomodoroSettings`, stamped by `settingsUpdatedAt`, confirmed by
+  `settingsSyncedAt`. The server's `pomodoro` jsonb uses snake_case keys. A
+  device that never edited settings adopts the account's and uploads nothing.
+- **Delete is only offered once a sync attempt has reached the server**, and
+  never mid-session. Confirmation is typing the account's email.
+
+### Things worth not rediscovering
+
+- **A Dexie live query can freeze silently.** `countPending` awaited nested
+  async helpers inside its live query and Dexie stopped re-running it after
+  the first result: the "changes waiting" count stuck at 0, the 2 s upload
+  never fired, and a finished desktop session sat unsynced while the status
+  said "Backed up". Unit tests passed; only the desktop acceptance run caught
+  it. Fix: one `meta.bulkGet`. Any new live query gets a
+  `liveQuery(...).subscribe` unit test (now in CLAUDE.md).
+- **Vite hot-swaps non-component modules without reloading the page**, so
+  after editing `engine.ts` the running app was a mix of old and new code and
+  behaved inconsistently. Reload the window (`location.reload()`) before
+  re-testing a sync change.
+- **The packaged app keeps an old frontend if a service worker from an older
+  exe is registered** at `http://tauri.localhost`. The new release binary
+  loaded the previous build's `index-*.js` with no update prompt until the
+  worker was unregistered by hand. Pre-existing; a task was flagged for it.
+  When testing a release binary, check `document.scripts` matches `dist/`.
+- **A paused Docker container makes requests hang, not fail** — sync sat on
+  "Syncing…" indefinitely. To simulate "server unreachable", `docker stop
+  supabase_kong_work-timer` (then `docker start`), not `docker pause`.
+- **Realtime on a just-started local stack** took over 1.5 s to accept a
+  subscription; the integration test now retries until it hears an event.
+- **A release build can point at the local stack without an env file**:
+  `VITE_SUPABASE_URL=… VITE_SUPABASE_PUBLISHABLE_KEY=… npx tauri build --no-bundle`
+  (Vite reads `VITE_` variables from the process environment).
+- **Desktop + browser pane on one dev server:** start the `dev` preview, then
+  run `tauri dev` with `--config` overriding `build.beforeDevCommand` to `""`
+  so it reuses port 5173 instead of failing on `strictPort`.
+- Tauri's IPC to `http://ipc.localhost` violates the CSP from PR 1 and falls
+  back to `postMessage` — console noise on every IPC call, works. Pre-existing.
+
+### Test data on the local stack
+
+`a@test.local` gained a few sessions (devices `desktop/app`,
+`case-28-script`, `integration-test`), a tag renamed to "Live rename", and
+settings 25/5/15/4 countdown. `b@test.local` was deleted in case 25 and
+**re-created empty** (new user id). The release test install's service worker
+was unregistered by hand.
+
+### Next
+
+- **Case 29, by hand, Lucas:** the hosted Supabase project, as in
+  `supabase/README.md` ("Setting up the hosted project"). Leave
+  `min_client_version` null there.
+- **The service worker in the desktop app** (flagged as a task): make a new
+  exe always load its own frontend before the Release milestone's
+  auto-updates.
+- **Release milestone** after that: Windows installer on GitHub Releases,
+  Tauri auto-updates, web hosting.
+- The other machine still needs Docker Desktop (with WSL).
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-08 — M5 two-thirds done: invite-only accounts and sync
 
 **Status: PRs #19 (accounts) and #20 (sync) merged; PR 3 not started.**
@@ -79,6 +154,7 @@ The desktop app's and the browser pane's account stores mirror it.
   sync (mode + Pomodoro lengths, last-write-wins), delete-account (typed
   confirmation), and the `app_config.min_client_version` "Please update" check.
   Acceptance cases 23–26. Stay on Opus.
+  **(Done 2026-10-13 — merged as PR #23; see the entry above.)**
 - **Case 29, by hand, Lucas:** create the free hosted Supabase project and run
   the steps in `supabase/README.md` ("Setting up the hosted project"),
   including the Gmail app password, which needs 2-step verification. I can't
