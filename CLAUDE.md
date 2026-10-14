@@ -80,7 +80,8 @@ in `NOTES.md`.
 - **The service worker is disabled in `npm run dev`.** Anything involving
   install, offline, or update prompts must be tested with
   `npm run build && npm run preview`. A missing service worker in development
-  is configuration, not a bug.
+  is configuration, not a bug. **The desktop app has none either**, by design
+  (see "Decisions already made"): don't test offline or update prompts there.
 - **Vitest defaults to the `node` environment, not jsdom.** Deliberate — jsdom
   cost ~50s of setup per run for tests that never touch a DOM. A test that
   needs `window` must declare `// @vitest-environment jsdom` at the top of the
@@ -253,6 +254,16 @@ rejected). Don't pre-populate this with guesses.
   toward the days its interval overlaps; counts, stars and the history list
   belong to the period the session *started* in. Unfinished sessions are
   excluded everywhere. Week starts Monday.
+- **The desktop app has no service worker** (2026-10-13). Its frontend comes
+  from the exe, so an offline cache buys it nothing, and a worker registered
+  by one exe kept serving that exe's cached files to the next, with no update
+  prompt. Offline support and the "new version" prompt are browser-only
+  (`App.tsx` mounts `UpdatePrompt` only when `!isDesktop()`); desktop updates
+  arrive with the exe. `src-tauri/src/no_service_worker.rs` injects a script
+  into every webview that unregisters any worker an older exe left and clears
+  its caches (never IndexedDB or localStorage), reloading once if the page was
+  served by one. A pinned install runs the *old* frontend, so only the exe can
+  rescue it — don't try to move this into the frontend.
 - **`package.json` is the app's version** (M5, 2026-10-13). Vite exposes it as
   `APP_VERSION`; `tauri.conf.json` must match, and a test fails if it doesn't.
   Bump both before each release. `app_config.min_client_version` is compared
