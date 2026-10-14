@@ -12,6 +12,73 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-13 — Desktop app no longer registers a service worker (PR #25)
+
+**Status: merged (PR #25 as `348d4b1`); cases 1–5 passed.** A short follow-up to
+M5, built from the plan flagged in the entry below. Nothing is in flight from
+this work.
+
+### What was wrong, and what changed
+
+The desktop app runs the browser build's frontend, so it also registered the
+browser build's service worker at `http://tauri.localhost`. A worker
+registered by one exe kept serving that exe's cached `index-*.js` to the
+*next* exe, with no waiting worker and no update prompt. Auto-updates would
+have left desktop apps on a stale frontend.
+
+- **No worker on desktop:** `App.tsx` mounts `UpdatePrompt` (the only thing
+  that registers the worker) only when `!isDesktop()`. Offline support and the
+  "new version" prompt are browser-only.
+- **The exe retires old workers:** `src-tauri/src/no_service_worker.rs`
+  injects a script into every webview at document start that unregisters
+  workers and deletes CacheStorage, then reloads once (capped by a
+  `sessionStorage` flag) if the page was served by a worker. It never touches
+  IndexedDB or localStorage.
+- **Why it has to be the exe:** a pinned install runs the *old* frontend, which
+  can't fix itself. Don't move this rescue into the frontend.
+
+### Things worth not rediscovering
+
+- **`Get-Process starkeep` doesn't match a renamed exe.** A copy named
+  `starkeep-master.exe` has process name `starkeep-master`, so my "stop it"
+  missed it and the next launch exited at once (single-instance hands over to
+  the first and exits 0). A "launch completed with exit code 0" notice right
+  after starting an exe means another instance is running. Match
+  `starkeep*`.
+- **Simulating an update = swapping exes.** Both builds share one WebView2
+  profile (same app identifier, not the exe path), so run the old exe, sign in,
+  quit, then run the new one. Keep the old build as a copy in the scratchpad
+  before changing anything.
+- **Run `cargo fmt --check` before pushing Rust.** CI's "Rust formatting" step
+  failed on one assertion; I had run clippy and the tests but not the format
+  check. Add it to the local pre-push set: lint, typecheck, format:check, test,
+  build, **cargo fmt --check**, clippy.
+- **Case 1's "old install" is real, not simulated**: the `master` exe
+  registered the worker itself, so the pinned state is the one users would
+  actually have.
+
+### Not verified
+
+- Why the stale worker never updated (probably WebView2 not routing the
+  worker's update fetch through Tauri's asset protocol). The fix doesn't
+  depend on it.
+- A real installer update; the installer doesn't exist yet. The exe swap
+  stands in for it.
+- A reload while a session is in flight was reasoned, not reproduced.
+- macOS.
+
+### Next
+
+- **Case 29, by hand, Lucas:** the hosted Supabase project (see the entry
+  below).
+- **Release milestone:** Windows installer on GitHub Releases, Tauri
+  auto-updates, web hosting. When the installer exists, repeat case 1 through
+  it, since that is the part not covered here.
+- The other machine still needs Docker Desktop (with WSL).
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-13 — M5 finished: live updates, settings sync, delete account, version check
 
 **Status: merged (PR #23 as `a6568ec`); cases 23–28 passed, 29 still Lucas's.**
@@ -50,6 +117,9 @@ section. No server migration — PR 1's schema already had everything.
   loaded the previous build's `index-*.js` with no update prompt until the
   worker was unregistered by hand. Pre-existing; a task was flagged for it.
   When testing a release binary, check `document.scripts` matches `dist/`.
+  **(Superseded 2026-10-13 — fixed in PR #25: the desktop app registers no
+  worker and the exe retires old ones. The `document.scripts` check is still
+  a good habit.)**
 - **A paused Docker container makes requests hang, not fail** — sync sat on
   "Syncing…" indefinitely. To simulate "server unreachable", `docker stop
   supabase_kong_work-timer` (then `docker start`), not `docker pause`.
@@ -80,6 +150,7 @@ was unregistered by hand.
 - **The service worker in the desktop app** (flagged as a task): make a new
   exe always load its own frontend before the Release milestone's
   auto-updates.
+  **(Done 2026-10-13 — merged as PR #25; see the entry above.)**
 - **Release milestone** after that: Windows installer on GitHub Releases,
   Tauri auto-updates, web hosting.
 - The other machine still needs Docker Desktop (with WSL).
