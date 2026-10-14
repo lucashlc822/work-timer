@@ -152,6 +152,11 @@ in `NOTES.md`.
   down, another device's change waits for one of the other triggers. A
   device's own uploads echo back as one extra, harmless round. "Sync now" in
   the Account panel runs a round immediately.
+- **A Dexie live query can silently stop updating** if its body awaits a
+  chain of nested plain-`async` helpers: it emits once and never re-runs. Keep
+  live-query bodies flat — await Dexie calls directly, or read several `meta`
+  keys with one `bulkGet` (see `countPending`). Test new live queries with a
+  `liveQuery(...).subscribe` unit test; the M5 one failed on the bad version.
 - **"Please update the app to keep syncing" is the server's
   `app_config.min_client_version`**, not a sync failure. While it is above the
   app's `package.json` version, sync sends and applies nothing; clearing it

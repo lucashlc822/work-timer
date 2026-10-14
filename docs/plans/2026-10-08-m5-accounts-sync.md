@@ -250,3 +250,31 @@ model (Opus) for all three PRs.**
 - **The packaged app's origin is `http://tauri.localhost`** (CLAUDE.md said
   `tauri://localhost`; corrected).
 
+## As built — PR 3
+
+- **No server migration.** PR 1's schema already had `user_settings`,
+  `delete_my_account()`, `app_config` and the realtime publication; pgTAP gained
+  settings last-write-wins and isolation checks (41 tests).
+- **Settings live in `meta`, not a table**: `timerMode` + `pomodoroSettings`,
+  stamped by `settingsUpdatedAt` and confirmed by `settingsSyncedAt`. The
+  server row's `pomodoro` jsonb uses snake_case keys
+  (`focus_s`, `short_break_s`, `long_break_s`, `blocks_per_long_break`).
+  `lastTagId` is never synced; a run in progress keeps its own snapshot.
+- **`package.json` is the app version** (bumped 0.0.0 → 0.1.0 to match
+  `tauri.conf.json`; a test keeps them equal). `compareVersions` ignores a
+  malformed minimum rather than blocking sync.
+- **`deleteAccount` is not on `RemoteStore`** (the contract listed it): the
+  account feature calls `delete_my_account()` directly, so a sync-layer copy
+  would have been dead code.
+- **Two bugs caught by the acceptance pass, fixed before the PR:**
+  - `countPending` awaited nested async helpers inside its live query and
+    Dexie stopped re-running it, so the "changes waiting" count froze and the
+    2 s upload never fired (a finished session on the desktop sat unsynced).
+    Now one `meta.bulkGet`; a liveQuery regression test fails on the broken
+    version.
+  - The delete button re-enabled during offline retries (each reads
+    "Syncing…"). It now follows the last finished attempt and needs one to
+    have reached the server.
+- **Realtime on a just-started local stack** took over 1.5 s to accept a
+  subscription; the integration test keeps writing until it hears an event.
+
