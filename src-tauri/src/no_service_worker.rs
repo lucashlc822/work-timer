@@ -67,7 +67,10 @@ mod tests {
         assert!(SCRIPT.contains("getRegistrations"));
         assert!(SCRIPT.contains("caches.delete"));
         for forbidden in ["indexedDB", "localStorage.clear", "localStorage.removeItem"] {
-            assert!(!SCRIPT.contains(forbidden), "{forbidden} must never be touched");
+            assert!(
+                !SCRIPT.contains(forbidden),
+                "{forbidden} must never be touched"
+            );
         }
     }
 
