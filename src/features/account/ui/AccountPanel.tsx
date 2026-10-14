@@ -10,6 +10,8 @@ interface Props {
   sync: SyncStatusView;
   onSyncNow: () => void;
   onSignOut: () => Promise<void>;
+  /** Deletes the account everywhere it can; rejects if nothing was removed. */
+  onDeleteAccount: () => Promise<void>;
 }
 
 /**
@@ -26,8 +28,8 @@ const useBusy = (): boolean =>
     false,
   );
 
-/** Who is signed in, what is stored about them, and signing out. */
-export const AccountPanel = ({ email, sync, onSyncNow, onSignOut }: Props) => {
+/** Who is signed in, what is stored about them, signing out, and leaving for good. */
+export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccount }: Props) => {
   const busy = useBusy();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +92,127 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut }: Props) => {
           </p>
         )}
       </section>
+
+      <DeleteAccount
+        email={email}
+        busy={busy}
+        offline={sync.phase === 'offline' || sync.phase === 'unreachable'}
+        onDelete={onDeleteAccount}
+      />
     </div>
+  );
+};
+
+/**
+ * Deleting is permanent and reaches the server, so it is tucked behind a
+ * button, asks for the account's email to be typed out, and is only offered
+ * when it can actually finish: online, with nothing in progress.
+ */
+const DeleteAccount = ({
+  email,
+  busy,
+  offline,
+  onDelete,
+}: {
+  email: string | null;
+  busy: boolean;
+  offline: boolean;
+  onDelete: () => Promise<void>;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirmed = email !== null && typed.trim().toLowerCase() === email.toLowerCase();
+  const blocked = busy
+    ? 'Finish or end the session in progress before deleting your account.'
+    : offline
+      ? 'Deleting your account needs a connection to the server.'
+      : null;
+
+  const remove = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await onDelete();
+    } catch (e) {
+      console.error('Account deletion failed', e);
+      setError("Couldn't delete your account. Nothing was removed.");
+      setDeleting(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <section className="flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-ink-muted hover:text-faded text-xs transition-colors"
+        >
+          Delete account…
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      aria-label="Delete account"
+      className="border-faded/40 flex flex-col gap-3 rounded-xl border p-4 text-sm"
+    >
+      <h3 className="text-ink-primary">Delete account</h3>
+      <p className="text-ink-secondary">
+        This permanently removes your account and everything backed up under it — sessions, stars,
+        constellation choices, tags and settings — and this device&rsquo;s copy too. It can&rsquo;t
+        be undone.
+      </p>
+      <p className="text-ink-secondary">
+        Any other device signed in to this account is signed out the next time it reaches the
+        server; what it already holds stays on it. You could sign up again later with the same
+        address.
+      </p>
+      <label className="text-ink-secondary flex flex-col gap-1 text-xs">
+        Type your email address to confirm
+        <input
+          type="email"
+          autoComplete="off"
+          value={typed}
+          disabled={deleting}
+          onChange={(e) => setTyped(e.target.value)}
+          placeholder={email ?? ''}
+          className="bg-night-900 border-night-600 text-ink-primary focus:border-lavender-400 rounded-lg border px-3 py-2 text-sm outline-none"
+        />
+      </label>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={() => {
+            setOpen(false);
+            setTyped('');
+            setError(null);
+          }}
+          className="text-ink-muted hover:text-ink-primary text-xs transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!confirmed || blocked !== null || deleting}
+          onClick={() => void remove()}
+          className="rounded-pill border-faded text-faded hover:bg-faded/10 border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-40"
+        >
+          {deleting ? 'Deleting…' : 'Delete my account'}
+        </button>
+      </div>
+      {blocked !== null && <p className="text-ink-muted text-xs">{blocked}</p>}
+      {error !== null && (
+        <p role="alert" className="text-faded text-xs">
+          {error}
+        </p>
+      )}
+    </section>
   );
 };

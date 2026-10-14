@@ -1,4 +1,6 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -18,7 +20,19 @@ const injectBrand = (): PluginOption => ({
     html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION),
 });
 
+/**
+ * The app's version, from `package.json` — the one place it is written (the
+ * Tauri config must match; a test checks). The server's
+ * `app_config.min_client_version` is compared against it.
+ */
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+) as { version: string };
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

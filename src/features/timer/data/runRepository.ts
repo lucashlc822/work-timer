@@ -164,10 +164,46 @@ export const readTimerPrefs = async (
   };
 };
 
-export const saveTimerPrefs = (db: WorkTimerDb, prefs: TimerPrefs): Promise<void> =>
+const sameSettings = (a: Partial<PomodoroSettings> | undefined, b: PomodoroSettings): boolean =>
+  a !== undefined &&
+  a.focusS === b.focusS &&
+  a.shortBreakS === b.shortBreakS &&
+  a.longBreakS === b.longBreakS &&
+  a.blocksPerLongBreak === b.blocksPerLongBreak;
+
+/**
+ * Save the idle screen's choices. A change to the mode or the Pomodoro lengths
+ * also stamps `settingsUpdatedAt`, which is what sync uploads to the account's
+ * other devices (newest wins). The tag is this device's alone and never
+ * stamps it. The stamp only moves forward, so two edits in one millisecond
+ * still read as two.
+ */
+export const saveTimerPrefs = (db: WorkTimerDb, prefs: TimerPrefs, now: number): Promise<void> =>
   db.transaction('rw', db.meta, async () => {
+    const mode = await readMeta<unknown>(db, META_KEYS.timerMode);
+    const settings = await readMeta<Partial<PomodoroSettings>>(db, META_KEYS.pomodoroSettings);
+    if (mode !== prefs.mode || !sameSettings(settings, prefs.settings)) {
+      const previous = (await readMeta<number>(db, META_KEYS.settingsUpdatedAt)) ?? 0;
+      await writeMeta(db, META_KEYS.settingsUpdatedAt, Math.max(now, previous + 1));
+    }
     await writeMeta(db, META_KEYS.timerMode, prefs.mode);
     await writeMeta(db, META_KEYS.pomodoroSettings, prefs.settings);
     if (prefs.tagId === null) await clearMeta(db, META_KEYS.lastTagId);
     else await writeMeta(db, META_KEYS.lastTagId, prefs.tagId);
+  });
+
+/**
+ * Apply `patch` to whatever is stored right now, in one transaction. Quick
+ * successive edits (a stepper held down) each build on the last, even before
+ * the screen has caught up with the previous one.
+ */
+export const updateTimerPrefs = (
+  db: WorkTimerDb,
+  patch: Partial<TimerPrefs>,
+  limits: PomodoroLimits,
+  now: number,
+): Promise<void> =>
+  db.transaction('rw', db.meta, db.tags, async () => {
+    const current = await readTimerPrefs(db, limits);
+    await saveTimerPrefs(db, { ...current, ...patch }, now);
   });

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { REALTIME_SUBSCRIBE_STATES, type SupabaseClient } from '@supabase/supabase-js';
 
 import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import type { SyncTable, WireRow } from './wire';
@@ -42,6 +42,9 @@ const guard = async <T>(run: () => PromiseLike<T>): Promise<T> => {
   }
 };
 
+/** Every table whose changes another device should hear about. */
+const LIVE_TABLES: readonly SyncTable[] = ['tags', 'constellations', 'sessions', 'user_settings'];
+
 export const supabaseRemote = (client: SupabaseClient): RemoteStore => ({
   hasSession: async () => {
     const { data } = await client.auth.getSession();
@@ -54,8 +57,11 @@ export const supabaseRemote = (client: SupabaseClient): RemoteStore => ({
       table === 'tags'
         ? // Newest edit wins; the server's lww_guard ignores a stale copy.
           client.from('tags').upsert(rows, { onConflict: 'id' })
-        : // Insert-only: an id already on the server is skipped, so retries are safe.
-          client.from(table).upsert(rows, { onConflict: 'id', ignoreDuplicates: true }),
+        : table === 'user_settings'
+          ? // One row per account, keyed by the account (filled in by the server).
+            client.from('user_settings').upsert(rows, { onConflict: 'user_id' })
+          : // Insert-only: an id already on the server is skipped, so retries are safe.
+            client.from(table).upsert(rows, { onConflict: 'id', ignoreDuplicates: true }),
     );
     if (error) fail(error, status);
   },
@@ -72,5 +78,39 @@ export const supabaseRemote = (client: SupabaseClient): RemoteStore => ({
     });
     if (error) fail(error, status);
     return (data ?? []) as WireRow[];
+  },
+
+  /**
+   * Supabase Realtime: the server announces each insert or update to this
+   * account's rows (row-level security still decides who hears what). The
+   * event only says "something changed"; the caller then runs a normal sync,
+   * so there is one way server data is applied. After a reconnect, events
+   * sent while disconnected are lost, so a re-subscribe counts as a change.
+   */
+  subscribe: (userId, onChange) => {
+    const channel = client.channel(`sync:${userId}`);
+    for (const table of LIVE_TABLES) {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: `user_id=eq.${userId}` },
+        () => onChange(),
+      );
+    }
+    let subscribedBefore = false;
+    channel.subscribe((status) => {
+      if (status !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) return;
+      if (subscribedBefore) onChange();
+      subscribedBefore = true;
+    });
+    return () => void client.removeChannel(channel);
+  },
+
+  minClientVersion: async () => {
+    const { data, error, status } = await guard(() =>
+      client.from('app_config').select('min_client_version').maybeSingle(),
+    );
+    if (error) fail(error, status);
+    const min: unknown = data?.min_client_version;
+    return typeof min === 'string' && min.trim() !== '' ? min : null;
   },
 });

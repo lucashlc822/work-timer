@@ -208,6 +208,17 @@ export const META_KEYS = {
    * row can't block the rest; shown to the person as "couldn't be backed up".
    */
   syncRejected: 'syncRejected',
+  /**
+   * Sync (M5): epoch ms of the last change to `timerMode` or `pomodoroSettings`
+   * on this device, or of the server copy it adopted. Absent until either
+   * happens. Never bumped by `lastTagId`, which stays per device.
+   */
+  settingsUpdatedAt: 'settingsUpdatedAt',
+  /**
+   * Sync (M5): the `settingsUpdatedAt` value the server is known to hold. The
+   * settings wait to be uploaded whenever the two differ.
+   */
+  settingsSyncedAt: 'settingsSyncedAt',
 } as const;
 
 export type WorkTimerDb = Dexie & {

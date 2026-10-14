@@ -29,6 +29,19 @@ default. With the stack running and `a@test.local` signed up once:
 SUPABASE_IT=1 SUPABASE_IT_KEY=<publishable key from `npx supabase status`> npx vitest run supabaseRemote.integration
 ```
 
+### Asking old apps to update
+
+`app_config.min_client_version` is the oldest app version the server still
+syncs with (compared with `package.json`'s `version`). Apps older than it stop
+syncing and show "Please update the app to keep syncing"; they keep working
+offline. Set it in Studio's SQL editor (local: `http://127.0.0.1:54323`), only
+once the matching release is out:
+
+```sql
+update public.app_config set min_client_version = '0.2.0';
+update public.app_config set min_client_version = null;   -- any version again
+```
+
 Generate migrations on **one machine only**, so the two machines' histories
 never diverge. Once the app has been released to other people, every new
 migration must be backward compatible: never drop or rename a column an older

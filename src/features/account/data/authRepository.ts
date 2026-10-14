@@ -123,3 +123,14 @@ export const resetPassword = async (
 export const signOut = async (client: SupabaseClient) => {
   await call(() => client.auth.signOut({ scope: 'local' }));
 };
+
+/**
+ * Deletes the signed-in account on the server, with everything stored under
+ * it (`delete_my_account()`; every table cascades). The invite is kept, so
+ * the same address could sign up again. Removing this device's copy is the
+ * caller's job, once this has succeeded.
+ */
+export const deleteAccount = async (client: SupabaseClient) => {
+  // A query builder is only thenable; `async` makes it a real Promise for `call`.
+  await call(async () => client.rpc('delete_my_account'));
+};

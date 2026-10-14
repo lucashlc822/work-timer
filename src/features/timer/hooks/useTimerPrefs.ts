@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useCallback } from 'react';
 
 import { db, type SessionMode } from '@/shared/db';
 
-import { readTimerPrefs, saveTimerPrefs, type TimerPrefs } from '../data/runRepository';
+import { readTimerPrefs, updateTimerPrefs, type TimerPrefs } from '../data/runRepository';
 import {
   clampPomodoroSettings,
   DEFAULT_POMODORO,
@@ -21,42 +22,28 @@ export interface TimerPrefsState extends TimerPrefs {
   setTagId: (tagId: string | null) => void;
 }
 
+const DEFAULTS: TimerPrefs = {
+  mode: 'countdown',
+  settings: clampPomodoroSettings(DEFAULT_POMODORO, pomodoroLimits),
+  tagId: null,
+};
+
 /**
  * The idle screen's remembered choices: countdown or Pomodoro, the Pomodoro
- * lengths, and the last tag. Saved on every change, so they survive a reload without
- * the user having to start anything.
+ * lengths, and the last tag. Saved on every change, so they survive a reload
+ * without the user having to start anything.
+ *
+ * Read live from the store rather than held in component state, so settings
+ * synced from another of the account's devices show up here as they arrive.
+ * A run already under way is unaffected: it keeps its own copy of the lengths.
  */
 export const useTimerPrefs = (): TimerPrefsState => {
-  const [prefs, setPrefs] = useState<TimerPrefs>({
-    mode: 'countdown',
-    settings: clampPomodoroSettings(DEFAULT_POMODORO, pomodoroLimits),
-    tagId: null,
-  });
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    readTimerPrefs(db, pomodoroLimits)
-      .then((stored) => {
-        if (!cancelled) setPrefs(stored);
-      })
-      .catch((e: unknown) => console.error('Could not read timer preferences', e))
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const stored = useLiveQuery(() => readTimerPrefs(db, pomodoroLimits), []);
 
   const update = useCallback((patch: Partial<TimerPrefs>) => {
-    setPrefs((current) => {
-      const next = { ...current, ...patch };
-      void saveTimerPrefs(db, next).catch((e: unknown) =>
-        console.error('Could not save timer preferences', e),
-      );
-      return next;
-    });
+    void updateTimerPrefs(db, patch, pomodoroLimits, Date.now()).catch((e: unknown) =>
+      console.error('Could not save timer preferences', e),
+    );
   }, []);
 
   const setMode = useCallback((mode: SessionMode) => update({ mode }), [update]);
@@ -65,8 +52,7 @@ export const useTimerPrefs = (): TimerPrefsState => {
       update({ settings: clampPomodoroSettings(settings, pomodoroLimits) }),
     [update],
   );
-
   const setTagId = useCallback((tagId: string | null) => update({ tagId }), [update]);
 
-  return { ...prefs, loaded, setMode, setSettings, setTagId };
+  return { ...(stored ?? DEFAULTS), loaded: stored !== undefined, setMode, setSettings, setTagId };
 };

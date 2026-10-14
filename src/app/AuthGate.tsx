@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { AuthScreens, signOut, type SignedInAccount } from '@/features/account';
+import { AuthScreens, deleteAccount, signOut, type SignedInAccount } from '@/features/account';
 import { clearLastUserId, getSupabase, readStoredAccount, writeLastUserId } from '@/shared/backend';
 import { APP_NAME } from '@/shared/config';
-import { bindAccountDb } from '@/shared/db';
+import { bindAccountDb, db, deleteAccountDb } from '@/shared/db';
 
 import { AccountContext } from './accountContext';
 import { useSync } from './useSync';
@@ -52,7 +52,9 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     const client = getSupabase();
     if (client === null || gate.kind !== 'signedIn') return;
     const { data } = client.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
+      // Deleting the account signs out too, but must finish removing the local
+      // copy before the window reloads.
+      if (event === 'SIGNED_OUT' && !deleting) {
         clearLastUserId();
         reload();
       }
@@ -93,25 +95,55 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
         clearLastUserId();
         reload();
       }}
+      deleteAccount={() => deleteEverywhere(gate.account.userId)}
     >
       {children}
     </SignedIn>
   );
 };
 
+/**
+ * Delete the account on the server, then this device's copy, then go back to
+ * the sign-in screen. If the server refuses, nothing local is touched and the
+ * error reaches the panel. Once the server has deleted it, every later step is
+ * best effort: the account is gone either way, so the person must not be left
+ * signed in to it.
+ */
+let deleting = false;
+
+const deleteEverywhere = async (userId: string): Promise<void> => {
+  const client = getSupabase();
+  if (client === null) throw new Error('No server configured');
+  await deleteAccount(client);
+  deleting = true;
+
+  // The server session went with the account; this clears the stored one.
+  await signOut(client).catch((e: unknown) => console.warn('Local sign-out after delete', e));
+  clearLastUserId();
+  // Close this window's connection first, or the deletion waits on it. Other
+  // windows (the mini window) close theirs when Dexie asks them to.
+  db.close();
+  await deleteAccountDb(userId).catch((e: unknown) =>
+    console.error('Could not delete the local copy', e),
+  );
+  reload();
+};
+
 /** The signed-in app, with sync running for the whole time it is mounted. */
 const SignedIn = ({
   account,
   signOut,
+  deleteAccount,
   children,
 }: {
   account: SignedInAccount;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   children: ReactNode;
 }) => {
-  const { syncNow, ...sync } = useSync();
+  const { syncNow, ...sync } = useSync(account.userId);
   return (
-    <AccountContext.Provider value={{ account, signOut, sync, syncNow }}>
+    <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
       {children}
     </AccountContext.Provider>
   );

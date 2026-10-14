@@ -4,15 +4,16 @@ import {
   createDb,
   META_KEYS,
   readMeta,
+  writeMeta,
   type ConstellationRow,
   type SessionRow,
   type TagRow,
   type WorkTimerDb,
 } from '../db';
 import { createTestClock } from '../lib';
-import { createSyncEngine, PULL_PAGE, type SyncLock } from './engine';
+import { countPending, createSyncEngine, PULL_PAGE, type SyncLock } from './engine';
 import { FakeRemote } from './fakeRemote';
-import { sessionToWire, tagToWire } from './wire';
+import { sessionToWire, settingsToWire, tagToWire } from './wire';
 
 const opened: WorkTimerDb[] = [];
 const newDb = (): WorkTimerDb => {
@@ -66,9 +67,15 @@ const choice = (o: Partial<ConstellationRow> = {}): ConstellationRow => ({
   ...o,
 });
 
-const device = (remote: FakeRemote, lock: SyncLock | null = null) => {
+const device = (remote: FakeRemote, lock: SyncLock | null = null, appVersion = '0.1.0') => {
   const db = newDb();
-  const engine = createSyncEngine({ db, remote, clock: createTestClock(T0 + 3_600_000), lock });
+  const engine = createSyncEngine({
+    db,
+    remote,
+    clock: createTestClock(T0 + 3_600_000),
+    lock,
+    appVersion,
+  });
   return { db, engine };
 };
 
@@ -312,5 +319,199 @@ describe('concurrency', () => {
 
     expect(await engine.syncNow()).toEqual({ ok: false, reason: 'busy' });
     expect(remote.hasSessionCalls).toBe(0);
+  });
+});
+
+// --- settings (M5 PR 3) ------------------------------------------------------
+
+const POMO = { focusS: 1500, shortBreakS: 300, longBreakS: 900, blocksPerLongBreak: 4 };
+
+/** Write settings the way `saveTimerPrefs` does after a local edit. */
+const editSettings = async (
+  db: WorkTimerDb,
+  updatedAt: number,
+  mode: 'countdown' | 'pomodoro' = 'pomodoro',
+  settings = POMO,
+) => {
+  await writeMeta(db, META_KEYS.timerMode, mode);
+  await writeMeta(db, META_KEYS.pomodoroSettings, settings);
+  await writeMeta(db, META_KEYS.settingsUpdatedAt, updatedAt);
+};
+
+const serverSettings = (updatedAt: number, focusS = 1800) =>
+  settingsToWire({ mode: 'pomodoro', settings: { ...POMO, focusS }, updatedAt });
+
+describe('settings', () => {
+  // U1
+  it('uploads a local settings change once and marks it synced', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0);
+
+    const first = await engine.syncNow();
+    const pushesAfterFirst = remote.pushCalls;
+    await engine.syncNow();
+
+    expect(first).toMatchObject({ ok: true, counts: { pushed: 1 } });
+    expect(remote.tables.user_settings.get('me')).toMatchObject({
+      mode: 'pomodoro',
+      pomodoro: { focus_s: 1500, short_break_s: 300, long_break_s: 900, blocks_per_long_break: 4 },
+    });
+    expect(await readMeta(db, META_KEYS.settingsSyncedAt)).toBe(T0);
+    expect(remote.pushCalls).toBe(pushesAfterFirst);
+    expect(await countPending(db)).toEqual({ pending: 0, rejected: 0 });
+  });
+
+  // U2
+  it('keeps settings edited during their upload waiting, and sends the edit next time', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0);
+    remote.onPush = async (table) => {
+      if (table !== 'user_settings') return;
+      remote.onPush = null;
+      await editSettings(db, T0 + 1000, 'pomodoro', { ...POMO, focusS: 2400 });
+    };
+
+    await engine.syncNow();
+    expect(await countPending(db)).toMatchObject({ pending: 1 });
+
+    await engine.syncNow();
+    expect(remote.tables.user_settings.get('me')).toMatchObject({ pomodoro: { focus_s: 2400 } });
+    expect(await readMeta(db, META_KEYS.settingsSyncedAt)).toBe(T0 + 1000);
+  });
+
+  // U3
+  it('adopts newer settings from the server, leaving the tag and a run in progress alone', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0, 'countdown');
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    await writeMeta(db, META_KEYS.lastTagId, 'my-tag');
+    const run = { id: 'run', startedAt: T0, settings: POMO, blocksDone: 1, break: null };
+    await writeMeta(db, META_KEYS.activeRun, run);
+    remote.seed('user_settings', serverSettings(T0 + 5000, 1800));
+
+    const outcome = await engine.syncNow();
+
+    expect(outcome).toMatchObject({ ok: true, counts: { pulled: 1 } });
+    expect(await readMeta(db, META_KEYS.timerMode)).toBe('pomodoro');
+    expect(await readMeta(db, META_KEYS.pomodoroSettings)).toEqual({ ...POMO, focusS: 1800 });
+    expect(await readMeta(db, META_KEYS.settingsUpdatedAt)).toBe(T0 + 5000);
+    expect(await readMeta(db, META_KEYS.lastTagId)).toBe('my-tag');
+    expect(await readMeta(db, META_KEYS.activeRun)).toEqual(run);
+    expect(await countPending(db)).toMatchObject({ pending: 0 });
+  });
+
+  // U4
+  it('keeps a newer local edit over older server settings, and uploads it', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    remote.seed('user_settings', serverSettings(T0, 1800));
+    await editSettings(db, T0 + 5000, 'pomodoro', { ...POMO, focusS: 600 });
+
+    await engine.syncNow();
+
+    expect(await readMeta(db, META_KEYS.pomodoroSettings)).toEqual({ ...POMO, focusS: 600 });
+    expect(remote.tables.user_settings.get('me')).toMatchObject({ pomodoro: { focus_s: 600 } });
+    expect(await readMeta(db, META_KEYS.settingsSyncedAt)).toBe(T0 + 5000);
+  });
+
+  // U5
+  it.each([
+    ['an unknown mode', { ...serverSettings(T0 + 5000), mode: 'flowtime' }],
+    [
+      'a fractional length',
+      {
+        ...serverSettings(T0 + 5000),
+        pomodoro: { focus_s: 1.5, short_break_s: 300, long_break_s: 900, blocks_per_long_break: 4 },
+      },
+    ],
+  ])('skips and counts settings with %s, and applies the rest', async (_label, row) => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0, 'countdown');
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    remote.seed('user_settings', row);
+    const s = session();
+    remote.seed('sessions', sessionToWire(s));
+
+    const outcome = await engine.syncNow();
+
+    expect(outcome).toMatchObject({ ok: true, counts: { skipped: 1 } });
+    expect(await readMeta(db, META_KEYS.timerMode)).toBe('countdown');
+    expect(await db.sessions.get(s.id)).toBeDefined();
+  });
+
+  // U6
+  it('a device with no settings of its own adopts the account’s and uploads nothing', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    remote.seed('user_settings', serverSettings(T0, 1800));
+
+    await engine.syncNow();
+
+    expect(remote.pushCalls).toBe(0);
+    expect(await readMeta(db, META_KEYS.pomodoroSettings)).toEqual({ ...POMO, focusS: 1800 });
+    expect(await countPending(db)).toMatchObject({ pending: 0 });
+  });
+
+  it('sets aside settings the server refuses until they are edited again', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    remote.reject.add('me');
+    await editSettings(db, T0);
+
+    await engine.syncNow();
+    expect(await countPending(db)).toEqual({ pending: 0, rejected: 1 });
+
+    remote.reject.clear();
+    await editSettings(db, T0 + 1000);
+    expect(await countPending(db)).toMatchObject({ pending: 1 });
+    await engine.syncNow();
+    expect(await readMeta(db, META_KEYS.settingsSyncedAt)).toBe(T0 + 1000);
+  });
+});
+
+// --- version check (M5 PR 3) ---------------------------------------------------
+
+describe('minimum app version', () => {
+  // U8
+  it('syncs nothing when the server requires a newer app', async () => {
+    const remote = new FakeRemote();
+    remote.minVersion = '0.2.0';
+    const { db, engine } = device(remote);
+    await db.sessions.add(session());
+    remote.seed('sessions', sessionToWire(session()));
+
+    expect(await engine.syncNow()).toEqual({ ok: false, reason: 'outdated' });
+    expect(remote.pushCalls).toBe(0);
+    expect(remote.pullCalls).toBe(0);
+    expect(await db.sessions.count()).toBe(1);
+  });
+
+  it.each([null, '0.1.0', '0.0.9', 'not-a-version'])(
+    'syncs normally when the minimum is %s',
+    async (min) => {
+      const remote = new FakeRemote();
+      remote.minVersion = min;
+      const { db, engine } = device(remote);
+      await db.sessions.add(session());
+
+      expect(await engine.syncNow()).toMatchObject({ ok: true, counts: { pushed: 1 } });
+    },
+  );
+
+  it('resumes once the minimum is lowered again', async () => {
+    const remote = new FakeRemote();
+    remote.minVersion = '9.0.0';
+    const { db, engine } = device(remote);
+    await db.sessions.add(session());
+    await engine.syncNow();
+
+    remote.minVersion = null;
+
+    expect(await engine.syncNow()).toMatchObject({ ok: true, counts: { pushed: 1 } });
+    expect(remote.tables.sessions.size).toBe(1);
   });
 });
