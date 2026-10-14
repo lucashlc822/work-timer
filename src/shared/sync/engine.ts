@@ -1,6 +1,14 @@
 import type { EntityTable } from 'dexie';
 
-import { META_KEYS, readMeta, writeMeta, type WorkTimerDb } from '../db';
+import { compareVersions } from '../config';
+import {
+  META_KEYS,
+  readMeta,
+  writeMeta,
+  type MetaRow,
+  type PomodoroSettingsRow,
+  type WorkTimerDb,
+} from '../db';
 import type { Clock } from '../lib';
 import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import {
@@ -8,8 +16,11 @@ import {
   constellationToWire,
   sessionFromWire,
   sessionToWire,
+  settingsFromWire,
+  settingsToWire,
   tagFromWire,
   tagToWire,
+  type SyncedSettings,
   type SyncTable,
   type WireRow,
 } from './wire';
@@ -33,6 +44,15 @@ import {
  * One bad row must not block everything else: if the server refuses a batch
  * for its content, the rows are retried one at a time and only the refused
  * ones are set aside (`META_KEYS.syncRejected`).
+ *
+ * Settings (mode and Pomodoro lengths) are one record per account, kept in
+ * `meta` rather than a table, and go up and come down last, newest edit
+ * winning. The last-picked tag and anything about a run in progress stay on
+ * this device.
+ *
+ * Before any of that, the server may say this app is too old to sync
+ * (`app_config.min_client_version`); then nothing is sent or applied, and the
+ * person is asked to update. The app keeps working on its own meanwhile.
  */
 
 export const PUSH_BATCH = 200;
@@ -69,7 +89,12 @@ export interface SyncCounts {
 
 export type SyncOutcome =
   | { ok: true; counts: SyncCounts }
-  | { ok: false; reason: RemoteErrorKind | 'signedOut' | 'busy'; message?: string };
+  | {
+      ok: false;
+      /** `outdated`: the server requires a newer app; nothing was synced. */
+      reason: RemoteErrorKind | 'signedOut' | 'busy' | 'outdated';
+      message?: string;
+    };
 
 export interface SyncEngine {
   syncNow(): Promise<SyncOutcome>;
@@ -81,6 +106,8 @@ interface Deps {
   clock: Clock;
   /** Cross-window lock; null in tests and where Web Locks is missing. */
   lock: SyncLock | null;
+  /** This build's version, checked against the server's minimum. */
+  appVersion: string;
 }
 
 type Rejected = Partial<Record<SyncTable, string[]>>;
@@ -100,7 +127,46 @@ const later = (a: string | undefined, b: string): string =>
 const withOverlap = (cursor: string | undefined): string | null =>
   cursor === undefined ? null : new Date(Date.parse(cursor) - PULL_OVERLAP_MS).toISOString();
 
-export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine => {
+interface LocalSettings extends SyncedSettings {
+  /** Changed here since the server last confirmed holding this version. */
+  dirty: boolean;
+}
+
+/** The `meta` rows that make up the synced settings, in the order `settingsFrom` reads them. */
+const SETTINGS_META = [
+  META_KEYS.settingsUpdatedAt,
+  META_KEYS.pomodoroSettings,
+  META_KEYS.timerMode,
+  META_KEYS.settingsSyncedAt,
+] as const;
+
+/**
+ * This device's synced settings from the `SETTINGS_META` rows, or null if
+ * they've never been set or adopted. Synchronous on purpose: `countPending`
+ * runs inside a live query, and a chain of nested async helpers there made
+ * Dexie lose track of what it read, so the count stopped updating (seen in
+ * the desktop app). Callers fetch the rows with one `bulkGet` instead.
+ */
+const settingsFrom = (rows: readonly (MetaRow | undefined)[]): LocalSettings | null => {
+  const [updatedAt, settings, mode, syncedAt] = rows.map((row) => row?.value);
+  if (typeof updatedAt !== 'number' || typeof settings !== 'object' || settings === null) {
+    return null;
+  }
+  return {
+    mode: mode === 'pomodoro' ? 'pomodoro' : 'countdown',
+    settings: settings as PomodoroSettingsRow,
+    updatedAt,
+    dirty: syncedAt !== updatedAt,
+  };
+};
+
+const readLocalSettings = async (db: WorkTimerDb): Promise<LocalSettings | null> =>
+  settingsFrom(await db.meta.bulkGet([...SETTINGS_META]));
+
+/** Refused settings are remembered by the edit's timestamp; a newer edit is tried again. */
+const settingsKey = (updatedAt: number): string => String(updatedAt);
+
+export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps): SyncEngine => {
   type Synced = { id: string; syncedAt: number | null };
 
   /**
@@ -188,8 +254,78 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
     }
   };
 
+  /** Upload this device's settings if they changed; mark them synced if still unchanged. */
+  const pushSettings = async (rejected: Set<string>): Promise<number> => {
+    const local = await readLocalSettings(db);
+    if (local === null || !local.dirty || rejected.has(settingsKey(local.updatedAt))) return 0;
+    try {
+      await remote.push('user_settings', [settingsToWire(local)]);
+    } catch (e) {
+      if (e instanceof RemoteError && e.kind === 'rejected') {
+        rejected.add(settingsKey(local.updatedAt));
+        return 0;
+      }
+      throw e;
+    }
+    return db.transaction('rw', db.meta, async () => {
+      // Edited again while the upload was in flight: leave it waiting.
+      if ((await readMeta<number>(db, META_KEYS.settingsUpdatedAt)) !== local.updatedAt) return 0;
+      await writeMeta(db, META_KEYS.settingsSyncedAt, local.updatedAt);
+      return 1;
+    });
+  };
+
+  /** Adopt the account's settings if they are newer than this device's. */
+  const pullSettings = async (counts: SyncCounts): Promise<void> => {
+    const cursors = (await readMeta<Cursors>(db, META_KEYS.syncCursors)) ?? {};
+    // One row per account, so a page of one is everything there is.
+    const [wire] = await remote.pull('user_settings', withOverlap(cursors.user_settings), 1);
+    if (wire === undefined) return;
+
+    await db.transaction('rw', db.meta, async () => {
+      const incoming = settingsFromWire(wire);
+      if (incoming === null) {
+        counts.skipped += 1;
+      } else {
+        const localAt = await readMeta<number>(db, META_KEYS.settingsUpdatedAt);
+        if (localAt === undefined || incoming.updatedAt > localAt) {
+          await writeMeta(db, META_KEYS.timerMode, incoming.mode);
+          await writeMeta(db, META_KEYS.pomodoroSettings, incoming.settings);
+          await writeMeta(db, META_KEYS.settingsUpdatedAt, incoming.updatedAt);
+          await writeMeta(db, META_KEYS.settingsSyncedAt, incoming.updatedAt);
+          counts.pulled += 1;
+        } else if (incoming.updatedAt === localAt) {
+          // The server already has exactly this version.
+          await writeMeta(db, META_KEYS.settingsSyncedAt, localAt);
+        }
+        // Older: this device's newer edit stays, and goes up next round.
+      }
+      const stored = (await readMeta<Cursors>(db, META_KEYS.syncCursors)) ?? {};
+      stored.user_settings = later(stored.user_settings, wire.server_updated_at);
+      await writeMeta(db, META_KEYS.syncCursors, stored);
+    });
+  };
+
+  /** Whether the server has stopped syncing with this version. A malformed minimum is ignored. */
+  const tooOld = async (): Promise<boolean> => {
+    const min = await remote.minClientVersion();
+    if (min === null) return false;
+    const order = compareVersions(appVersion, min);
+    if (order === null) {
+      console.warn(`Ignoring unreadable min_client_version ${JSON.stringify(min)}`);
+      return false;
+    }
+    return order < 0;
+  };
+
   const round = async (): Promise<SyncOutcome> => {
     if (!(await remote.hasSession())) return { ok: false, reason: 'signedOut' };
+    try {
+      if (await tooOld()) return { ok: false, reason: 'outdated' };
+    } catch (e) {
+      if (e instanceof RemoteError) return { ok: false, reason: e.kind, message: e.message };
+      throw e;
+    }
 
     const counts: SyncCounts = { pushed: 0, pulled: 0, skipped: 0, rejected: 0 };
     const stored = (await readMeta<Rejected>(db, META_KEYS.syncRejected)) ?? {};
@@ -198,6 +334,7 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
       tags: rejectedFor('tags'),
       constellations: rejectedFor('constellations'),
       sessions: rejectedFor('sessions'),
+      user_settings: rejectedFor('user_settings'),
     };
 
     try {
@@ -246,6 +383,8 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
         rejected.sessions,
       );
 
+      counts.pushed += await pushSettings(rejected.user_settings);
+
       // --- down ---
       await pullTable(
         'tags',
@@ -292,6 +431,8 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
         counts,
       );
 
+      await pullSettings(counts);
+
       await writeMeta(db, META_KEYS.lastSyncedAt, clock.now());
       return { ok: true, counts };
     } catch (e) {
@@ -302,8 +443,13 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
         tags: [...rejected.tags],
         constellations: [...rejected.constellations],
         sessions: [...rejected.sessions],
+        user_settings: [...rejected.user_settings],
       };
-      counts.rejected = rejected.tags.size + rejected.constellations.size + rejected.sessions.size;
+      counts.rejected =
+        rejected.tags.size +
+        rejected.constellations.size +
+        rejected.sessions.size +
+        rejected.user_settings.size;
       await writeMeta(db, META_KEYS.syncRejected, asLists);
     }
   };
@@ -330,22 +476,37 @@ export const createSyncEngine = ({ db, remote, clock, lock }: Deps): SyncEngine 
 
 /**
  * How many rows are waiting to be uploaded, for the status line. The same
- * selection as the outbox, minus anything the server has refused.
+ * selection as the outbox, minus anything the server has refused. Changed
+ * settings count as one.
+ *
+ * Runs inside a live query, so every read awaits a Dexie call directly (see
+ * `settingsFrom`).
  */
 export const countPending = async (
   db: WorkTimerDb,
 ): Promise<{ pending: number; rejected: number }> => {
-  const refused = (await readMeta<Rejected>(db, META_KEYS.syncRejected)) ?? {};
+  const [rejectedRow, ...settingsRows] = await db.meta.bulkGet([
+    META_KEYS.syncRejected,
+    ...SETTINGS_META,
+  ]);
+  const refused = (rejectedRow?.value as Rejected | undefined) ?? {};
   const skip = new Set([
     ...(refused.tags ?? []),
     ...(refused.constellations ?? []),
     ...(refused.sessions ?? []),
   ]);
+  const refusedSettings = refused.user_settings ?? [];
+  const settings = settingsFrom(settingsRows);
+  const settingsWaiting =
+    settings !== null &&
+    settings.dirty &&
+    !refusedSettings.includes(settingsKey(settings.updatedAt));
   const unsynced = (row: { id: string; syncedAt: number | null }) =>
     row.syncedAt === null && !skip.has(row.id);
   const pending =
     (await db.tags.filter(unsynced).count()) +
     (await db.constellations.filter(unsynced).count()) +
-    (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null).count());
-  return { pending, rejected: skip.size };
+    (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null).count()) +
+    (settingsWaiting ? 1 : 0);
+  return { pending, rejected: skip.size + refusedSettings.length };
 };

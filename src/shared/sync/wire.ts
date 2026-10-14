@@ -1,4 +1,12 @@
-import type { ConstellationRow, ConstellationTier, SessionRow, TagColor, TagRow } from '../db';
+import type {
+  ConstellationRow,
+  ConstellationTier,
+  PomodoroSettingsRow,
+  SessionMode,
+  SessionRow,
+  TagColor,
+  TagRow,
+} from '../db';
 
 /**
  * Translation between local rows and the server's columns.
@@ -16,7 +24,19 @@ import type { ConstellationRow, ConstellationTier, SessionRow, TagColor, TagRow 
  *   ignored.
  */
 
-export type SyncTable = 'tags' | 'constellations' | 'sessions';
+export type SyncTable = 'tags' | 'constellations' | 'sessions' | 'user_settings';
+
+/**
+ * The settings that follow an account between devices: the idle screen's mode
+ * and the Pomodoro lengths. The last-picked tag is deliberately not part of
+ * it — each device keeps its own.
+ */
+export interface SyncedSettings {
+  mode: SessionMode;
+  settings: PomodoroSettingsRow;
+  /** Epoch ms of the edit, on the device that made it. Newest wins. */
+  updatedAt: number;
+}
 
 /** A row as the server sends it: whatever columns exist, plus the pull cursor. */
 export type WireRow = Record<string, unknown> & { server_updated_at: string };
@@ -64,6 +84,21 @@ export const sessionToWire = (row: SessionRow) => ({
   client_created_at: iso(row.clientCreatedAt),
   run_id: row.runId ?? null,
   run_index: row.runIndex ?? null,
+});
+
+/**
+ * One row per account; `user_id` comes from the signed-in account. The
+ * `pomodoro` object's keys are snake_case like every other server name.
+ */
+export const settingsToWire = (s: SyncedSettings) => ({
+  mode: s.mode,
+  pomodoro: {
+    focus_s: s.settings.focusS,
+    short_break_s: s.settings.shortBreakS,
+    long_break_s: s.settings.longBreakS,
+    blocks_per_long_break: s.settings.blocksPerLongBreak,
+  },
+  updated_at: iso(s.updatedAt),
 });
 
 // --- down ------------------------------------------------------------------
@@ -143,4 +178,32 @@ export const sessionFromWire = (w: WireRow, syncedAt: number): SessionRow | null
   if (str(w.run_id)) row.runId = w.run_id;
   if (num(w.run_index)) row.runIndex = w.run_index;
   return row;
+};
+
+const count = (v: unknown): v is number => num(v) && Number.isInteger(v) && v > 0;
+
+/**
+ * Pulled settings, or null if this app can't use them (a mode added by a newer
+ * version, a length that isn't a whole positive number). Ranges are not
+ * checked here: reading the settings clamps them to this build's limits.
+ */
+export const settingsFromWire = (w: WireRow): SyncedSettings | null => {
+  const updatedAt = ms(w.updated_at);
+  if (updatedAt === null) return null;
+  if (w.mode !== 'countdown' && w.mode !== 'pomodoro') return null;
+  const p = w.pomodoro as Record<string, unknown> | null;
+  if (typeof p !== 'object' || p === null) return null;
+  const { focus_s, short_break_s, long_break_s, blocks_per_long_break } = p;
+  if (!count(focus_s) || !count(short_break_s) || !count(long_break_s)) return null;
+  if (!count(blocks_per_long_break)) return null;
+  return {
+    mode: w.mode,
+    settings: {
+      focusS: focus_s,
+      shortBreakS: short_break_s,
+      longBreakS: long_break_s,
+      blocksPerLongBreak: blocks_per_long_break,
+    },
+    updatedAt,
+  };
 };

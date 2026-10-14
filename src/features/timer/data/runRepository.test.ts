@@ -1,3 +1,4 @@
+import { liveQuery } from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, META_KEYS, readMeta, writeMeta, type WorkTimerDb } from '@/shared/db';
@@ -237,7 +238,7 @@ describe('timer prefs', () => {
     const db = withDb();
     const settings = { focusS: 1800, shortBreakS: 420, longBreakS: 1200, blocksPerLongBreak: 3 };
 
-    await saveTimerPrefs(db, { mode: 'pomodoro', settings, tagId: null });
+    await saveTimerPrefs(db, { mode: 'pomodoro', settings, tagId: null }, START);
 
     expect(await readTimerPrefs(db, POMODORO_LIMITS)).toEqual({
       mode: 'pomodoro',
@@ -257,6 +258,51 @@ describe('timer prefs', () => {
       tagId: null,
     });
     expect((await readTimerPrefs(db, DEV_POMODORO_LIMITS)).settings.focusS).toBe(60);
+  });
+
+  // M5: the idle screen reads prefs live, so settings synced from another
+  // device must re-run the query (see countPending's live-query test).
+  it('a live query of the prefs follows a write made elsewhere', async () => {
+    const db = withDb();
+    const seen: string[] = [];
+    const sub = liveQuery(() => readTimerPrefs(db, POMODORO_LIMITS)).subscribe((p) =>
+      seen.push(`${p.mode}/${p.settings.focusS}`),
+    );
+    const settle = () => new Promise((r) => setTimeout(r, 100));
+
+    await settle();
+    await writeMeta(db, META_KEYS.timerMode, 'pomodoro');
+    await settle();
+    await writeMeta(db, META_KEYS.pomodoroSettings, { ...DEFAULT_POMODORO, focusS: 1800 });
+    await settle();
+    sub.unsubscribe();
+
+    expect(seen).toEqual([
+      `countdown/${DEFAULT_POMODORO.focusS}`,
+      `pomodoro/${DEFAULT_POMODORO.focusS}`,
+      'pomodoro/1800',
+    ]);
+  });
+
+  // M5 U7: only what syncs between devices stamps the sync clock.
+  it('stamps settingsUpdatedAt for a mode or length change, never for a tag change', async () => {
+    const db = withDb();
+    const base = { mode: 'countdown' as const, settings: DEFAULT_POMODORO, tagId: null };
+    const stamp = () => readMeta<number>(db, META_KEYS.settingsUpdatedAt);
+
+    await saveTimerPrefs(db, base, START);
+    expect(await stamp()).toBe(START);
+
+    await saveTimerPrefs(db, { ...base, tagId: 't1' }, START + 1000);
+    await saveTimerPrefs(db, base, START + 2000);
+    expect(await stamp()).toBe(START);
+
+    await saveTimerPrefs(db, { ...base, mode: 'pomodoro' }, START + 3000);
+    expect(await stamp()).toBe(START + 3000);
+
+    const longer = { ...DEFAULT_POMODORO, focusS: DEFAULT_POMODORO.focusS + 300 };
+    await saveTimerPrefs(db, { ...base, mode: 'pomodoro', settings: longer }, START + 3000);
+    expect(await stamp()).toBe(START + 3001);
   });
 });
 
@@ -320,13 +366,13 @@ describe('tags on a run', () => {
       syncedAt: null,
     };
     await db.tags.add(tag);
-    await saveTimerPrefs(db, { ...base, tagId: 't1' });
+    await saveTimerPrefs(db, { ...base, tagId: 't1' }, START);
     expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBe('t1');
 
     await db.tags.update('t1', { archivedAt: 2 });
     expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBeNull();
 
-    await saveTimerPrefs(db, { ...base, tagId: 'gone' });
+    await saveTimerPrefs(db, { ...base, tagId: 'gone' }, START);
     expect((await readTimerPrefs(db, POMODORO_LIMITS)).tagId).toBeNull();
   });
 });

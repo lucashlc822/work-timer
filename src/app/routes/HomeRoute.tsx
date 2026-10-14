@@ -41,7 +41,7 @@ const timerSlots: TimerSlots = {
  */
 export const HomeRoute = () => {
   const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'account'>('timer');
-  const { account, signOut, sync, syncNow } = useAccount();
+  const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
 
   useEffect(installDevTools, []);
@@ -112,7 +112,13 @@ export const HomeRoute = () => {
 
       {view === 'account' && (
         <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
-          <AccountPanel email={account.email} sync={sync} onSyncNow={syncNow} onSignOut={signOut} />
+          <AccountPanel
+            email={account.email}
+            sync={sync}
+            onSyncNow={syncNow}
+            onSignOut={signOut}
+            onDeleteAccount={deleteAccount}
+          />
         </div>
       )}
 

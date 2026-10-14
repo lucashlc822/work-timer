@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { SessionRow } from '../db';
 import { RemoteError, type RemoteStore } from './remote';
 import { supabaseRemote } from './supabaseRemote';
-import { sessionToWire, tagToWire } from './wire';
+import { sessionToWire, settingsToWire, tagToWire } from './wire';
 
 /**
  * The real adapter against the local Supabase stack — the one place the
@@ -44,16 +44,18 @@ describe.skipIf(!enabled)('supabaseRemote against the local stack', () => {
   // Built in beforeAll, not at collection time: a skipped suite's body still
   // runs while tests are collected, and createClient throws without a key.
   let remote: RemoteStore;
+  let userId: string;
 
   beforeAll(async () => {
     const client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error } = await client.auth.signInWithPassword({
+    const { data, error } = await client.auth.signInWithPassword({
       email: 'a@test.local',
       password: 'local-test-pass-1',
     });
     if (error) throw error;
+    userId = data.user.id;
     remote = supabaseRemote(client);
   });
 
@@ -104,4 +106,40 @@ describe.skipIf(!enabled)('supabaseRemote against the local stack', () => {
     const last = all[all.length - 1]!.server_updated_at;
     expect(await remote.pull('sessions', last, 1000)).toEqual([]);
   });
+
+  // M5 PR 3
+  it('keeps the newest settings, one row per account', async () => {
+    const settings = { focusS: 1500, shortBreakS: 300, longBreakS: 900, blocksPerLongBreak: 4 };
+    const now = Date.now();
+    await remote.push('user_settings', [
+      settingsToWire({ mode: 'pomodoro', settings: { ...settings, focusS: 1800 }, updatedAt: now }),
+    ]);
+    await remote.push('user_settings', [
+      settingsToWire({ mode: 'countdown', settings, updatedAt: now - 1000 }),
+    ]);
+
+    const rows = await remote.pull('user_settings', null, 10);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ mode: 'pomodoro', pomodoro: { focus_s: 1800 } });
+  });
+
+  it('reads the minimum app version (none on a fresh stack)', async () => {
+    expect(await remote.minClientVersion()).toBeNull();
+  });
+
+  it('hears about a change to this account live', async () => {
+    let heard = false;
+    const stop = remote.subscribe(userId, () => {
+      heard = true;
+    });
+    // The subscription isn't accepted instantly — it took over 1.5 s on a
+    // freshly started stack — so keep making changes until one is heard.
+    for (let i = 0; i < 20 && !heard; i += 1) {
+      await remote.push('sessions', [sessionToWire(session())]);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    stop();
+
+    expect(heard).toBe(true);
+  }, 30_000);
 });

@@ -6,6 +6,8 @@ import type { SignedInAccount, SyncStatusView } from '@/features/account';
 export interface AccountContextValue {
   account: SignedInAccount;
   signOut: () => Promise<void>;
+  /** Rejects, having changed nothing, if the server didn't delete the account. */
+  deleteAccount: () => Promise<void>;
   sync: SyncStatusView;
   syncNow: () => void;
 }

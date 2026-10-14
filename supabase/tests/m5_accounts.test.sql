@@ -9,7 +9,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(38);
+select plan(41);
 
 -- --- fixtures (as superuser) ------------------------------------------------
 -- Addresses of their own, so the suite also runs on a local stack where the
@@ -180,6 +180,21 @@ select lives_ok(
   $$ insert into public.user_settings (mode, pomodoro, updated_at)
      values ('pomodoro', '{"focusS": 1500}', '2026-10-01 09:00Z') $$,
   'A can save their settings');
+
+-- Settings: last write wins, through the same upsert the app sends (M5 PR 3).
+insert into public.user_settings (mode, pomodoro, updated_at)
+  values ('countdown', '{"focus_s": 600}', '2026-09-30 09:00Z')
+  on conflict (user_id) do update set mode = excluded.mode, pomodoro = excluded.pomodoro,
+    updated_at = excluded.updated_at;
+select is((select mode from public.user_settings), 'pomodoro',
+  'older settings arriving late are ignored');
+
+insert into public.user_settings (mode, pomodoro, updated_at)
+  values ('countdown', '{"focus_s": 1800}', '2026-10-02 09:00Z')
+  on conflict (user_id) do update set mode = excluded.mode, pomodoro = excluded.pomodoro,
+    updated_at = excluded.updated_at;
+select is((select mode from public.user_settings), 'countdown',
+  'newer settings, sent as an upsert, win');
 reset role;
 
 -- --- B can see and touch none of A's data -------------------------------------
@@ -206,9 +221,13 @@ select throws_ok(
   '23503', null, 'B cannot tag a session with A''s tag');
 
 update public.tags set name = 'Hijacked', updated_at = '2030-01-01Z';
+update public.user_settings set mode = 'pomodoro', updated_at = '2030-01-01Z';
 reset role;
 select is((select name from public.tags where id = '11111111-0000-4000-8000-00000000000a'),
   'Essays', 'B''s update reaches none of A''s tags');
+select is((select mode from public.user_settings
+           where user_id = 'aaaaaaaa-0000-4000-8000-000000000001'),
+  'countdown', 'B''s update reaches none of A''s settings');
 
 -- --- delete account ------------------------------------------------------------
 

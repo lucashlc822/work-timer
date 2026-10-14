@@ -4,5 +4,5 @@
 export { AuthScreens } from './ui/AuthScreens';
 export { AccountPanel } from './ui/AccountPanel';
 export type { SyncStatusView } from './ui/SyncStatus';
-export { signOut } from './data/authRepository';
+export { deleteAccount, signOut } from './data/authRepository';
 export type { SignedInAccount } from './data/authRepository';

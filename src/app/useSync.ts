@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SyncStatusView } from '@/features/account';
 import { getSupabase } from '@/shared/backend';
+import { APP_VERSION } from '@/shared/config';
 import { db, META_KEYS, readMeta } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
 import {
@@ -10,6 +11,7 @@ import {
   createSyncEngine,
   supabaseRemote,
   webLock,
+  type RemoteStore,
   type SyncEngine,
   type SyncOutcome,
 } from '@/shared/sync';
@@ -18,6 +20,8 @@ import {
 const PERIODIC_MS = 5 * 60_000;
 /** Wait after a local change before uploading, so a burst becomes one round. */
 const DEBOUNCE_MS = 2_000;
+/** Wait after another device's change is announced, so a burst becomes one round. */
+const LIVE_DEBOUNCE_MS = 500;
 const BACKOFF_FIRST_MS = 5_000;
 const BACKOFF_MAX_MS = 5 * 60_000;
 
@@ -33,6 +37,8 @@ const phaseFor = (outcome: SyncOutcome, previous: Phase): Phase => {
       return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'unreachable';
     case 'auth':
       return 'unreachable';
+    case 'outdated':
+      return 'outdated';
     default:
       return 'error';
   }
@@ -43,21 +49,31 @@ const phaseFor = (outcome: SyncOutcome, previous: Phase): Phase => {
  * window only (the mini window never mounts this).
  *
  * Triggers: start, the window becoming visible, the connection coming back,
- * a short pause after any new local change, and every five minutes. After a
- * failure it retries on its own with a growing wait (5 s doubling to 5 min),
- * and any of the triggers above still gets a round in sooner.
+ * a short pause after any new local change, another of the account's devices
+ * changing something (announced live by the server), and every five minutes.
+ * After a failure it retries on its own with a growing wait (5 s doubling to
+ * 5 min), and any of the triggers above still gets a round in sooner. That
+ * includes "Please update": once the server's minimum is lowered again, sync
+ * resumes on the next retry.
  */
-export const useSync = (): SyncStatusView & { syncNow: () => void } => {
-  const [engine] = useState<SyncEngine | null>(() => {
+export const useSync = (userId: string): SyncStatusView & { syncNow: () => void } => {
+  const [{ engine, remote }] = useState<{
+    engine: SyncEngine | null;
+    remote: RemoteStore | null;
+  }>(() => {
     const client = getSupabase();
-    return client === null
-      ? null
-      : createSyncEngine({
-          db,
-          remote: supabaseRemote(client),
-          clock: systemClock,
-          lock: webLock(),
-        });
+    if (client === null) return { engine: null, remote: null };
+    const remote = supabaseRemote(client);
+    return {
+      remote,
+      engine: createSyncEngine({
+        db,
+        remote,
+        clock: systemClock,
+        lock: webLock(),
+        appVersion: APP_VERSION,
+      }),
+    };
   });
 
   const [phase, setPhase] = useState<Phase>('syncing');
@@ -117,6 +133,20 @@ export const useSync = (): SyncStatusView & { syncNow: () => void } => {
       if (retryTimer.current !== null) clearTimeout(retryTimer.current);
     };
   }, [engine, run]);
+
+  // Another device changed something: fetch it now rather than at the next check-in.
+  useEffect(() => {
+    if (remote === null) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const stop = remote.subscribe(userId, () => {
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(() => void run(), LIVE_DEBOUNCE_MS);
+    });
+    return () => {
+      stop();
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [remote, userId, run]);
 
   // Upload soon after something new is waiting (a session finished, a tag edited).
   useEffect(() => {

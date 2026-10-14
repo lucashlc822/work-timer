@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 
 /** What the app knows about syncing, in the shape this panel shows. */
 export interface SyncStatusView {
-  phase: 'syncing' | 'synced' | 'offline' | 'unreachable' | 'error';
+  /** `outdated`: the server needs a newer app before it syncs again. */
+  phase: 'syncing' | 'synced' | 'offline' | 'unreachable' | 'outdated' | 'error';
   /** Epoch ms of the last complete sync, or null if there hasn't been one. */
   lastSyncedAt: number | null;
   /** Rows waiting to be uploaded. */
@@ -46,11 +47,13 @@ export const SyncStatus = ({
         ? `Offline${waiting(status.pending)}`
         : status.phase === 'unreachable'
           ? `Couldn't reach the server${waiting(status.pending)}`
-          : status.phase === 'error'
-            ? "Couldn't sync — will try again"
-            : status.lastSyncedAt === null
-              ? `Not synced yet${waiting(status.pending)}`
-              : `Backed up · synced ${ago(status.lastSyncedAt, now)}${waiting(status.pending)}`;
+          : status.phase === 'outdated'
+            ? `Please update the app to keep syncing${waiting(status.pending)}`
+            : status.phase === 'error'
+              ? "Couldn't sync — will try again"
+              : status.lastSyncedAt === null
+                ? `Not synced yet${waiting(status.pending)}`
+                : `Backed up · synced ${ago(status.lastSyncedAt, now)}${waiting(status.pending)}`;
 
   return (
     <section className="flex flex-col items-center gap-1.5" aria-label="Sync">

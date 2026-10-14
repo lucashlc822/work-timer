@@ -147,9 +147,20 @@ in `NOTES.md`.
   comparison. Compare `lower(...)` explicitly (the pgTAP suite caught this).
 - **Sync waits on purpose.** An upload runs about 2 s after a change, and a
   pull runs on start, when the window becomes visible, when the connection
-  returns, and every 5 minutes (live updates arrive in M5's third PR). A
-  change from another device not showing for a few minutes is the schedule,
-  not a bug — "Sync now" in the Account panel runs a round immediately.
+  returns, every 5 minutes, and ~0.5 s after Supabase Realtime announces a
+  change to the account's rows. Realtime is best effort: if its websocket is
+  down, another device's change waits for one of the other triggers. A
+  device's own uploads echo back as one extra, harmless round. "Sync now" in
+  the Account panel runs a round immediately.
+- **A Dexie live query can silently stop updating** if its body awaits a
+  chain of nested plain-`async` helpers: it emits once and never re-runs. Keep
+  live-query bodies flat — await Dexie calls directly, or read several `meta`
+  keys with one `bulkGet` (see `countPending`). Test new live queries with a
+  `liveQuery(...).subscribe` unit test; the M5 one failed on the bad version.
+- **"Please update the app to keep syncing" is the server's
+  `app_config.min_client_version`**, not a sync failure. While it is above the
+  app's `package.json` version, sync sends and applies nothing; clearing it
+  resumes sync on the next retry (≤5 min) or "Sync now".
 - **Scripted `focus()`/`blur()` don't fire in a background window.** When
   driving the app from DevTools (browser pane or WebView2 remote debugging),
   a rename field's save-on-blur never runs unless the page has focus. Use real
@@ -242,6 +253,13 @@ rejected). Don't pre-populate this with guesses.
   toward the days its interval overlaps; counts, stars and the history list
   belong to the period the session *started* in. Unfinished sessions are
   excluded everywhere. Week starts Monday.
+- **`package.json` is the app's version** (M5, 2026-10-13). Vite exposes it as
+  `APP_VERSION`; `tauri.conf.json` must match, and a test fails if it doesn't.
+  Bump both before each release. `app_config.min_client_version` is compared
+  against it, so only raise that minimum after the matching release is out.
+- **Synced settings are mode + Pomodoro lengths; the last-picked tag is per
+  device** (M5 PR 3). Newest edit wins by `settingsUpdatedAt` in `meta`. A run
+  in progress keeps its own copy of the lengths and is never changed by sync.
 
 ## Plans include acceptance tests
 
