@@ -1,3 +1,4 @@
+import { liveQuery } from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, META_KEYS, readMeta, writeMeta, type WorkTimerDb } from '@/shared/db';
@@ -257,6 +258,30 @@ describe('timer prefs', () => {
       tagId: null,
     });
     expect((await readTimerPrefs(db, DEV_POMODORO_LIMITS)).settings.focusS).toBe(60);
+  });
+
+  // M5: the idle screen reads prefs live, so settings synced from another
+  // device must re-run the query (see countPending's live-query test).
+  it('a live query of the prefs follows a write made elsewhere', async () => {
+    const db = withDb();
+    const seen: string[] = [];
+    const sub = liveQuery(() => readTimerPrefs(db, POMODORO_LIMITS)).subscribe((p) =>
+      seen.push(`${p.mode}/${p.settings.focusS}`),
+    );
+    const settle = () => new Promise((r) => setTimeout(r, 100));
+
+    await settle();
+    await writeMeta(db, META_KEYS.timerMode, 'pomodoro');
+    await settle();
+    await writeMeta(db, META_KEYS.pomodoroSettings, { ...DEFAULT_POMODORO, focusS: 1800 });
+    await settle();
+    sub.unsubscribe();
+
+    expect(seen).toEqual([
+      `countdown/${DEFAULT_POMODORO.focusS}`,
+      `pomodoro/${DEFAULT_POMODORO.focusS}`,
+      'pomodoro/1800',
+    ]);
   });
 
   // M5 U7: only what syncs between devices stamps the sync clock.

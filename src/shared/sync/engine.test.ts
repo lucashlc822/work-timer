@@ -1,3 +1,4 @@
+import { liveQuery } from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -454,6 +455,27 @@ describe('settings', () => {
     expect(remote.pushCalls).toBe(0);
     expect(await readMeta(db, META_KEYS.pomodoroSettings)).toEqual({ ...POMO, focusS: 1800 });
     expect(await countPending(db)).toMatchObject({ pending: 0 });
+  });
+
+  // The status line and the 2 s upload both hang off a live query of this
+  // count. A version that awaited nested async helpers stopped re-running
+  // after its first result, so a finished session never went up on its own.
+  it('the pending count keeps updating inside a live query', async () => {
+    const remote = new FakeRemote();
+    const { db } = device(remote);
+    await editSettings(db, T0);
+    const seen: number[] = [];
+    const sub = liveQuery(() => countPending(db)).subscribe((c) => seen.push(c.pending));
+    const settle = () => new Promise((r) => setTimeout(r, 100));
+
+    await settle();
+    await db.sessions.add(session());
+    await settle();
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    await settle();
+    sub.unsubscribe();
+
+    expect(seen).toEqual([1, 2, 1]);
   });
 
   it('sets aside settings the server refuses until they are edited again', async () => {

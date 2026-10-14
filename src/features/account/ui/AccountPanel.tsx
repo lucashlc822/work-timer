@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { db, META_KEYS, readMeta } from '@/shared/db';
 
@@ -28,9 +28,23 @@ const useBusy = (): boolean =>
     false,
   );
 
+/**
+ * The outcome of the last finished sync attempt. While offline, sync retries
+ * on its own and reads "Syncing…" for seconds at a time; whether the server
+ * can be reached is still what the last attempt found, not unknown.
+ */
+const useSettledPhase = (phase: SyncStatusView['phase']): SyncStatusView['phase'] => {
+  const [settled, setSettled] = useState(phase);
+  useEffect(() => {
+    if (phase !== 'syncing') setSettled(phase);
+  }, [phase]);
+  return settled;
+};
+
 /** Who is signed in, what is stored about them, signing out, and leaving for good. */
 export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccount }: Props) => {
   const busy = useBusy();
+  const settled = useSettledPhase(sync.phase);
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,7 +110,9 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
       <DeleteAccount
         email={email}
         busy={busy}
-        offline={sync.phase === 'offline' || sync.phase === 'unreachable'}
+        // Only once an attempt has actually reached the server (it may still
+        // have said "please update"); before the first one, it's unknown.
+        offline={settled !== 'synced' && settled !== 'outdated'}
         onDelete={onDeleteAccount}
       />
     </div>

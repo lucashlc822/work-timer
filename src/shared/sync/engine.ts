@@ -1,7 +1,14 @@
 import type { EntityTable } from 'dexie';
 
 import { compareVersions } from '../config';
-import { META_KEYS, readMeta, writeMeta, type PomodoroSettingsRow, type WorkTimerDb } from '../db';
+import {
+  META_KEYS,
+  readMeta,
+  writeMeta,
+  type MetaRow,
+  type PomodoroSettingsRow,
+  type WorkTimerDb,
+} from '../db';
 import type { Clock } from '../lib';
 import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import {
@@ -125,20 +132,36 @@ interface LocalSettings extends SyncedSettings {
   dirty: boolean;
 }
 
-/** This device's synced settings, or null if they've never been set or adopted. */
-const readLocalSettings = async (db: WorkTimerDb): Promise<LocalSettings | null> => {
-  const updatedAt = await readMeta<number>(db, META_KEYS.settingsUpdatedAt);
-  const settings = await readMeta<PomodoroSettingsRow>(db, META_KEYS.pomodoroSettings);
-  if (updatedAt === undefined || settings === undefined) return null;
-  const stored = await readMeta<unknown>(db, META_KEYS.timerMode);
-  const syncedAt = await readMeta<number>(db, META_KEYS.settingsSyncedAt);
+/** The `meta` rows that make up the synced settings, in the order `settingsFrom` reads them. */
+const SETTINGS_META = [
+  META_KEYS.settingsUpdatedAt,
+  META_KEYS.pomodoroSettings,
+  META_KEYS.timerMode,
+  META_KEYS.settingsSyncedAt,
+] as const;
+
+/**
+ * This device's synced settings from the `SETTINGS_META` rows, or null if
+ * they've never been set or adopted. Synchronous on purpose: `countPending`
+ * runs inside a live query, and a chain of nested async helpers there made
+ * Dexie lose track of what it read, so the count stopped updating (seen in
+ * the desktop app). Callers fetch the rows with one `bulkGet` instead.
+ */
+const settingsFrom = (rows: readonly (MetaRow | undefined)[]): LocalSettings | null => {
+  const [updatedAt, settings, mode, syncedAt] = rows.map((row) => row?.value);
+  if (typeof updatedAt !== 'number' || typeof settings !== 'object' || settings === null) {
+    return null;
+  }
   return {
-    mode: stored === 'pomodoro' ? 'pomodoro' : 'countdown',
-    settings,
+    mode: mode === 'pomodoro' ? 'pomodoro' : 'countdown',
+    settings: settings as PomodoroSettingsRow,
     updatedAt,
     dirty: syncedAt !== updatedAt,
   };
 };
+
+const readLocalSettings = async (db: WorkTimerDb): Promise<LocalSettings | null> =>
+  settingsFrom(await db.meta.bulkGet([...SETTINGS_META]));
 
 /** Refused settings are remembered by the edit's timestamp; a newer edit is tried again. */
 const settingsKey = (updatedAt: number): string => String(updatedAt);
@@ -455,18 +478,25 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
  * How many rows are waiting to be uploaded, for the status line. The same
  * selection as the outbox, minus anything the server has refused. Changed
  * settings count as one.
+ *
+ * Runs inside a live query, so every read awaits a Dexie call directly (see
+ * `settingsFrom`).
  */
 export const countPending = async (
   db: WorkTimerDb,
 ): Promise<{ pending: number; rejected: number }> => {
-  const refused = (await readMeta<Rejected>(db, META_KEYS.syncRejected)) ?? {};
+  const [rejectedRow, ...settingsRows] = await db.meta.bulkGet([
+    META_KEYS.syncRejected,
+    ...SETTINGS_META,
+  ]);
+  const refused = (rejectedRow?.value as Rejected | undefined) ?? {};
   const skip = new Set([
     ...(refused.tags ?? []),
     ...(refused.constellations ?? []),
     ...(refused.sessions ?? []),
   ]);
   const refusedSettings = refused.user_settings ?? [];
-  const settings = await readLocalSettings(db);
+  const settings = settingsFrom(settingsRows);
   const settingsWaiting =
     settings !== null &&
     settings.dirty &&
