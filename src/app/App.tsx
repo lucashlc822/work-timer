@@ -5,6 +5,7 @@ import { bindAccountDb } from '@/shared/db';
 import { isDesktop } from '@/shared/runtime';
 
 import { AuthGate } from './AuthGate';
+import { DesktopUpdatePrompt } from './DesktopUpdatePrompt';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MiniWindow } from './MiniWindow';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -47,12 +48,13 @@ export const App = () =>
         <RouterProvider router={router} />
       </AuthGate>
       {/*
-        Browser only. `UpdatePrompt` is what registers the service worker, and
-        the desktop app must not have one: its frontend comes from the exe, and a
-        worker registered by one exe kept serving that exe's cached files to the
-        next (see src-tauri/src/no_service_worker.rs). Desktop updates arrive
-        with the exe itself.
+        Each host updates its own way. `UpdatePrompt` is what registers the
+        browser build's service worker, and the desktop app must not have one:
+        its frontend comes from the exe, and a worker registered by one exe kept
+        serving that exe's cached files to the next (see
+        src-tauri/src/no_service_worker.rs). The desktop app is updated by
+        replacing the exe, which `DesktopUpdatePrompt` offers.
       */}
-      {!isDesktop() && <UpdatePrompt />}
+      {isDesktop() ? <DesktopUpdatePrompt /> : <UpdatePrompt />}
     </ErrorBoundary>
   );

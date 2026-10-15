@@ -4,6 +4,7 @@ export {
   createDb,
   db,
   deleteAccountDb,
+  isAccountDbBound,
   LEGACY_DB_NAME,
   META_KEYS,
 } from './schema';
@@ -22,4 +23,4 @@ export type {
   WorkTimerDb,
 } from './schema';
 
-export { clearMeta, getLocalUserId, readMeta, writeMeta } from './meta';
+export { clearMeta, getLocalUserId, hasWorkInFlight, readMeta, writeMeta } from './meta';

@@ -23,6 +23,19 @@ export const clearMeta = async (db: WorkTimerDb, key: string): Promise<void> => 
 };
 
 /**
+ * Whether a session or Pomodoro run is in progress on this device — read from
+ * the pointers the timer keeps in `meta`, so callers outside the timer feature
+ * (sign-out, delete account, the update notice) never reach into its internals.
+ *
+ * One `bulkGet`, not two awaited reads: this runs inside live queries, where a
+ * chain of nested async helpers can stop re-running (see CLAUDE.md).
+ */
+export const hasWorkInFlight = async (db: WorkTimerDb): Promise<boolean> => {
+  const rows = await db.meta.bulkGet([META_KEYS.activeSessionId, META_KEYS.activeRun]);
+  return rows.some((row) => row !== undefined);
+};
+
+/**
  * The identity sessions are attributed to before the user has an account.
  *
  * Created lazily on first use and never changed. When an account is added

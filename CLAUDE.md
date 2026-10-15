@@ -265,9 +265,11 @@ rejected). Don't pre-populate this with guesses.
   served by one. A pinned install runs the *old* frontend, so only the exe can
   rescue it — don't try to move this into the frontend.
 - **`package.json` is the app's version** (M5, 2026-10-13). Vite exposes it as
-  `APP_VERSION`; `tauri.conf.json` must match, and a test fails if it doesn't.
-  Bump both before each release. `app_config.min_client_version` is compared
-  against it, so only raise that minimum after the matching release is out.
+  `APP_VERSION`. Five files state it (`package.json`, `package-lock.json`,
+  `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`) and a test fails if they
+  disagree: move them together with `npm run version:set -- X.Y.Z`, never by
+  hand. `app_config.min_client_version` is compared against it, so only raise
+  that minimum after the matching release is out.
 - **Synced settings are mode + Pomodoro lengths; the last-picked tag is per
   device** (M5 PR 3). Newest edit wins by `settingsUpdatedAt` in `meta`. A run
   in progress keeps its own copy of the lengths and is never changed by sync.

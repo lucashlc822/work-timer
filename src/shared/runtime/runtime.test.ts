@@ -53,6 +53,16 @@ describe('web runtime', () => {
     expect((await getRuntime()).kind).toBe('web');
   });
 
+  // Release PR 1, case 1: the browser updates through its service worker, so
+  // the desktop updater port must be a harmless no-op there.
+  it('has no desktop updater: unsupported, and checking resolves null', async () => {
+    stubWindow();
+    const { updater } = await getRuntime();
+
+    expect(updater.isSupported).toBe(false);
+    await expect(updater.check()).resolves.toBeNull();
+  });
+
   it('memoises, so repeated calls return the same instance', async () => {
     stubWindow();
     expect(await getRuntime()).toBe(await getRuntime());

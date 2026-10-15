@@ -94,6 +94,30 @@ export interface CompletionPort {
   disarm(sessionId: string): Promise<void>;
 }
 
+/** A newer build of the desktop app, ready to install. */
+export interface AvailableUpdate {
+  /** The version it would become, e.g. `0.2.0`. */
+  version: string;
+  /** Download, install and relaunch. Rejects if the install fails; the app keeps running as it was. */
+  install(): Promise<void>;
+}
+
+/**
+ * Desktop app updates. The web build has nothing to do here: it updates
+ * through its own service worker and prompt, so this port is an unsupported
+ * no-op there.
+ */
+export interface UpdaterPort {
+  isSupported: boolean;
+  /**
+   * Ask the update server whether a newer version exists. Resolves null when
+   * there isn't one *and* when the server can't be reached or answers
+   * something unusable — a failed check must never look like an error to the
+   * person, it just means "try again later".
+   */
+  check(): Promise<AvailableUpdate | null>;
+}
+
 export type RuntimeKind = 'desktop' | 'web';
 
 export interface Runtime {
@@ -103,6 +127,7 @@ export interface Runtime {
   miniWindow: MiniWindowPort;
   autostart: AutostartPort;
   completion: CompletionPort;
+  updater: UpdaterPort;
 }
 
 /**
@@ -140,4 +165,9 @@ export const unsupportedCompletion: CompletionPort = {
   isSupported: false,
   arm: () => Promise.resolve(),
   disarm: () => Promise.resolve(),
+};
+
+export const unsupportedUpdater: UpdaterPort = {
+  isSupported: false,
+  check: () => Promise.resolve(null),
 };

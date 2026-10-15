@@ -4,6 +4,7 @@ import type { Runtime } from './types';
 
 export type {
   AutostartPort,
+  AvailableUpdate,
   CompletionNotice,
   CompletionPort,
   MiniWindowPort,
@@ -11,6 +12,7 @@ export type {
   Runtime,
   RuntimeKind,
   TrayPort,
+  UpdaterPort,
 } from './types';
 
 /**

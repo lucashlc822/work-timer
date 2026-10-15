@@ -28,6 +28,17 @@
       "csp": "default-src 'self'; img-src 'self' data: asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:54321 ws://127.0.0.1:54321"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhFM0FGMTgwMTI1MjZEQTgKUldTb2JWSVNnUEU2amlnSEs0MisyWG1qSWExOGdJVlI2cWRBSjB6S3AzUEJXb2xTdWpuYWhaUjIK",
+      "endpoints": [
+        "https://github.com/lucashlc822/work-timer/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis"],

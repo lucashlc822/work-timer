@@ -289,6 +289,13 @@ const unbound = new Proxy({} as WorkTimerDb, {
  */
 export let db: WorkTimerDb = unbound;
 
+/**
+ * Whether an account's store has been opened. False on the sign-in screen,
+ * where reading `db` would throw; anything that can render there (the update
+ * notice) checks this first.
+ */
+export const isAccountDbBound = (): boolean => db !== unbound;
+
 export const bindAccountDb = (userId: string): WorkTimerDb => {
   db = createDb(accountDbName(userId));
   return db;

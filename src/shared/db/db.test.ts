@@ -2,7 +2,8 @@ import Dexie from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, type SessionRow, type WorkTimerDb } from './schema';
-import { getLocalUserId, readMeta, writeMeta } from './meta';
+import { getLocalUserId, hasWorkInFlight, readMeta, writeMeta } from './meta';
+import { META_KEYS } from './schema';
 
 const openFreshDb = (): WorkTimerDb => createDb(`test-${crypto.randomUUID()}`);
 
@@ -161,5 +162,34 @@ describe('meta', () => {
 
     expect(first).toBe(second);
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
+describe('hasWorkInFlight', () => {
+  it('is false on a fresh store', async () => {
+    expect(await hasWorkInFlight(withDb())).toBe(false);
+  });
+
+  it('is true while a session is running', async () => {
+    const db = withDb();
+    await writeMeta(db, META_KEYS.activeSessionId, 'running');
+
+    expect(await hasWorkInFlight(db)).toBe(true);
+  });
+
+  // A break between blocks has no session, only the run, and is still "in progress".
+  it('is true during a Pomodoro run with no block in flight', async () => {
+    const db = withDb();
+    await writeMeta(db, META_KEYS.activeRun, { id: 'run', break: { kind: 'short' } });
+
+    expect(await hasWorkInFlight(db)).toBe(true);
+  });
+
+  it('is false again once both pointers are gone', async () => {
+    const db = withDb();
+    await writeMeta(db, META_KEYS.activeSessionId, 'running');
+    await db.meta.delete(META_KEYS.activeSessionId);
+
+    expect(await hasWorkInFlight(db)).toBe(false);
   });
 });
