@@ -12,6 +12,103 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-14 — Release built: updater, release pipeline, docs (PRs #27, #28)
+
+**Status: both merged (#27 as `37c31b2`, #28 as `3784a33`); the first real
+release has not been cut.** Planned as `docs/plans/2026-10-13-release.md`. The
+code and docs are done; what remains is Lucas's account setup and then running
+v0.1.0 and v0.1.1, where everything the unit tests and `actionlint` could not
+reach gets exercised for the first time.
+
+### Product decisions, made with Lucas while planning
+
+- **The repo goes public.** GitHub serves release files without a login only
+  from a public repo, and the updater and download link need that. History was
+  checked first: no secret was ever committed. Accepted: the code, plans, notes
+  and the personal Gmail on 42 old commits become visible.
+- **Vercel for the web version**, not Cloudflare Pages (Lucas's choice; both
+  fit). Free Hobby plan is personal/non-commercial and 100 GB/month, about
+  0.1% of what ten friends use. Supersedes the architecture doc's hosting row.
+- **Updates are a notice and one click, never mid-session.** Not silent.
+- **One deliberate "go":** CI builds a *draft* release from a `v*` tag;
+  *publishing* it ships the desktop update and deploys the web version
+  together. A merge reaches nobody. The Vercel project is not connected to
+  the Git repo for the same reason.
+- **No Windows code signing** (costs money): first install shows SmartScreen
+  once. The invitation message says so.
+
+### What was built
+
+- **#27, the app side:** `tauri-plugin-updater` + `-process`; `UpdaterPort`
+  on the runtime seam (no-op on web); `DesktopUpdatePrompt` (checks 10 s after
+  launch and every 6 h, production builds only; hidden while a session or run
+  is in progress; still offered on the sign-in screen); `hasWorkInFlight` /
+  `isAccountDbBound`; `npm run version:set` for the five files that state the
+  version, with a drift test covering all of them; version in the Account
+  panel.
+- **#28, shipping:** `release.yml` (tag → version check → signed installer +
+  `latest.json` + fixed-name `Starkeep-setup.exe` in a draft release),
+  `deploy-web.yml` (published release → Vercel), `tauri.release.conf.json`
+  (turns on update files in CI only), `vercel.json`, `RELEASING.md`,
+  `docs/invite-a-friend.md`, `.env.example`.
+
+### Things worth not rediscovering
+
+- **Update files are made only in CI.** `createUpdaterArtifacts` is off in
+  `tauri.conf.json`; turning it on makes every local `tauri build` fail
+  without the private key. CI passes `tauri.release.conf.json` as a *file*,
+  to avoid quoting inline JSON through a Windows shell.
+- **The release exe is 5.3 MB, up from 3.7 MB**: the updater's HTTP stack. The
+  browser bundle grew only about 1.8 KB (the updater is in the lazy `desktop`
+  chunk).
+- **A failed update check is silent by design** (logs "Update check failed").
+  With no release published, every production launch logs it. Not a bug.
+- **`@testing-library/user-event` is now a dev dependency**, for clicking in
+  component tests.
+- **Run `cargo fmt --check` before pushing Rust**: it caught #25 in CI. #27
+  and #28 ran the full local set first and passed.
+- **`actionlint` runs from its Docker image** (needs Docker Desktop):
+  `docker run --rm -v "$(pwd -W):/repo" -w /repo rhysd/actionlint:latest`.
+  It found two shell-style issues in the new workflows; fixed.
+- **A throwaway key proves the build config** without touching the real one:
+  `npx tauri signer generate -w <scratch> --ci -p ""`, then
+  `npx tauri build --config src-tauri/tauri.release.conf.json` with
+  `TAURI_SIGNING_PRIVATE_KEY` set. Output: `Starkeep_0.1.0_x64-setup.exe`
+  (2.3 MB) + `.sig` in `src-tauri/target/release/bundle/nsis/`.
+- **The plan's case 9 wording was wrong** (said only `deploy-web.yml` may use
+  the hosted `VITE_*` values; the desktop build needs them too). The real
+  property: nothing a PR or merge triggers can see them. Corrected in #28.
+
+### Not verified
+
+- **Neither workflow has run.** `actionlint` checks syntax and shell, not
+  behaviour. `tauri-action`'s `releaseId` output, how it names `latest.json`
+  and builds its URLs, and the Vercel `pull` → `build` → `deploy --prebuilt`
+  flow are from documentation. Expect the first run to need a tweak.
+- **That an update actually downloads, passes its signature check, installs
+  and relaunches** (plan cases 11 and 14). The unit tests fake `install()`.
+- That the plugin follows GitHub's `latest/download/…` redirect.
+- Windows' `passive` install-mode experience on a real install.
+
+### Next
+
+- **Lucas, in this order** (`RELEASING.md` has the detail): (1) case 29, the
+  hosted Supabase project; (2) make the repo public; (3) GitHub secrets
+  (`TAURI_SIGNING_PRIVATE_KEY`, its password, `VERCEL_TOKEN`,
+  `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) and variables (`VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_PUBLISHABLE_KEY`, optionally `WEB_URL`); (4) `npx vercel
+  link` without connecting the Git repo.
+- **Then the first releases, on Opus:** v0.1.0, then v0.1.1 to prove an
+  installed app updates itself (plan cases 10–16). Expect debugging here.
+  Record the results, and mark the updater items above verified.
+- **M6, Progression:** currency ledger, unlock catalogue, shop, streaks,
+  daily goals. Needs its own plan, and must absorb M2's simple "medium after
+  one easy" unlock gate rather than add a second system.
+- The other machine still needs Docker Desktop (with WSL).
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-13 — Desktop app no longer registers a service worker (PR #25)
 
 **Status: merged (PR #25 as `348d4b1`); cases 1–5 passed.** A short follow-up to
@@ -74,6 +171,8 @@ have left desktop apps on a stale frontend.
 - **Release milestone:** Windows installer on GitHub Releases, Tauri
   auto-updates, web hosting. When the installer exists, repeat case 1 through
   it, since that is the part not covered here.
+  **(Superseded 2026-10-14 — built in PRs #27 and #28; not yet released. Repeat
+  case 1 through the real installer in the first release run.)**
 - The other machine still needs Docker Desktop (with WSL).
 - Autostart's reboot check, still carried over.
 
@@ -153,6 +252,7 @@ was unregistered by hand.
   **(Done 2026-10-13 — merged as PR #25; see the entry above.)**
 - **Release milestone** after that: Windows installer on GitHub Releases,
   Tauri auto-updates, web hosting.
+  **(Superseded 2026-10-14 — built in PRs #27 and #28; see the entry above.)**
 - The other machine still needs Docker Desktop (with WSL).
 - Autostart's reboot check, still carried over.
 
