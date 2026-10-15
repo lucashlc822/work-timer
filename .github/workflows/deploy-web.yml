@@ -1,0 +1,99 @@
+# Deploys the web version to Vercel when a release is PUBLISHED.
+#
+# Never on a merge or a pull request: a change reaching master must not reach
+# friends before its database migration is pushed and a release is cut, and a
+# preview deployment must never talk to the real server. The Vercel project is
+# deliberately not connected to the Git repository, so this is its only way in.
+#
+# Publishing the draft release that release.yml made is the one deliberate "go"
+# for the desktop app and the web version together, at the same version.
+name: Deploy web
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # The tag, not whatever master has become since.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # A web build without the server's address would show "This build isn't
+      # connected to a server" to everyone, so refuse to deploy one.
+      - name: Everything a deploy needs is configured
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set. See .env.example and RELEASING.md."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      # Vercel's own flow for deploying from CI: pull the project's settings,
+      # build here (with the hosted server's address in the environment), then
+      # upload the finished output. vercel.json pins the build command and
+      # output folder, so nothing depends on dashboard settings.
+      - name: Build for production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel@latest build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      # Optional: set the WEB_URL repository variable (e.g. https://starkeep.vercel.app)
+      # and a deploy that didn't actually go live fails here instead of silently.
+      - name: The live site is serving this build
+        if: ${{ vars.WEB_URL != '' }}
+        env:
+          WEB_URL: ${{ vars.WEB_URL }}
+        run: |
+          expected=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' .vercel/output/static/index.html | head -n 1)
+          test -n "$expected"
+          for _ in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error "$WEB_URL" | grep -q "$expected"; then
+              echo "Live site is serving $expected"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$WEB_URL is not serving $expected"
+          exit 1

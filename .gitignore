@@ -34,3 +34,6 @@ desktop.ini
 # Logs
 *.log
 npm-debug.log*
+
+# Vercel CLI link/build output (project ids, pulled settings)
+.vercel/

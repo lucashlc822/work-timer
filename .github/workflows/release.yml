@@ -1,0 +1,137 @@
+# Builds the desktop release when a version tag is pushed.
+#
+# Pushing `vX.Y.Z` builds the installer and its signed update files and puts
+# them in a DRAFT GitHub Release. Nothing reaches anyone yet: the desktop
+# updater and the stable download link only see published releases, and the web
+# version is deployed by deploy-web.yml only when the release is published. So
+# publishing is the one deliberate "go". See RELEASING.md for the checklist.
+#
+# This is the only place release builds happen, so the update-signing key lives
+# in GitHub's secrets and never on a laptop.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # A tag that disagrees with the files would ship an app that reports one
+  # version while the update manifest says another, and the updater would
+  # offer it forever. Cheap to check, so it runs first and alone.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: The tag matches the five files that state the version
+        run: node scripts/set-version.mjs --check "$GITHUB_REF_NAME"
+
+  desktop:
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 45
+    # Creating the release and uploading its assets.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # An unconfigured build would ship an app that says "This build isn't
+      # connected to a server", and an unsigned one would ship updates no
+      # installed app accepts. Fail here, loudly, before spending the build.
+      - name: Everything a release needs is configured
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set. See .env.example and RELEASING.md."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Build the installer and its signed update files
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Inlined into the frontend at build time: the hosted server's address
+          # and its publishable key (designed to ship in the app).
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Starkeep ${{ github.ref_name }}
+          releaseBody: |
+            Draft. Review, then Publish: publishing is what lets installed apps
+            update and deploys the web version.
+
+            New here? Download **Starkeep-setup.exe** below. Windows may show a
+            one-time "Windows protected your PC" notice: choose More info, then
+            Run anyway.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          # A file rather than inline JSON, so no shell quoting is involved. It
+          # only switches on the signed update files, which a local build can't
+          # make without the private key.
+          args: --config src-tauri/tauri.release.conf.json
+
+      # The versioned installer name changes every release. A copy with a fixed
+      # name gives one download link that is always the latest published
+      # release: .../releases/latest/download/Starkeep-setup.exe
+      #
+      # Uploaded by release id (which the build step returns) because a draft
+      # release can't be looked up by its tag.
+      - name: Add the stable-name installer
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
+        run: |
+          set -euo pipefail
+          installers=(src-tauri/target/release/bundle/nsis/*-setup.exe)
+          installer="${installers[0]}"
+          test -f "$installer"
+          cp "$installer" Starkeep-setup.exe
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @Starkeep-setup.exe \
+            "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=Starkeep-setup.exe"
