@@ -65,6 +65,10 @@ Supabase project** everyone shares (superseding the earlier plan of one
 project per machine: cross-device sync needs a shared server). Migrations are
 generated on one machine only, so the two histories never diverge.
 
+The builds people actually install are made by GitHub Actions on a version tag,
+configured from repository variables and secrets rather than that file —
+`RELEASING.md` is the checklist, `docs/invite-a-friend.md` the way people get in.
+
 Read `NOTES.md` (newest entries first) plus `git log` at the start of a
 session. My general planning and collaboration norms live in
 `~/.claude/CLAUDE.md` and apply here too; this file only holds what's
@@ -162,6 +166,18 @@ in `NOTES.md`.
   `app_config.min_client_version`**, not a sync failure. While it is above the
   app's `package.json` version, sync sends and applies nothing; clearing it
   resumes sync on the next retry (≤5 min) or "Sync now".
+- **The desktop app only looks for updates in a production build.** `tauri dev`
+  never shows "Starkeep X.Y.Z is ready"; to see the notice, build a release exe
+  and point a test at a published release. A check that finds nothing (no
+  release yet, offline, GitHub down) is silent by design: it logs
+  "Update check failed" to the console and shows nothing.
+- **Local builds don't make update files, and don't need the signing key.**
+  `bundle.createUpdaterArtifacts` is deliberately off in `tauri.conf.json`;
+  CI turns it on with `src-tauri/tauri.release.conf.json`. Turning it on in the
+  main config makes every local `tauri build` fail without the private key.
+- **A first install shows "Windows protected your PC".** The installer isn't
+  code-signed (that costs money), so SmartScreen warns once: More info → Run
+  anyway. Updates installed by the app don't warn. Not a broken release.
 - **Scripted `focus()`/`blur()` don't fire in a background window.** When
   driving the app from DevTools (browser pane or WebView2 remote debugging),
   a rename field's save-on-blur never runs unless the page has focus. Use real
@@ -270,6 +286,32 @@ rejected). Don't pre-populate this with guesses.
   disagree: move them together with `npm run version:set -- X.Y.Z`, never by
   hand. `app_config.min_client_version` is compared against it, so only raise
   that minimum after the matching release is out.
+- **The repository is public** (Release, 2026-10-13). GitHub serves a release's
+  files without a login only from a public repo, and the desktop updater and
+  the download link need exactly that. The history was checked first: no
+  secret was ever committed (only `sb_secret_...` placeholders). Keep it that
+  way — secrets live in GitHub's secrets, `.env.*.local`, or a password
+  manager, never in a commit.
+- **Releases are built only by CI, on a version tag, as a draft; publishing the
+  draft is the one deliberate "go"** (Release, 2026-10-13). It ships the
+  desktop update and the web version together at the same version. A merge to
+  `master` reaches nobody. `RELEASING.md` has the steps.
+- **The web version is hosted on Vercel and deploys only from a published
+  release** (Release, 2026-10-13; supersedes Cloudflare Pages). The Vercel
+  project is deliberately not connected to the Git repo, so no merge or pull
+  request can deploy, and no preview can talk to the real server. Free Hobby
+  plan: personal, non-commercial use, 100 GB/month.
+- **Desktop updates are a notice and one click, never mid-session** (Release,
+  2026-10-13). `DesktopUpdatePrompt` offers "Restart to update" only when no
+  session or Pomodoro run is in progress. Don't make it install silently: an
+  update that relaunches the app mid-session destroys what the app protects.
+- **There is no Windows code signing** (no paid services). First installs show a
+  SmartScreen warning; the invitation message says so.
+- **The update-signing key is Lucas's, and is never regenerated casually.**
+  Installed apps trust only the public key in `tauri.conf.json`; the private
+  key and password live in a password manager and the GitHub secrets. Changing
+  the public key, or losing the private one, strands every installed app until
+  its person reinstalls (`RELEASING.md`, "If the signing key is lost").
 - **Synced settings are mode + Pomodoro lengths; the last-picked tag is per
   device** (M5 PR 3). Newest edit wins by `settingsUpdatedAt` in `meta`. A run
   in progress keeps its own copy of the lengths and is never changed by sync.

@@ -69,7 +69,7 @@ it.
 | Timer logic | XState | Modes × phases × failure states is exactly what ad-hoc `useState` turns to spaghetti |
 | Local store | Dexie (IndexedDB) | Source of truth; app is fully functional offline |
 | Backend | Supabase (Postgres, Auth, RLS) | Real relational schema + SQL migrations reviewable in PRs — Firestore's schemaless documents fight the structure goal |
-| Hosting | Cloudflare Pages | Free, unlimited bandwidth |
+| Hosting | ~~Cloudflare Pages~~ **Vercel** *(superseded 2026-10-13, see `docs/plans/2026-10-13-release.md`)* | Free; deploys only from a published release |
 | Tests | Vitest (unit) + Playwright (e2e) | Fills the already-scaffolded CI workflow |
 
 ## The three decisions that make or break this
@@ -225,7 +225,7 @@ Each milestone is its own branch and PR, with its own acceptance pass.
 | **M3** | Pomodoro | Phase machine, break-exempt abandonment semantics. *Built as `docs/plans/2026-10-07-m3-pomodoro.md`: blocks are sessions, breaks are derived.* |
 | **M4** | Tags + stats | Tagging, dashboard charts. *Built as `docs/plans/2026-10-08-m4-tags-stats.md`: archivable tags chosen before or during a session, and a week / month / all-time stats view derived from sessions.* |
 | **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim. *Built as `docs/plans/2026-10-08-m5-accounts-sync.md`: invite-only accounts, one local store per account, no claim step (no guests).* |
-| **Release** | Ship to friends and family | Windows installer on GitHub Releases, Tauri auto-updates, the web version on a free host (also the Mac answer). Added 2026-10-08. |
+| **Release** | Ship to friends and family | Windows installer on GitHub Releases, Tauri auto-updates, the web version on a free host (also the Mac answer). Added 2026-10-08. *Planned as `docs/plans/2026-10-13-release.md`: public repo, a notice-and-one-click updater that never interrupts a session, Vercel for the web, one "publish" action ships both.* |
 | **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals |
 
 **On sequencing — worth pushing back on if you disagree.** You asked for accounts
