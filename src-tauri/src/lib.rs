@@ -100,6 +100,11 @@ pub fn run() {
         // Retires a service worker an older build registered, before any page
         // script runs (see the module for why the exe has to do this).
         .plugin(no_service_worker::init())
+        // Updates: the app checks the signed manifest named in tauri.conf.json
+        // and, on the person's say-so, installs it and relaunches (the prompt
+        // is in the frontend; it never offers one mid-session).
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,

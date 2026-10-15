@@ -3,6 +3,7 @@ import {
   unsupportedMiniWindow,
   unsupportedNotifications,
   unsupportedTray,
+  unsupportedUpdater,
   type CompletionNotice,
   type CompletionPort,
   type NotificationPort,
@@ -116,5 +117,6 @@ export const createWebRuntime = (): Runtime => {
     miniWindow: unsupportedMiniWindow,
     autostart: unsupportedAutostart,
     completion: webCompletion(notifications),
+    updater: unsupportedUpdater,
   };
 };

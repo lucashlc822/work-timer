@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { checkVersion } from '../../../scripts/set-version.mjs';
 import { APP_VERSION, compareVersions } from './version';
 
 // Resolved from the project root: `import.meta.url` isn't a file:// URL under Vitest.
@@ -13,8 +14,11 @@ describe('app version', () => {
     expect(APP_VERSION).toBe(readJson('package.json').version);
   });
 
-  it('matches the desktop app’s version, so both builds report the same one', () => {
-    expect(readJson('src-tauri/tauri.conf.json').version).toBe(readJson('package.json').version);
+  // The web package, its lockfile, the Tauri config and the Rust crate with its
+  // lockfile all state the version; the release workflow refuses a tag that
+  // doesn't match them. `npm run version:set` is how they move together.
+  it('is the one version every file states', () => {
+    expect(checkVersion(process.cwd(), readJson('package.json').version)).toEqual([]);
   });
 });
 

@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
-import { db, META_KEYS, readMeta } from '@/shared/db';
+import { APP_VERSION } from '@/shared/config';
+import { db, hasWorkInFlight } from '@/shared/db';
 
 import { SyncStatus, type SyncStatusView } from './SyncStatus';
 
@@ -14,19 +15,8 @@ interface Props {
   onDeleteAccount: () => Promise<void>;
 }
 
-/**
- * Whether this device has a session or Pomodoro run in progress. Read from the
- * meta pointers the timer keeps, so the account feature never reaches into
- * the timer's internals.
- */
-const useBusy = (): boolean =>
-  useLiveQuery(
-    async () =>
-      (await readMeta<string>(db, META_KEYS.activeSessionId)) !== undefined ||
-      (await readMeta<unknown>(db, META_KEYS.activeRun)) !== undefined,
-    [],
-    false,
-  );
+/** Whether this device has a session or Pomodoro run in progress. */
+const useBusy = (): boolean => useLiveQuery(() => hasWorkInFlight(db), [], false);
 
 /**
  * The outcome of the last finished sync attempt. While offline, sync retries
@@ -115,6 +105,9 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
         offline={settled !== 'synced' && settled !== 'outdated'}
         onDelete={onDeleteAccount}
       />
+
+      {/* What to quote when asking for help, and what an update changes. */}
+      <p className="text-ink-muted text-center text-xs">Starkeep {APP_VERSION}</p>
     </div>
   );
 };

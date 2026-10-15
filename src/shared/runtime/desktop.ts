@@ -6,6 +6,8 @@ import {
   requestPermission as requestNotificationPermission,
   sendNotification,
 } from '@tauri-apps/plugin-notification';
+import { relaunch } from '@tauri-apps/plugin-process';
+import { check as checkForUpdate } from '@tauri-apps/plugin-updater';
 
 import type {
   AutostartPort,
@@ -15,6 +17,7 @@ import type {
   NotificationPort,
   Runtime,
   TrayPort,
+  UpdaterPort,
 } from './types';
 
 /**
@@ -158,6 +161,30 @@ const desktopCompletion: CompletionPort = {
   },
 };
 
+const desktopUpdater: UpdaterPort = {
+  isSupported: true,
+
+  async check() {
+    try {
+      // The plugin reads the endpoint and public key from tauri.conf.json and
+      // verifies the download's signature before it will install anything.
+      const update = await checkForUpdate();
+      if (update === null) return null;
+      return {
+        version: update.version,
+        async install() {
+          await update.downloadAndInstall();
+          await relaunch();
+        },
+      };
+    } catch (error) {
+      // No network, GitHub down, no release yet: all just "nothing to offer".
+      console.warn('Update check failed', error);
+      return null;
+    }
+  },
+};
+
 export const createDesktopRuntime = (): Runtime => ({
   kind: 'desktop',
   notifications: desktopNotifications,
@@ -165,4 +192,5 @@ export const createDesktopRuntime = (): Runtime => ({
   miniWindow: desktopMiniWindow,
   autostart: desktopAutostart,
   completion: desktopCompletion,
+  updater: desktopUpdater,
 });
