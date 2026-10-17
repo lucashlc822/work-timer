@@ -74,6 +74,13 @@ export interface SessionRow {
   runId?: string;
   /** Pomodoro only: 1-based position of this block in its run. */
   runIndex?: number;
+  /**
+   * The star style this session's star was born with (M6), stamped when it
+   * completes. Absent on cancelled sessions, on rows from before M6, and on
+   * rows from older apps — all of which render in the default style. Optional
+   * and unindexed, so no schema version and no rewrite of any finished row.
+   */
+  starStyle?: string;
 }
 
 /**
@@ -89,6 +96,19 @@ export interface PomodoroSettingsRow {
   /** A long break follows every Nth completed block. */
   blocksPerLongBreak: number;
 }
+
+/**
+ * The Pomodoro lengths anyone has before choosing their own. Here rather than
+ * in the timer feature so the sync engine (shared) can fall back to the same
+ * values when only other synced settings — a star style, a daily goal — have
+ * been set on this device.
+ */
+export const DEFAULT_POMODORO_SETTINGS: Readonly<PomodoroSettingsRow> = {
+  focusS: 25 * 60,
+  shortBreakS: 5 * 60,
+  longBreakS: 15 * 60,
+  blocksPerLongBreak: 4,
+};
 
 export interface RunBreakRow {
   kind: 'short' | 'long';
@@ -182,6 +202,27 @@ export interface TagRow {
   syncedAt: number | null;
 }
 
+/**
+ * One entry in the Stardust ledger (M6). Append-only: the balance is the sum
+ * of `delta`, never a stored number, and no row is ever changed or removed.
+ *
+ * `id` is derived from the fact the row records (`stableId('<user>:session:<id>')`,
+ * `'<user>:purchase:<item>'`, ...), so the same fact recorded on two devices,
+ * or twice on one, is the same row.
+ */
+export interface LedgerRow {
+  id: string;
+  /** 'session', 'goal', 'streak', 'constellation', 'purchase', ... */
+  reason: string;
+  /** Positive for earnings, negative for spending. Whole Stardust. */
+  delta: number;
+  /** What it's for: a session id, a day, an item key. */
+  ref: string | null;
+  /** Epoch ms when this device recorded it. */
+  createdAt: number;
+  syncedAt: number | null;
+}
+
 export const META_KEYS = {
   /** Id of the session currently running, or absent when idle. */
   activeSessionId: 'activeSessionId',
@@ -219,6 +260,15 @@ export const META_KEYS = {
    * settings wait to be uploaded whenever the two differ.
    */
   settingsSyncedAt: 'settingsSyncedAt',
+  /**
+   * The equipped star style (M6): the style a session's star is born with when
+   * it completes. Synced with the other settings. Absent means the default.
+   */
+  starStyle: 'starStyle',
+  /** The equipped sky theme (M6). Synced with the other settings. Absent means the default. */
+  skyTheme: 'skyTheme',
+  /** The daily focus goal in minutes (M6). Synced with the other settings. Absent means the default. */
+  dailyGoalMin: 'dailyGoalMin',
 } as const;
 
 export type WorkTimerDb = Dexie & {
@@ -226,6 +276,7 @@ export type WorkTimerDb = Dexie & {
   meta: EntityTable<MetaRow, 'key'>;
   constellations: EntityTable<ConstellationRow, 'id'>;
   tags: EntityTable<TagRow, 'id'>;
+  ledger: EntityTable<LedgerRow, 'id'>;
 };
 
 /**
@@ -264,6 +315,25 @@ export const createDb = (name: string): WorkTimerDb => {
   db.version(3).stores({
     tags: 'id, createdAt, syncedAt',
   });
+
+  // v4 (M6) — the Stardust ledger. Indexed on createdAt (the history list) and
+  // syncedAt (like the others; the outbox still scans).
+  //
+  // The upgrade also forgets how far the settings were pulled. A pre-M6 app
+  // ignored the server's new settings columns (star style, sky theme, daily
+  // goal) and moved its cursor past them; without a fresh read, this device
+  // would never learn the values another device chose. Pulling the one row
+  // again is harmless: the newer copy still wins.
+  db.version(4)
+    .stores({
+      ledger: 'id, createdAt, syncedAt',
+    })
+    .upgrade(async (tx) => {
+      const row = (await tx.table('meta').get(META_KEYS.syncCursors)) as MetaRow | undefined;
+      if (row === undefined || typeof row.value !== 'object' || row.value === null) return;
+      const { user_settings: _forgotten, ...rest } = row.value as Record<string, unknown>;
+      await tx.table('meta').put({ key: META_KEYS.syncCursors, value: rest });
+    });
 
   return db;
 };

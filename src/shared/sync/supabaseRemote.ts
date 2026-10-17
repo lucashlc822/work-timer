@@ -43,7 +43,13 @@ const guard = async <T>(run: () => PromiseLike<T>): Promise<T> => {
 };
 
 /** Every table whose changes another device should hear about. */
-const LIVE_TABLES: readonly SyncTable[] = ['tags', 'constellations', 'sessions', 'user_settings'];
+const LIVE_TABLES: readonly SyncTable[] = [
+  'tags',
+  'constellations',
+  'sessions',
+  'ledger',
+  'user_settings',
+];
 
 export const supabaseRemote = (client: SupabaseClient): RemoteStore => ({
   hasSession: async () => {

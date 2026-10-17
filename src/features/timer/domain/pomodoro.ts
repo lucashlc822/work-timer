@@ -1,3 +1,5 @@
+import { DEFAULT_POMODORO_SETTINGS } from '@/shared/db';
+
 import type { PomodoroRun, PomodoroSettings, RunBreak } from './types';
 
 /**
@@ -9,12 +11,8 @@ import type { PomodoroRun, PomodoroSettings, RunBreak } from './types';
  * out while the app was quit is simply over when it is next looked at.
  */
 
-export const DEFAULT_POMODORO: PomodoroSettings = {
-  focusS: 25 * 60,
-  shortBreakS: 5 * 60,
-  longBreakS: 15 * 60,
-  blocksPerLongBreak: 4,
-};
+/** Defined in `shared/db` so the sync engine falls back to the same values. */
+export const DEFAULT_POMODORO: PomodoroSettings = { ...DEFAULT_POMODORO_SETTINGS };
 
 interface Range {
   min: number;

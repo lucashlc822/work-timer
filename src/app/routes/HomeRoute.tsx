@@ -9,6 +9,7 @@ import {
   StartHint,
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
+import { RewardNote, StardustPanel, StardustPill } from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
@@ -19,28 +20,32 @@ import { StarMark } from '@/shared/ui';
 import { useAccount } from '../accountContext';
 
 /**
- * Sky content for the timer's slots. The two features never import each
- * other; this is the one place they meet.
+ * Sky and Stardust content for the timer's slots. The features never import
+ * each other; this is the one place they meet.
  */
 const timerSlots: TimerSlots = {
   tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
-  resultNote: (result) =>
-    result.outcome === 'completed' ? <NewStarNote sessionId={result.sessionId} /> : null,
+  resultNote: (result) => (
+    <>
+      {result.outcome === 'completed' && <NewStarNote sessionId={result.sessionId} />}
+      <RewardNote outcome={result.outcome} actualFocusS={result.actualFocusS} />
+    </>
+  ),
 };
 
 /**
  * The main window: the timer in front of your night sky.
  *
- * "View sky" and "Stats" fade the timer out — it stays mounted, so a running
+ * "View sky", "Stats" and the Stardust pill fade the timer out — it stays mounted, so a running
  * session is untouched. The sky hands the pointer to the stars so they can be
  * hovered and focused; the stats are a scrollable panel over the dimmed sky.
  * The autostart toggle lives in the footer until a settings surface exists to
  * hold it.
  */
 export const HomeRoute = () => {
-  const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'account'>('timer');
+  const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'stardust' | 'account'>('timer');
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
 
@@ -78,6 +83,7 @@ export const HomeRoute = () => {
         <footer className="flex flex-col items-center gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ConstellationStatus />
+            <StardustPill onOpen={() => setView('stardust')} />
             <button
               type="button"
               onClick={() => setView('sky')}
@@ -107,6 +113,12 @@ export const HomeRoute = () => {
       {view === 'stats' && (
         <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
           <StatsView />
+        </div>
+      )}
+
+      {view === 'stardust' && (
+        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+          <StardustPanel />
         </div>
       )}
 

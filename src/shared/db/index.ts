@@ -3,6 +3,7 @@ export {
   bindAccountDb,
   createDb,
   db,
+  DEFAULT_POMODORO_SETTINGS,
   deleteAccountDb,
   isAccountDbBound,
   LEGACY_DB_NAME,
@@ -11,6 +12,7 @@ export {
 export type {
   ConstellationRow,
   ConstellationTier,
+  LedgerRow,
   MetaRow,
   PomodoroRunRow,
   PomodoroSettingsRow,
@@ -23,4 +25,11 @@ export type {
   WorkTimerDb,
 } from './schema';
 
-export { clearMeta, getLocalUserId, hasWorkInFlight, readMeta, writeMeta } from './meta';
+export {
+  clearMeta,
+  getLocalUserId,
+  hasWorkInFlight,
+  readMeta,
+  touchSettings,
+  writeMeta,
+} from './meta';

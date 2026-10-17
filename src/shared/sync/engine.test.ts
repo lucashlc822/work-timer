@@ -7,11 +7,12 @@ import {
   readMeta,
   writeMeta,
   type ConstellationRow,
+  type LedgerRow,
   type SessionRow,
   type TagRow,
   type WorkTimerDb,
 } from '../db';
-import { createTestClock } from '../lib';
+import { createTestClock, stableId } from '../lib';
 import { countPending, createSyncEngine, PULL_PAGE, type SyncLock } from './engine';
 import { FakeRemote } from './fakeRemote';
 import { sessionToWire, settingsToWire, tagToWire } from './wire';
@@ -339,8 +340,10 @@ const editSettings = async (
   await writeMeta(db, META_KEYS.settingsUpdatedAt, updatedAt);
 };
 
+const NO_M6 = { starStyle: null, skyTheme: null, dailyGoalMin: null };
+
 const serverSettings = (updatedAt: number, focusS = 1800) =>
-  settingsToWire({ mode: 'pomodoro', settings: { ...POMO, focusS }, updatedAt });
+  settingsToWire({ mode: 'pomodoro', settings: { ...POMO, focusS }, ...NO_M6, updatedAt });
 
 describe('settings', () => {
   // U1
@@ -535,5 +538,202 @@ describe('minimum app version', () => {
 
     expect(await engine.syncNow()).toMatchObject({ ok: true, counts: { pushed: 1 } });
     expect(remote.tables.sessions.size).toBe(1);
+  });
+});
+
+// --- Stardust ledger and M6 settings ---------------------------------------------
+
+const earning = (o: Partial<LedgerRow> = {}): LedgerRow => ({
+  id: stableId(`u1:session:${crypto.randomUUID()}`),
+  reason: 'session',
+  delta: 25,
+  ref: 's-1',
+  createdAt: T0,
+  syncedAt: null,
+  ...o,
+});
+
+describe('ledger', () => {
+  it('uploads Stardust rows and marks them synced', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    const row = earning();
+    await db.ledger.add(row);
+
+    expect(await countPending(db)).toMatchObject({ pending: 1 });
+    expect(await engine.syncNow()).toMatchObject({ ok: true, counts: { pushed: 1 } });
+
+    expect(remote.tables.ledger.get(row.id)).toMatchObject({ reason: 'session', delta: 25 });
+    expect((await db.ledger.get(row.id))?.syncedAt).not.toBeNull();
+    expect(await countPending(db)).toMatchObject({ pending: 0 });
+  });
+
+  // M6 case 2: the same fact recorded on two devices is one row everywhere.
+  it('keeps one row when two devices record the same fact', async () => {
+    const remote = new FakeRemote();
+    const a = device(remote);
+    const b = device(remote);
+    const id = stableId('u1:session:shared');
+    await a.db.ledger.add(earning({ id, createdAt: T0 }));
+    await b.db.ledger.add(earning({ id, createdAt: T0 + 5_000 }));
+
+    await a.engine.syncNow();
+    await b.engine.syncNow();
+    await a.engine.syncNow();
+
+    expect(remote.tables.ledger.size).toBe(1);
+    for (const { db } of [a, b]) {
+      expect(await db.ledger.count()).toBe(1);
+      expect((await db.ledger.get(id))?.syncedAt).not.toBeNull();
+      const sum = (await db.ledger.toArray()).reduce((n, r) => n + r.delta, 0);
+      expect(sum).toBe(25);
+    }
+  });
+
+  it('downloads Stardust recorded on another device', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    const row = earning({ delta: 40 });
+    remote.seed('ledger', {
+      id: row.id,
+      reason: 'session',
+      delta: 40,
+      ref: 's-9',
+      created_at: new Date(T0).toISOString(),
+    });
+
+    await engine.syncNow();
+
+    expect(await db.ledger.get(row.id)).toMatchObject({ reason: 'session', delta: 40, ref: 's-9' });
+  });
+
+  it('skips and counts a ledger row it cannot represent, and applies the rest', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    remote.seed('ledger', {
+      id: stableId('bad'),
+      reason: 'session',
+      delta: 2.5,
+      ref: null,
+      created_at: new Date(T0).toISOString(),
+    });
+    remote.seed('ledger', {
+      id: stableId('good'),
+      reason: 'session',
+      delta: 3,
+      ref: null,
+      created_at: new Date(T0).toISOString(),
+    });
+
+    const outcome = await engine.syncNow();
+
+    expect(outcome).toMatchObject({ ok: true, counts: { skipped: 1, pulled: 1 } });
+    expect(await db.ledger.get(stableId('good'))).toBeDefined();
+  });
+});
+
+describe('M6 settings', () => {
+  const setM6 = async (db: WorkTimerDb, at: number, style: string, theme: string, goal: number) => {
+    await writeMeta(db, META_KEYS.starStyle, style);
+    await writeMeta(db, META_KEYS.skyTheme, theme);
+    await writeMeta(db, META_KEYS.dailyGoalMin, goal);
+    await writeMeta(db, META_KEYS.settingsUpdatedAt, at);
+  };
+
+  // M6 case 13
+  it('carries the star style, sky theme and daily goal to the other device', async () => {
+    const remote = new FakeRemote();
+    const a = device(remote);
+    const b = device(remote);
+    await editSettings(a.db, T0);
+    await setM6(a.db, T0 + 1, 'style-rose', 'theme-dusk', 90);
+
+    await a.engine.syncNow();
+    await b.engine.syncNow();
+
+    expect(remote.tables.user_settings.get('me')).toMatchObject({
+      star_style: 'style-rose',
+      sky_theme: 'theme-dusk',
+      daily_goal_min: 90,
+    });
+    expect(await readMeta(b.db, META_KEYS.starStyle)).toBe('style-rose');
+    expect(await readMeta(b.db, META_KEYS.skyTheme)).toBe('theme-dusk');
+    expect(await readMeta(b.db, META_KEYS.dailyGoalMin)).toBe(90);
+  });
+
+  it('picks them up after updating from an app that wrote the same version without them', async () => {
+    // Before updating, this device ran 0.1.x: it uploaded a Pomodoro edit as
+    // version T0, and the server kept the style another device had chosen.
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0, 'pomodoro');
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    remote.seed('user_settings', {
+      ...serverSettings(T0),
+      star_style: 'style-rose',
+      sky_theme: 'theme-dusk',
+      daily_goal_min: 90,
+    });
+
+    await engine.syncNow();
+
+    expect(await readMeta(db, META_KEYS.starStyle)).toBe('style-rose');
+    expect(await readMeta(db, META_KEYS.skyTheme)).toBe('theme-dusk');
+    expect(await readMeta(db, META_KEYS.dailyGoalMin)).toBe(90);
+    expect(await readMeta(db, META_KEYS.settingsUpdatedAt)).toBe(T0);
+  });
+
+  it('a newer edit elsewhere that goes back to the defaults clears them here', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0, 'pomodoro');
+    await setM6(db, T0, 'style-rose', 'theme-dusk', 90);
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    remote.seed('user_settings', serverSettings(T0 + 5000)); // explicit nulls
+
+    await engine.syncNow();
+
+    expect(await readMeta(db, META_KEYS.starStyle)).toBeUndefined();
+    expect(await readMeta(db, META_KEYS.skyTheme)).toBeUndefined();
+    expect(await readMeta(db, META_KEYS.dailyGoalMin)).toBeUndefined();
+  });
+
+  it('a settings row without the M6 columns at all leaves this device’s values alone', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await editSettings(db, T0, 'countdown');
+    await setM6(db, T0, 'style-rose', 'theme-dusk', 90);
+    await writeMeta(db, META_KEYS.settingsSyncedAt, T0);
+    // What a server without the M6 migration would send.
+    const {
+      star_style: _s,
+      sky_theme: _t,
+      daily_goal_min: _g,
+      ...preM6
+    } = serverSettings(T0 + 5000);
+    remote.seed('user_settings', preM6);
+
+    await engine.syncNow();
+
+    expect(await readMeta(db, META_KEYS.timerMode)).toBe('pomodoro'); // the newer edit applies
+    expect(await readMeta(db, META_KEYS.starStyle)).toBe('style-rose');
+    expect(await readMeta(db, META_KEYS.skyTheme)).toBe('theme-dusk');
+    expect(await readMeta(db, META_KEYS.dailyGoalMin)).toBe(90);
+  });
+
+  it('uploads a style chosen on a device that never saved Pomodoro lengths, with the defaults', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await writeMeta(db, META_KEYS.starStyle, 'style-rose');
+    await writeMeta(db, META_KEYS.settingsUpdatedAt, T0);
+
+    expect(await countPending(db)).toMatchObject({ pending: 1 });
+    await engine.syncNow();
+
+    expect(remote.tables.user_settings.get('me')).toMatchObject({
+      mode: 'countdown',
+      star_style: 'style-rose',
+      pomodoro: { focus_s: 1500, short_break_s: 300, long_break_s: 900, blocks_per_long_break: 4 },
+    });
   });
 });
