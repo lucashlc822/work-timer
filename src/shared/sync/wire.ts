@@ -1,6 +1,7 @@
 import type {
   ConstellationRow,
   ConstellationTier,
+  LedgerRow,
   PomodoroSettingsRow,
   SessionMode,
   SessionRow,
@@ -24,16 +25,27 @@ import type {
  *   ignored.
  */
 
-export type SyncTable = 'tags' | 'constellations' | 'sessions' | 'user_settings';
+export type SyncTable = 'tags' | 'constellations' | 'sessions' | 'ledger' | 'user_settings';
 
 /**
  * The settings that follow an account between devices: the idle screen's mode
- * and the Pomodoro lengths. The last-picked tag is deliberately not part of
- * it — each device keeps its own.
+ * and the Pomodoro lengths, and (M6) the equipped star style, sky theme and
+ * daily goal. The last-picked tag is deliberately not part of it — each device
+ * keeps its own.
  */
 export interface SyncedSettings {
   mode: SessionMode;
   settings: PomodoroSettingsRow;
+  /**
+   * The equipped star style's key, or null for the default. On a pulled row,
+   * `undefined` means the server didn't mention it at all (a server without
+   * the M6 migration): keep whatever this device has rather than reset it.
+   */
+  starStyle?: string | null | undefined;
+  /** The equipped sky theme's key, or null for the default (`undefined` as above). */
+  skyTheme?: string | null | undefined;
+  /** The daily focus goal in minutes, or null for the default (`undefined` as above). */
+  dailyGoalMin?: number | null | undefined;
   /** Epoch ms of the edit, on the device that made it. Newest wins. */
   updatedAt: number;
 }
@@ -84,6 +96,16 @@ export const sessionToWire = (row: SessionRow) => ({
   client_created_at: iso(row.clientCreatedAt),
   run_id: row.runId ?? null,
   run_index: row.runIndex ?? null,
+  star_style: row.starStyle ?? null,
+});
+
+/** One ledger row; insert-only on the server, like sessions. */
+export const ledgerToWire = (row: LedgerRow) => ({
+  id: row.id,
+  reason: row.reason,
+  delta: row.delta,
+  ref: row.ref,
+  created_at: iso(row.createdAt),
 });
 
 /**
@@ -98,6 +120,9 @@ export const settingsToWire = (s: SyncedSettings) => ({
     long_break_s: s.settings.longBreakS,
     blocks_per_long_break: s.settings.blocksPerLongBreak,
   },
+  star_style: s.starStyle ?? null,
+  sky_theme: s.skyTheme ?? null,
+  daily_goal_min: s.dailyGoalMin ?? null,
   updated_at: iso(s.updatedAt),
 });
 
@@ -177,7 +202,29 @@ export const sessionFromWire = (w: WireRow, syncedAt: number): SessionRow | null
   // Optional, absent on countdowns (matching how the timer writes them).
   if (str(w.run_id)) row.runId = w.run_id;
   if (num(w.run_index)) row.runIndex = w.run_index;
+  // Absent from older apps' rows (and on cancelled sessions): the default look.
+  // A style key this version doesn't know is kept as-is and drawn as the default.
+  if (str(w.star_style)) row.starStyle = w.star_style;
   return row;
+};
+
+/**
+ * A pulled ledger row, or null if it can't be represented. Whole-number deltas
+ * only: Stardust is never fractional.
+ */
+export const ledgerFromWire = (w: WireRow, syncedAt: number): LedgerRow | null => {
+  const createdAt = ms(w.created_at);
+  if (!str(w.id) || !str(w.reason) || createdAt === null) return null;
+  if (!num(w.delta) || !Number.isInteger(w.delta)) return null;
+  if (w.ref !== null && w.ref !== undefined && typeof w.ref !== 'string') return null;
+  return {
+    id: w.id,
+    reason: w.reason,
+    delta: w.delta,
+    ref: typeof w.ref === 'string' ? w.ref : null,
+    createdAt,
+    syncedAt,
+  };
 };
 
 const count = (v: unknown): v is number => num(v) && Number.isInteger(v) && v > 0;
@@ -204,6 +251,16 @@ export const settingsFromWire = (w: WireRow): SyncedSettings | null => {
       longBreakS: long_break_s,
       blocksPerLongBreak: blocks_per_long_break,
     },
+    // M6 columns. Never a reason to drop the whole row: an unusable value means
+    // "default". A column the server didn't send at all stays undefined, so the
+    // device keeps its own value (see SyncedSettings).
+    starStyle: !('star_style' in w) ? undefined : str(w.star_style) ? w.star_style : null,
+    skyTheme: !('sky_theme' in w) ? undefined : str(w.sky_theme) ? w.sky_theme : null,
+    dailyGoalMin: !('daily_goal_min' in w)
+      ? undefined
+      : count(w.daily_goal_min)
+        ? w.daily_goal_min
+        : null,
     updatedAt,
   };
 };

@@ -19,6 +19,7 @@ export class FakeRemote implements RemoteStore {
     tags: new Map(),
     constellations: new Map(),
     sessions: new Map(),
+    ledger: new Map(),
     user_settings: new Map(),
   };
 

@@ -5,8 +5,8 @@ import type { SyncTable, WireRow } from './wire';
  * (`supabaseRemote`); tests use an in-memory stand-in with the same rules.
  *
  * Server rules the engine relies on (enforced by the migration):
- * - `push` of sessions and constellations is insert-only: an id that already
- *   exists is silently ignored, so re-sending is always safe.
+ * - `push` of sessions, constellations and the ledger is insert-only: an id
+ *   that already exists is silently ignored, so re-sending is always safe.
  * - `push` of tags and `user_settings` is an upsert where the newest
  *   `updated_at` wins; an older copy arriving late changes nothing. Settings
  *   are one row per account, keyed by the account rather than an `id`.

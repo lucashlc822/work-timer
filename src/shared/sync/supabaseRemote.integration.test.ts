@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { SessionRow } from '../db';
 import { RemoteError, type RemoteStore } from './remote';
 import { supabaseRemote } from './supabaseRemote';
-import { sessionToWire, settingsToWire, tagToWire } from './wire';
+import { ledgerToWire, sessionToWire, settingsToWire, tagToWire } from './wire';
 
 /**
  * The real adapter against the local Supabase stack — the one place the
@@ -112,15 +112,61 @@ describe.skipIf(!enabled)('supabaseRemote against the local stack', () => {
     const settings = { focusS: 1500, shortBreakS: 300, longBreakS: 900, blocksPerLongBreak: 4 };
     const now = Date.now();
     await remote.push('user_settings', [
-      settingsToWire({ mode: 'pomodoro', settings: { ...settings, focusS: 1800 }, updatedAt: now }),
+      settingsToWire({
+        mode: 'pomodoro',
+        settings: { ...settings, focusS: 1800 },
+        starStyle: null,
+        skyTheme: null,
+        dailyGoalMin: null,
+        updatedAt: now,
+      }),
     ]);
     await remote.push('user_settings', [
-      settingsToWire({ mode: 'countdown', settings, updatedAt: now - 1000 }),
+      settingsToWire({
+        mode: 'countdown',
+        settings,
+        starStyle: null,
+        skyTheme: null,
+        dailyGoalMin: null,
+        updatedAt: now - 1000,
+      }),
     ]);
 
     const rows = await remote.pull('user_settings', null, 10);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ mode: 'pomodoro', pomodoro: { focus_s: 1800 } });
+  });
+
+  // M6
+  it('keeps one copy of a ledger row, however often it is sent', async () => {
+    const row = {
+      id: crypto.randomUUID(),
+      reason: 'session',
+      delta: 25,
+      ref: 'it',
+      createdAt: T0,
+      syncedAt: null,
+    };
+    await remote.push('ledger', [ledgerToWire(row)]);
+    await remote.push('ledger', [ledgerToWire({ ...row, delta: 99 })]);
+
+    const mine = (await remote.pull('ledger', null, 1000)).filter((r) => r.id === row.id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]?.delta).toBe(25);
+  });
+
+  it('refuses an out-of-range ledger row as "rejected"', async () => {
+    const bad = {
+      id: crypto.randomUUID(),
+      reason: 'session',
+      delta: 1_000_000,
+      ref: null,
+      createdAt: T0,
+      syncedAt: null,
+    };
+    await expect(remote.push('ledger', [ledgerToWire(bad)])).rejects.toMatchObject({
+      kind: 'rejected',
+    });
   });
 
   it('reads the minimum app version (none on a fresh stack)', async () => {

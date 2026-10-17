@@ -2,6 +2,8 @@ import type { EntityTable } from 'dexie';
 
 import { compareVersions } from '../config';
 import {
+  clearMeta,
+  DEFAULT_POMODORO_SETTINGS,
   META_KEYS,
   readMeta,
   writeMeta,
@@ -14,6 +16,8 @@ import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import {
   constellationFromWire,
   constellationToWire,
+  ledgerFromWire,
+  ledgerToWire,
   sessionFromWire,
   sessionToWire,
   settingsFromWire,
@@ -45,9 +49,13 @@ import {
  * for its content, the rows are retried one at a time and only the refused
  * ones are set aside (`META_KEYS.syncRejected`).
  *
- * Settings (mode and Pomodoro lengths) are one record per account, kept in
- * `meta` rather than a table, and go up and come down last, newest edit
- * winning. The last-picked tag and anything about a run in progress stay on
+ * Settings (mode, Pomodoro lengths and, since M6, the equipped star style, sky
+ * theme and daily goal) are one record per account, kept in `meta` rather than
+ * a table, and go up and come down last, newest edit winning.
+ *
+ * The Stardust ledger (M6) is insert-only like sessions, and goes up after
+ * them. Its ids are derived from the facts they record, so the same fact from
+ * two devices is one row. The last-picked tag and anything about a run in progress stay on
  * this device.
  *
  * Before any of that, the server may say this app is too old to sync
@@ -138,6 +146,9 @@ const SETTINGS_META = [
   META_KEYS.pomodoroSettings,
   META_KEYS.timerMode,
   META_KEYS.settingsSyncedAt,
+  META_KEYS.starStyle,
+  META_KEYS.skyTheme,
+  META_KEYS.dailyGoalMin,
 ] as const;
 
 /**
@@ -148,13 +159,21 @@ const SETTINGS_META = [
  * the desktop app). Callers fetch the rows with one `bulkGet` instead.
  */
 const settingsFrom = (rows: readonly (MetaRow | undefined)[]): LocalSettings | null => {
-  const [updatedAt, settings, mode, syncedAt] = rows.map((row) => row?.value);
-  if (typeof updatedAt !== 'number' || typeof settings !== 'object' || settings === null) {
-    return null;
-  }
+  const [updatedAt, settings, mode, syncedAt, starStyle, skyTheme, dailyGoalMin] = rows.map(
+    (row) => row?.value,
+  );
+  if (typeof updatedAt !== 'number') return null;
   return {
     mode: mode === 'pomodoro' ? 'pomodoro' : 'countdown',
-    settings: settings as PomodoroSettingsRow,
+    // Since M6 a device can change a synced setting (a star style, the daily
+    // goal) without ever having saved Pomodoro lengths; the defaults stand in.
+    settings:
+      typeof settings === 'object' && settings !== null
+        ? (settings as PomodoroSettingsRow)
+        : { ...DEFAULT_POMODORO_SETTINGS },
+    starStyle: typeof starStyle === 'string' ? starStyle : null,
+    skyTheme: typeof skyTheme === 'string' ? skyTheme : null,
+    dailyGoalMin: typeof dailyGoalMin === 'number' ? dailyGoalMin : null,
     updatedAt,
     dirty: syncedAt !== updatedAt,
   };
@@ -287,15 +306,34 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
       if (incoming === null) {
         counts.skipped += 1;
       } else {
+        // Null means "the default": clear the key rather than store a null.
+        // Undefined means the server didn't say (no M6 columns): leave it.
+        const adoptM6 = async () => {
+          for (const [key, value] of [
+            [META_KEYS.starStyle, incoming.starStyle],
+            [META_KEYS.skyTheme, incoming.skyTheme],
+            [META_KEYS.dailyGoalMin, incoming.dailyGoalMin],
+          ] as const) {
+            if (value === undefined) continue;
+            if (value === null) await clearMeta(db, key);
+            else await writeMeta(db, key, value);
+          }
+        };
         const localAt = await readMeta<number>(db, META_KEYS.settingsUpdatedAt);
         if (localAt === undefined || incoming.updatedAt > localAt) {
           await writeMeta(db, META_KEYS.timerMode, incoming.mode);
           await writeMeta(db, META_KEYS.pomodoroSettings, incoming.settings);
+          await adoptM6();
           await writeMeta(db, META_KEYS.settingsUpdatedAt, incoming.updatedAt);
           await writeMeta(db, META_KEYS.settingsSyncedAt, incoming.updatedAt);
           counts.pulled += 1;
         } else if (incoming.updatedAt === localAt) {
-          // The server already has exactly this version.
+          // The server already has exactly this version. Its M6 fields still
+          // win: this version may have been written by a pre-M6 app (this
+          // device before it updated), which never saw them and whose upload
+          // left the server's copy in place. An M6 device writing this version
+          // sent its own, so adopting them is a no-op there.
+          await adoptM6();
           await writeMeta(db, META_KEYS.settingsSyncedAt, localAt);
         }
         // Older: this device's newer edit stays, and goes up next round.
@@ -334,6 +372,7 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
       tags: rejectedFor('tags'),
       constellations: rejectedFor('constellations'),
       sessions: rejectedFor('sessions'),
+      ledger: rejectedFor('ledger'),
       user_settings: rejectedFor('user_settings'),
     };
 
@@ -381,6 +420,19 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
         // that somehow lost its ending since it was read.
         (stored) => stored.endedAt !== null,
         rejected.sessions,
+      );
+
+      // Stardust (M6). Insert-only, and a row never changes after it's written.
+      const ledger = await db.ledger
+        .filter((r) => r.syncedAt === null && !rejected.ledger.has(r.id))
+        .toArray();
+      counts.pushed += await pushTable(
+        'ledger',
+        db.ledger,
+        ledger,
+        ledgerToWire,
+        () => true,
+        rejected.ledger,
       );
 
       counts.pushed += await pushSettings(rejected.user_settings);
@@ -431,6 +483,19 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
         counts,
       );
 
+      await pullTable(
+        'ledger',
+        db.ledger,
+        ledgerFromWire,
+        async (row) => {
+          // The same id means the same fact (see stableId), whoever recorded it.
+          if ((await db.ledger.get(row.id)) !== undefined) return false;
+          await db.ledger.add(row);
+          return true;
+        },
+        counts,
+      );
+
       await pullSettings(counts);
 
       await writeMeta(db, META_KEYS.lastSyncedAt, clock.now());
@@ -443,12 +508,14 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
         tags: [...rejected.tags],
         constellations: [...rejected.constellations],
         sessions: [...rejected.sessions],
+        ledger: [...rejected.ledger],
         user_settings: [...rejected.user_settings],
       };
       counts.rejected =
         rejected.tags.size +
         rejected.constellations.size +
         rejected.sessions.size +
+        rejected.ledger.size +
         rejected.user_settings.size;
       await writeMeta(db, META_KEYS.syncRejected, asLists);
     }
@@ -494,6 +561,7 @@ export const countPending = async (
     ...(refused.tags ?? []),
     ...(refused.constellations ?? []),
     ...(refused.sessions ?? []),
+    ...(refused.ledger ?? []),
   ]);
   const refusedSettings = refused.user_settings ?? [];
   const settings = settingsFrom(settingsRows);
@@ -507,6 +575,7 @@ export const countPending = async (
     (await db.tags.filter(unsynced).count()) +
     (await db.constellations.filter(unsynced).count()) +
     (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null).count()) +
+    (await db.ledger.filter(unsynced).count()) +
     (settingsWaiting ? 1 : 0);
   return { pending, rejected: skip.size + refusedSettings.length };
 };

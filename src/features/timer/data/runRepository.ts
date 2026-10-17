@@ -1,4 +1,4 @@
-import { clearMeta, META_KEYS, readMeta, writeMeta } from '@/shared/db';
+import { clearMeta, META_KEYS, readMeta, touchSettings, writeMeta } from '@/shared/db';
 import type { SessionMode, WorkTimerDb } from '@/shared/db';
 
 import { clampPomodoroSettings, type PomodoroLimits } from '../domain/pomodoro';
@@ -183,8 +183,7 @@ export const saveTimerPrefs = (db: WorkTimerDb, prefs: TimerPrefs, now: number):
     const mode = await readMeta<unknown>(db, META_KEYS.timerMode);
     const settings = await readMeta<Partial<PomodoroSettings>>(db, META_KEYS.pomodoroSettings);
     if (mode !== prefs.mode || !sameSettings(settings, prefs.settings)) {
-      const previous = (await readMeta<number>(db, META_KEYS.settingsUpdatedAt)) ?? 0;
-      await writeMeta(db, META_KEYS.settingsUpdatedAt, Math.max(now, previous + 1));
+      await touchSettings(db, now);
     }
     await writeMeta(db, META_KEYS.timerMode, prefs.mode);
     await writeMeta(db, META_KEYS.pomodoroSettings, prefs.settings);

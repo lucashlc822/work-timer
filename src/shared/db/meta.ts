@@ -23,6 +23,18 @@ export const clearMeta = async (db: WorkTimerDb, key: string): Promise<void> => 
 };
 
 /**
+ * Mark the synced settings as changed here, so sync uploads them to the
+ * account's other devices (newest edit wins). Call it in the same transaction
+ * as the write, and only for settings that sync — never for per-device ones
+ * like the last-picked tag. The stamp only moves forward, so two edits in one
+ * millisecond still read as two.
+ */
+export const touchSettings = async (db: WorkTimerDb, now: number): Promise<void> => {
+  const previous = (await readMeta<number>(db, META_KEYS.settingsUpdatedAt)) ?? 0;
+  await writeMeta(db, META_KEYS.settingsUpdatedAt, Math.max(now, previous + 1));
+};
+
+/**
  * Whether a session or Pomodoro run is in progress on this device — read from
  * the pointers the timer keeps in `meta`, so callers outside the timer feature
  * (sign-out, delete account, the update notice) never reach into its internals.

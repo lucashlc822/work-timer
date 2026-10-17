@@ -226,7 +226,7 @@ Each milestone is its own branch and PR, with its own acceptance pass.
 | **M4** | Tags + stats | Tagging, dashboard charts. *Built as `docs/plans/2026-10-08-m4-tags-stats.md`: archivable tags chosen before or during a session, and a week / month / all-time stats view derived from sessions.* |
 | **M5** | Accounts + sync | Supabase, RLS, outbox sync engine, local→account claim. *Built as `docs/plans/2026-10-08-m5-accounts-sync.md`: invite-only accounts, one local store per account, no claim step (no guests).* |
 | **Release** | Ship to friends and family | Windows installer on GitHub Releases, Tauri auto-updates, the web version on a free host (also the Mac answer). Added 2026-10-08. *Planned as `docs/plans/2026-10-13-release.md`: public repo, a notice-and-one-click updater that never interrupts a session, Vercel for the web, one "publish" action ships both.* |
-| **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals |
+| **M6** | Progression | Currency ledger, unlock catalogue, shop, streaks, daily goals. *Planned as `docs/plans/2026-10-17-m6-progression.md`: Stardust earned per focused minute, written by a reconciler with ids derived from what each row pays for; purchases are ledger rows; styles, themes and the goal are synced settings.* |
 
 **On sequencing — worth pushing back on if you disagree.** You asked for accounts
 and cloud sync "from day one," and they *are* in v1 scope. But they're sequenced

@@ -319,6 +319,22 @@ rejected). Don't pre-populate this with guesses.
 - **Synced settings are mode + Pomodoro lengths; the last-picked tag is per
   device** (M5 PR 3). Newest edit wins by `settingsUpdatedAt` in `meta`. A run
   in progress keeps its own copy of the lengths and is never changed by sync.
+- **Stardust is written only by the reconciler** (M6, 2026-10-17). From
+  facts every device sees (completed sessions; later goals, streaks,
+  constellations, purchases) it computes the ledger rows that should exist and
+  inserts the missing ones. Each row's id is `stableId('<userId>:<kind>:<ref>')`
+  — the **user id is part of the key** because the server's primary key is
+  global. That is what makes it safe on any device, any number of times, and
+  what credits sessions from apps that predate the ledger. A changed earning
+  rule gets a new key namespace (`session.v2:`); never re-price existing ids.
+- **What's owned is derived from purchase rows** (M6): a purchase is a ledger
+  row with a negative `delta` and id `purchase:<itemKey>`. No unlocks table.
+- **Star style, sky theme and daily goal are their own `user_settings`
+  columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
+  wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A
+  settings row at the same version as this device's still hands over its M6
+  columns (a pre-M6 app may have written that version), and the Dexie v4
+  upgrade forgets the settings cursor once so they are re-read.
 
 ## Plans include acceptance tests
 

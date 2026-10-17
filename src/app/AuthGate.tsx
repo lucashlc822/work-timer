@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { AuthScreens, deleteAccount, signOut, type SignedInAccount } from '@/features/account';
+import { useStardustReconciler } from '@/features/progression';
 import { clearLastUserId, getSupabase, readStoredAccount, writeLastUserId } from '@/shared/backend';
 import { APP_NAME } from '@/shared/config';
 import { bindAccountDb, db, deleteAccountDb } from '@/shared/db';
@@ -129,7 +130,10 @@ const deleteEverywhere = async (userId: string): Promise<void> => {
   reload();
 };
 
-/** The signed-in app, with sync running for the whole time it is mounted. */
+/**
+ * The signed-in app, with sync running — and the Stardust ledger kept in step
+ * with the sessions — for the whole time it is mounted.
+ */
 const SignedIn = ({
   account,
   signOut,
@@ -142,6 +146,7 @@ const SignedIn = ({
   children: ReactNode;
 }) => {
   const { syncNow, ...sync } = useSync(account.userId);
+  useStardustReconciler(account.userId);
   return (
     <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
       {children}

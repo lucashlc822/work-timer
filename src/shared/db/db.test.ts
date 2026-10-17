@@ -39,10 +39,10 @@ const aSession = (overrides: Partial<SessionRow> = {}): SessionRow => ({
 });
 
 describe('schema', () => {
-  it('opens at version 3', async () => {
+  it('opens at version 4', async () => {
     const db = withDb();
     await db.open();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
   });
 
   // M2 O8.18 — an M1 install upgrades without losing anything.
@@ -59,11 +59,12 @@ describe('schema', () => {
     opened.push(upgraded);
     await upgraded.open();
 
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect(await upgraded.sessions.toArray()).toEqual([existing]);
     expect(await readMeta(upgraded, 'localUserId')).toBe('user-1');
     expect(await upgraded.constellations.count()).toBe(0);
     expect(await upgraded.tags.count()).toBe(0);
+    expect(await upgraded.ledger.count()).toBe(0);
   });
 
   // M4 case 26 — an M2/M3 install upgrades to tags without losing anything.
@@ -91,10 +92,51 @@ describe('schema', () => {
     opened.push(upgraded);
     await upgraded.open();
 
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect(await upgraded.sessions.toArray()).toEqual([existing]);
     expect(await upgraded.constellations.toArray()).toEqual([choice]);
     expect(await upgraded.tags.count()).toBe(0);
+  });
+
+  // M6 — an M4/M5 install (every released app so far) gains the ledger,
+  // keeps everything, and its finished sessions are not rewritten.
+  it('upgrades a version 3 database without touching its rows', async () => {
+    const name = `test-${crypto.randomUUID()}`;
+    const v3 = new Dexie(name);
+    v3.version(1).stores({ sessions: 'id, startedAt, tagId, syncedAt', meta: 'key' });
+    v3.version(2).stores({ constellations: 'id, chosenAt, syncedAt' });
+    v3.version(3).stores({ tags: 'id, createdAt, syncedAt' });
+    const existing = aSession();
+    const tag = {
+      id: 't1',
+      name: 'Writing',
+      color: 'mint',
+      createdAt: 1,
+      updatedAt: 1,
+      archivedAt: null,
+      syncedAt: 5,
+    };
+    await v3.table('sessions').add(existing);
+    await v3.table('tags').add(tag);
+    await v3.table('meta').put({ key: 'timerMode', value: 'pomodoro' });
+    await v3.table('meta').put({
+      key: 'syncCursors',
+      value: { sessions: '2026-10-01T00:00:00Z', user_settings: '2026-10-02T00:00:00Z' },
+    });
+    v3.close();
+
+    const upgraded = createDb(name);
+    opened.push(upgraded);
+    await upgraded.open();
+
+    expect(upgraded.verno).toBe(4);
+    expect(await upgraded.sessions.toArray()).toEqual([existing]);
+    expect(await upgraded.tags.toArray()).toEqual([tag]);
+    expect(await readMeta(upgraded, 'timerMode')).toBe('pomodoro');
+    expect(await upgraded.ledger.count()).toBe(0);
+    // Settings are re-read in full once, so the M6 columns a pre-M6 app
+    // skipped past arrive; every other table keeps its place.
+    expect(await readMeta(upgraded, 'syncCursors')).toEqual({ sessions: '2026-10-01T00:00:00Z' });
   });
 
   it('round-trips a session without losing fields', async () => {
