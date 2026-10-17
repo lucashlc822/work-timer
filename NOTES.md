@@ -12,6 +12,116 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-17 — Starkeep is live: v0.1.0 and v0.1.1 released, ready to share
+
+**Status: the Release milestone is done.** The hosted Supabase project is set
+up (M5 case 29), and v0.1.0 and v0.1.1 are published; plan cases 10–16 all
+passed. PRs #30 (friend-facing release notes) and #31 (0.1.1) merged; #32
+(Prettier ignore) open at the time of writing.
+
+### Where everything lives now
+
+- **Web:** https://starkeep.vercel.app (Vercel project `lhlc/starkeep` on the
+  existing Hobby account, which also hosts `opentabs`; not connected to Git).
+- **Desktop installer, always the latest:**
+  https://github.com/lucashlc822/work-timer/releases/latest/download/Starkeep-setup.exe
+- **Hosted Supabase:** project ref `nbjehnbdgtrsglqxgxug`, East US (N.
+  Virginia), free plan. `min_client_version` is null. Lucas's account is
+  `lulouman@gmail.com`, the only invite so far.
+- **Email:** codes go out from a dedicated Gmail, `starkeep09@gmail.com`,
+  through a Google app password (Gmail SMTP), not Lucas's personal account.
+- **GitHub:** the repo is public, with secret scanning and push protection on,
+  and fork PRs needing approval. Secrets: the two signing ones and three
+  Vercel ones. Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
+  `WEB_URL`.
+- **This machine's git email** is the GitHub `noreply` address, so new commits
+  no longer expose the Gmail address.
+
+### Decisions made along the way
+
+- **Supabase, not Neon** (Lucas asked). Neon is only the database; moving would
+  mean redoing M5's sign-in, live updates and privacy rules. Neon's one real
+  advantage, no 7-day inactivity pause, is cheap to work around if needed.
+- **"Automatically expose new tables" left on** when creating the project. The
+  migration revokes and grants per table anyway, but the invite script (as
+  `service_role`) relies on that default grant for `public.invites`. Turning it
+  off needs a migration granting `service_role` on `invites` first.
+- **A dedicated Gmail sends the codes**, so a leaked app password can only
+  send as that account, and friends don't see Lucas's personal address.
+- **The existing Vercel account was reused.** Its token can act on the whole
+  account (Hobby tokens can't be limited to one project); it lives only in
+  GitHub's secrets.
+
+### Things worth not rediscovering
+
+- **Supabase warns that Gmail is "for personal… messages"** in the SMTP form.
+  That's expected. Codes can land in spam, and the invitation message says so.
+- **The per-user installer can't install into `Program Files`** (NSIS: "Error
+  opening file for writing … starkeep.exe"). Keep the suggested folder; #30
+  says so in the release notes, invite message and CLAUDE.md.
+- **`vercel link` has side effects:** it writes `.env.local` (a short-lived
+  `VERCEL_OIDC_TOKEN`) and appends `.vercel` and `.env*` to `.gitignore`. The
+  latter would ignore `.env.example`. Undo with `git checkout -- .gitignore`
+  and delete `.env.local`.
+- **`supabase link` writes `supabase/.temp/`**, which broke local
+  `format:check` until #32 (Prettier doesn't read nested `.gitignore` files).
+- **The workflows only check that a variable is set, not that it's right.**
+  `VITE_SUPABASE_PUBLISHABLE_KEY` briefly held the updater's public key (a
+  clipboard mix-up), which would have shipped an app that can't sign in.
+  Fixed with `gh variable set --env-file .env.production.local`. After setting
+  anything, read it back: `gh variable list` (values), `gh secret list`
+  (names only).
+- **A draft release can't be looked up by its tag.** Publish by id:
+  `gh api -X PATCH repos/lucashlc822/work-timer/releases/<id> -F draft=false -f make_latest=true`.
+- **Which key signed a release:** the minisign key id is bytes 2–10
+  (little-endian) of the `.sig` file's second line, base64-decoded. It must be
+  `8E3AF18012526DA8`, the one in `tauri.conf.json`. v0.1.0 and v0.1.1 both
+  match.
+- **`sb_secret_` appears in the web bundle, but it's not a leak.** It's
+  supabase-js checking what kind of key it was given; the real secret key was
+  confirmed absent.
+- **To test an update,** fully quit from the tray and relaunch: the app checks
+  10 s after launch, then every 6 hours. The Windows release build takes
+  about 12 minutes; the web deploy about 2.
+
+### Acceptance results
+
+| Case | Result |
+|---|---|
+| M5 case 29 (hosted project) | Pass: invite, code email in the inbox, sign-up, session reaches the server; an uninvited address is refused |
+| 10: signed draft, nothing public | Pass (key `8E3AF18012526DA8`) |
+| 11: public links + web deploy | Pass |
+| 12: web sign-in, sync, offline | Pass |
+| 13: installer + desktop sign-in | Pass; found the Program Files issue (#30) |
+| 14: installed app updates itself, never mid-session | Pass (0.1.0 → 0.1.1, signed in, history intact) |
+| 15: open web tab offers the update | Pass |
+| 16: mismatched tag refused | Pass (throwaway tag deleted) |
+
+### Not verified
+
+- A **friend's fresh PC.** Only Lucas's machine has installed it, and it had
+  run earlier test builds.
+- **Email to non-Gmail inboxes** (only Gmail → Gmail was tested).
+- **Mac**, including Safari's "Add to Dock".
+- Nothing guards against the **7-day Supabase pause** yet.
+
+### Next
+
+- **Invite friends**: `docs/invite-a-friend.md`.
+- **Merge #32.**
+- **The other machine:** `.env.production.local` (and `.env.admin.local` only
+  if invites are managed there), Docker Desktop with WSL, and
+  `git config --global user.email "123426268+lucashlc822@users.noreply.github.com"`.
+  Migrations stay generated on one machine.
+- **Renew the Vercel token** before the expiry chosen when it was created, or
+  web deploys start failing.
+- **M6, Progression:** currency ledger, unlock catalogue, shop, streaks,
+  daily goals. Needs its own plan, absorbing M2's unlock gate.
+- Optional: a weekly keep-alive ping if quiet weeks could pause the server.
+- Autostart's reboot check, still carried over.
+
+---
+
 ## 2026-10-14 — Release built: updater, release pipeline, docs (PRs #27, #28)
 
 **Status: both merged (#27 as `37c31b2`, #28 as `3784a33`); the first real
@@ -90,6 +200,9 @@ reach gets exercised for the first time.
 - That the plugin follows GitHub's `latest/download/…` redirect.
 - Windows' `passive` install-mode experience on a real install.
 
+**(Superseded 2026-10-17 — all four verified by the v0.1.0 and v0.1.1
+releases; see the entry above.)**
+
 ### Next
 
 - **Lucas, in this order** (`RELEASING.md` has the detail): (1) case 29, the
@@ -98,9 +211,11 @@ reach gets exercised for the first time.
   `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) and variables (`VITE_SUPABASE_URL`,
   `VITE_SUPABASE_PUBLISHABLE_KEY`, optionally `WEB_URL`); (4) `npx vercel
   link` without connecting the Git repo.
+  **(Done 2026-10-17 — all set up; see the entry above.)**
 - **Then the first releases, on Opus:** v0.1.0, then v0.1.1 to prove an
   installed app updates itself (plan cases 10–16). Expect debugging here.
   Record the results, and mark the updater items above verified.
+  **(Done 2026-10-17 — both released, cases 10–16 passed; see the entry above.)**
 - **M6, Progression:** currency ledger, unlock catalogue, shop, streaks,
   daily goals. Needs its own plan, and must absorb M2's simple "medium after
   one easy" unlock gate rather than add a second system.
@@ -168,6 +283,7 @@ have left desktop apps on a stale frontend.
 
 - **Case 29, by hand, Lucas:** the hosted Supabase project (see the entry
   below).
+  **(Done 2026-10-17 — hosted project set up and verified; see the 2026-10-17 entry.)**
 - **Release milestone:** Windows installer on GitHub Releases, Tauri
   auto-updates, web hosting. When the installer exists, repeat case 1 through
   it, since that is the part not covered here.
@@ -246,6 +362,7 @@ was unregistered by hand.
 - **Case 29, by hand, Lucas:** the hosted Supabase project, as in
   `supabase/README.md` ("Setting up the hosted project"). Leave
   `min_client_version` null there.
+  **(Done 2026-10-17 — hosted project set up and verified; see the 2026-10-17 entry.)**
 - **The service worker in the desktop app** (flagged as a task): make a new
   exe always load its own frontend before the Release milestone's
   auto-updates.
@@ -330,6 +447,7 @@ The desktop app's and the browser pane's account stores mirror it.
   the steps in `supabase/README.md` ("Setting up the hosted project"),
   including the Gmail app password, which needs 2-step verification. I can't
   do this one.
+  **(Done 2026-10-17 — hosted project set up and verified; see the 2026-10-17 entry.)**
 - **The other machine** needs Docker Desktop (with WSL) before it can run the app in development.
 - Autostart's reboot check, still carried over.
 
@@ -802,289 +920,5 @@ environment fact until O6.17 is run deliberately.
 
 ---
 
-## 2026-09-01 — M0.5 landed, and the desktop shell is verified on screen
-
-**Status: merged (PRs #3 and #4).** The Tauri pivot from the entry below is in,
-and the OS-level behaviour it could not check in-session has now been confirmed
-by hand.
-
-### The unverified list from below is closed
-
-M0.5 shipped with five acceptance items that needed eyes on a screen, since
-nothing in this setup can observe an OS window. All five were checked and pass:
-the window itself, the tray icon and its menu, close-to-tray (X hides rather
-than exits), a real notification firing, and the autostart toggle.
-
-One genuine gap remains: **autostart has not survived an actual reboot.** The
-toggle flips and reports `on`, but the reboot test was deferred.
-
-### Two visual defects, found by looking at a screenshot
-
-Both were invisible to every automated check, because both are about *context*
-rather than correctness:
-
-- **The title bar rendered light** against a deep-indigo app. Windows themes it
-  from the system setting unless told otherwise; the window now declares
-  `"theme": "Dark"`.
-- **The in-app logo had a box around it.** It reused `favicon.svg`, which paints
-  an opaque rounded square behind the star. That is *correct* for a launcher
-  icon — it needs its own ground against arbitrary wallpaper — and wrong on a
-  page that is already night-coloured. Added `shared/ui/StarMark`, the star
-  alone, reading its colours from the design tokens.
-
-Worth knowing for any future SVG work: **CSS custom properties inside SVG
-gradient stops fail silently to black** when they don't resolve. Verified all
-six stops compute to real token values rather than assuming they would.
-
-### Environment fact worth not rediscovering
-
-**Running `git checkout` while `tauri dev` is up kills it.** The watcher saw
-`src-tauri/Cargo.toml` disappear mid-checkout and exited 101:
-
-    error: could not find `Cargo.toml` in ...\src-tauri or any parent directory
-
-Not an app bug — a dev watcher cannot survive its own source tree being swapped
-underneath it. Stop the dev process before switching branches. Now recorded in
-CLAUDE.md.
-
-Also confirmed: the CI Rust cache works. The desktop job went 6m40s cold to
-1m33s warm.
-
-### Housekeeping
-
-All four merged branches deleted from the remote; `master` is now the only
-branch, locally and remotely. Working tree clean, lint/build/27 tests green.
-
-### Next
-
-- **M1, the timer.** Nothing blocks it. Design is settled in the entry below:
-  countdown only, elapsed from timestamps, `endedAt` records the *planned* end
-  rather than when the app was reopened. **(Added 2026-10-03 — the full plan,
-  with contracts and acceptance tests, is now `docs/plans/2026-10-03-m1-timer.md`.
-  Start there.)**
-- Two decisions deferred into M1: whether to render remaining minutes *into*
-  the tray icon image (Windows has no persistent tray label, only a tooltip),
-  and what the mini window actually displays. **(Superseded 2026-10-03 — both
-  decided in the M1 plan: tooltip only, and a read-only countdown.)**
-- Autostart's reboot check, whenever the machine next restarts.
-
----
-
-## 2026-08-31 — Pivot: desktop-only Tauri app, and leaving no longer forfeits
-
-**Status: open PR (M0.5).** **(Superseded 2026-09-01 — merged as PR #3; see the
-entry above.)** Two decisions reversed on the same day, both while
-planning M1. They are related: one of them is what made the other obvious.
-
-### Decision 1 — leaving the app never forfeits a session
-
-Planning M1's abandonment mechanic turned up a perverse edge. On a phone,
-**locking the screen and switching apps are indistinguishable to a web app** —
-both just report `hidden`. So strict abandonment would punish locking your
-phone and putting it in your pocket, which is the single best focus behaviour
-there is.
-
-The resolution was to drop the mechanic entirely: the timer runs on wall-clock
-time regardless of window state, and **the only way to fail is to cancel
-deliberately**. Honour system, closer to how Forest frames the commitment
-anyway.
-
-This turned out to be *less* work, not more, because elapsed time was already
-computed from timestamps. There is no clock to keep alive — on reopening, the
-app compares `startedAt` to now and knows where the session stands, including
-that it finished an hour ago. Background continuation came for free.
-
-Consequences: no grace period, no wake lock, no strict/lenient policy, no
-`abandoned` outcome, and `SessionRow.policy` deleted. `awayMs` survives as a
-pure statistic that must never affect success.
-
-### Decision 2 — desktop-only, via Tauri
-
-Mobile dropped completely. That removed the constraint the whole architecture
-was bent around — the PWA choice existed solely to reach an iPhone for free.
-
-**Tauri over Electron:** ~10MB bundle and ~40MB idle versus ~150MB and
-~250MB. For something meant to sit running for hours, that gap matters more
-than Electron's gentler setup.
-
-**The browser build stays**, which is the consequential half of the decision:
-every native capability now needs a browser fallback forever. That seam is
-`src/shared/runtime/` — four ports (notifications, tray, mini window,
-autostart) with a Tauri implementation and a web one, chosen once by
-`getRuntime()`. The rule that makes it pay: **unsupported is a silent no-op,
-not a throw**, so feature code calls `tray.setStatus(...)` unconditionally and
-simply has nothing happen on the web. `isSupported` exists only for hiding UI.
-
-Almost all of M0 survived — React app, tokens, Dexie, clock, ids, icon
-generator, lint boundaries, CI. Roughly 40 lines were genuinely wasted (touch
-detection, iOS meta tags and CSS, two icon sizes). One known limit disappeared
-outright: **iOS PWA storage eviction no longer applies**, since Tauri keeps
-IndexedDB in the app data directory.
-
-### Things worth remembering
-
-- **A client-side route would 404 in the packaged app.** Tauri serves the
-  frontend over an asset protocol with no `index.html` fallback, so `/mini`
-  works in dev and breaks in production. Extra windows are addressed with
-  `?window=mini` instead, and the mini timer is rendered as a *surface* rather
-  than a route — which is arguably the more honest model anyway.
-- **jsdom crept back in and cost 60s.** The first runtime test used
-  `// @vitest-environment jsdom` and took the suite from 1.7s to 62s, 56s of
-  it jsdom setup. Rewritten to stub `window` by hand in the `node`
-  environment: three lines, and the suite went back to 2.9s.
-- **The Windows tray has no persistent label**, only a tooltip — so a
-  glanceable countdown is macOS-only unless the remaining minutes are rendered
-  *into* the tray icon image. The procedural PNG generator could do that.
-  Deferred to M1.
-- Toolchain installed this session: Rust 1.98 via `winget Rustlang.Rustup`,
-  and VS 2022 Build Tools with the VCTools workload (MSVC 14.44, Windows SDK
-  10.0.26100). Neither was present.
-
-### Next
-
-- M1 is the timer, now considerably simpler than originally planned. Its
-  design is settled: countdown only, timestamps only, `endedAt` records the
-  *planned* end rather than when the app was reopened.
-- Tray countdown, mini-window contents, and the completion notification are
-  M1 work — the M0.5 shell only proves the seam.
-- Cloudflare Pages and iOS install verification from the M0 entry below are
-  **no longer relevant** — there is no iPhone target, and the desktop app
-  needs no hosting. Web hosting is only worth setting up if the browser build
-  is ever actually wanted somewhere.
-
----
-
-## 2026-08-31 — Named the app Starkeep (provisionally)
-
-**Status: added to the open M0 PR.** The M0 entry below flagged that the app
-had no name. It has one now, though it is explicitly not locked in.
-
-### Why Starkeep, and what was ruled out
-
-Checked three candidates by web search — not an authoritative trademark
-clearance, but enough to spot obvious collisions:
-
-- **Astra** — ruled out hard. `astra.app` is Topaz Labs' AI video upscaler,
-  there are several live USPTO software-class marks, and the Astra WordPress
-  theme is one of the most-installed themes on the web.
-- **Glimmer** — ruled out on findability. An App Store app is named exactly
-  that, plus a dating app, an Australian sustainability app, a creator
-  platform at glimmer.io, and an AI PDF tool. `glimmer.app` is parked on
-  GoDaddy with a for-sale page.
-- **Starbloom** — workable but compromised. `starbloom.app` is a live AI
-  hiring/ATS product, `starbloom.com` is broker-parked as a premium domain,
-  and STARBLOOM LTD is a registered UK company.
-- **Starjar** (bonus check) — dead on arrival, six-plus children's chore-chart
-  apps. Would miscategorise the app entirely.
-- **Starkeep** — returned nothing at all. Also the better name on merit:
-  "keep" means both to retain (you keep the stars you earn) and a stronghold,
-  which suits an app about defending your attention.
-
-**The bar here is lower than commercial trademark clearance**, and that was
-deliberate: the no-paid-services rule means no domain purchase, so the app
-will live on a free `*.pages.dev` subdomain. What actually matters is not
-being buried in search and not colliding with something famous.
-
-### How the rename was made cheap
-
-The name now lives in `brand.mjs` (with `brand.d.mts` for types), mirroring
-the `design-tokens.mjs` pattern. It is read by the PWA manifest and the HTML
-title/description (via a small `inject-brand` Vite plugin that substitutes
-`%APP_NAME%` into `index.html`) and by the React app through
-`src/shared/config/brand.ts`. Changing the name is a one-line edit to
-`brand.mjs`; nothing else hard-codes it.
-
-The repository stays `work-timer` — renaming a GitHub repo is a separate
-decision and nothing in the code depends on it.
-
-### Next
-
-- Name is provisional. If it changes, edit `brand.mjs` and nothing else.
-
----
-
-## 2026-08-30 — M0 foundation: installable PWA shell
-
-**Status: open PR.** First real code in the repo. Brainstormed the app from
-scratch, wrote the architecture plan, then built the M0 foundation milestone
-from it.
-
-### What the app is
-
-A Forest-style focus timer themed as a pastel night sky — finish a session,
-earn a star; accumulate stars into constellations. The full plan (stack, data
-model, milestones M0–M6, acceptance tests) is at
-`docs/plans/2026-08-30-architecture.md`.
-
-### The constraint that decided the platform
-
-Wanting it on **iPhone + Windows + browser** while paying **nothing** has
-exactly one answer: a PWA. Native iOS needs a $99/year Apple Developer account
-*and* a Mac to build on, so the App Store is off the table entirely. An
-installable web app covers all three targets from one codebase.
-
-A useful thing fell out of that: the Page Visibility API works on installed
-iOS PWAs, so the "you left the app, your session dies" mechanic is genuinely
-enforceable on a phone. That was the part most at risk of not being possible,
-and it is not a compromise.
-
-### Decisions worth not re-litigating
-
-- **Timestamps, never tick counting.** iOS freezes JavaScript outright when a
-  PWA is backgrounded and browsers throttle `setInterval` in hidden tabs, so
-  any timer that accumulates elapsed time by counting ticks silently
-  under-reports. `src/shared/lib/clock.ts` exists to make the correct approach
-  the easy one, and exposes a monotonic source alongside wall-clock so device
-  clock changes are detectable.
-- **Completed sessions are immutable**, which makes sync append-only and
-  therefore conflict-free. Same reasoning drives an append-only currency
-  ledger (balance = `SUM(delta)`) and deriving streaks by query rather than
-  storing a counter.
-- **Stars are seeds, not images.** A session stores a 16-char seed; the
-  generator turns it into a star deterministically. Syncing a few bytes
-  reproduces the identical sky on another device.
-- **Sync is sequenced at M5, not M0**, despite "cloud sync from day one" being
-  a stated want. Syncing a schema that is still moving means writing every
-  migration twice. Nothing in M0–M4 needs redoing to add it later — records
-  already carry client-generated UUIDs and are already immutable.
-
-### Surprises during the build
-
-- **Vitest defaulted to jsdom and it cost ~50 seconds per run** of pure
-  environment setup, for tests that never touch a DOM. Switched the default to
-  `node`; the suite went 39s → 1.7s. Component tests opt back in with a
-  `// @vitest-environment jsdom` docblock.
-- **`import.meta.url` is not a `file://` URL under Vitest** — it serves modules
-  over http, so `fileURLToPath` throws. `src/styles/tokens.test.ts` resolves
-  from `process.cwd()` instead.
-- **Prettier rewrites `*emphasis*` to `_emphasis_` in markdown**, which would
-  churn this file on every session. Markdown is now in `.prettierignore`. It
-  had also mangled the `{{PROMPT}}` placeholders in the CI template into
-  `{ { PROMPT } }`, though that file was being replaced anyway.
-- **npm 11 blocks esbuild's postinstall** behind `npm approve-scripts`. It
-  turned out not to matter — Vite builds fine without it — so it was left
-  unapproved rather than granting a script it does not appear to need.
-
-### Verified by hand, not just by CI
-
-Ran the built app under `npm run preview`, then **stopped the server and
-reloaded**: the app still rendered fully and IndexedDB still reported ready,
-which is offline serving from the service worker confirmed for real rather
-than inferred from the build output. Also confirmed the abandonment-policy
-default flips `lenient` → `strict` under mobile emulation.
-
-### Next
-
-- **The app still has no name.** `work-timer` is the repo; "Work Timer" is a
-  placeholder sitting in the manifest, `index.html`, and the icon generator.
-  **(Superseded 2026-08-31 — named Starkeep, provisionally; the name now lives
-  in `brand.mjs` alone. See the entry above.)**
-- **Cloudflare Pages is not connected yet** — it needs an account and a repo
-  authorisation that has to be done by hand. The build output in `dist/` is
-  ready for it.
-- **iOS install is unverified.** No iPhone was available in this session, so
-  acceptance test 15 (home-screen install, standalone launch, offline) is
-  outstanding. Everything it depends on — manifest `display: standalone`,
-  apple-touch-icon, service worker — is confirmed present and serving.
-- M1 is the timer itself. Plan recommends staying on the stronger-reasoning
-  model for it (suspension and clock-skew edge cases).
+Older entries (2026-Q3: M0, the naming, the Tauri pivot, M0.5) are in
+`docs/notes-archive/2026-Q3.md`.
