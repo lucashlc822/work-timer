@@ -54,14 +54,14 @@ missing. `.env.example` lists every name.
    the installer and its signed update files into a **draft** release (about 10–15
    minutes).
 4. **Review the draft** (Releases page). It should hold: `Starkeep_X.Y.Z_x64-setup.exe`,
-   its `.sig`, `latest.json`, and `Starkeep-setup.exe`. Edit the release notes if
-   you like.
+   its `.sig`, `latest.json`, and `Starkeep-setup.exe`. The description is already
+   written for friends (how to install); add a line about what changed above it.
 5. **Publish.** This is the "go": installed apps will find it on their next check
    (within hours, and never mid-session), and the `Deploy web` workflow publishes the
    web version.
 6. **Verify.**
    - The web address loads, and signing in works.
-   - `https://github.com/<owner>/work-timer/releases/latest/download/Starkeep-setup.exe`
+   - `https://github.com/lucashlc822/work-timer/releases/latest/download/Starkeep-setup.exe`
      downloads.
    - An installed desktop app shows "Starkeep X.Y.Z is ready" once it is between
      sessions, and "Restart to update" brings it back on the new version, signed in.

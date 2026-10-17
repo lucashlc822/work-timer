@@ -97,13 +97,14 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Starkeep ${{ github.ref_name }}
+          # Written for the people downloading it, since publishing makes it
+          # public as-is. Add what changed above it when reviewing the draft.
           releaseBody: |
-            Draft. Review, then Publish: publishing is what lets installed apps
-            update and deploys the web version.
-
-            New here? Download **Starkeep-setup.exe** below. Windows may show a
-            one-time "Windows protected your PC" notice: choose More info, then
-            Run anyway.
+            **New here?** Download **Starkeep-setup.exe** below and run it. Windows
+            may show "Windows protected your PC" the first time: choose **More
+            info**, then **Run anyway**. Keep the install folder it suggests (it
+            installs just for you, with no admin prompt). After that, the app
+            updates itself.
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true

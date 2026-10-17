@@ -178,6 +178,10 @@ in `NOTES.md`.
 - **A first install shows "Windows protected your PC".** The installer isn't
   code-signed (that costs money), so SmartScreen warns once: More info → Run
   anyway. Updates installed by the app don't warn. Not a broken release.
+- **The installer is per-user, so it can't install into `Program Files`.**
+  Choosing a folder there fails with "Error opening file for writing …
+  starkeep.exe" (no admin rights, by design, so updates never prompt). Keep the
+  suggested folder under `AppData\Local`. Not a broken installer.
 - **Scripted `focus()`/`blur()` don't fire in a background window.** When
   driving the app from DevTools (browser pane or WebView2 remote debugging),
   a rename field's save-on-blur never runs unless the page has focus. Use real

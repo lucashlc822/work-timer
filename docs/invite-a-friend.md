@@ -18,24 +18,27 @@ an address stops *new* sign-ups only; an existing account keeps working.
 
 ## 2. Send them this
 
-Replace the two addresses first (the web address is your Vercel project's; the
-installer link is the same forever, `<owner>` being the GitHub account that owns
-the repository).
+Replace their email address first. Both links are permanent: the web address is
+the Vercel project's production domain, and the installer link always serves the
+latest published release.
 
 > Hi! I'd love you to try Starkeep, a focus timer where every session you finish
 > becomes a star in your own night sky. I've added your email (friend@example.com) so
 > you can make an account.
 >
 > **On the web (any computer, including a Mac):** https://starkeep.vercel.app
-> Make an account with the email above; it sends you a 6-digit code to type in.
+> Make an account with the email above; it sends you a 6-digit code to type in
+> (check your spam folder if it doesn't show up within a minute).
 > On a Mac you can keep it handy with Safari → File → Add to Dock.
 >
 > **On Windows, as an app:**
-> https://github.com/<owner>/work-timer/releases/latest/download/Starkeep-setup.exe
+> https://github.com/lucashlc822/work-timer/releases/latest/download/Starkeep-setup.exe
 > Windows may say "Windows protected your PC" the first time. That's because the app
 > isn't from a big publisher, not because anything is wrong: click "More info", then
-> "Run anyway". After that it updates itself, and tells you when a new version is
-> ready (never in the middle of a session).
+> "Run anyway". Keep the install folder it suggests (it installs just for you, with
+> no admin prompt; a folder like Program Files won't work). After that it updates
+> itself, and tells you when a new version is ready (never in the middle of a
+> session).
 >
 > Your sessions are saved to your account, so the web and the app stay in sync. If
 > anything is confusing or broken, tell me which version you're on (it's at the
