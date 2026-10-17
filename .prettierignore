@@ -10,3 +10,9 @@ public/*.png
 # without improving anything.
 *.md
 
+
+# Supabase CLI state written on a developer's machine (`supabase link` writes
+# .temp/). Git-ignored by supabase/.gitignore, which Prettier doesn't read, so
+# without these lines format:check fails only on machines that have linked.
+supabase/.temp
+supabase/.branches
