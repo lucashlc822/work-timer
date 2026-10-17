@@ -96,7 +96,7 @@ run), and the desktop exe of this build.
 **Status: the Release milestone is done.** The hosted Supabase project is set
 up (M5 case 29), and v0.1.0 and v0.1.1 are published; plan cases 10–16 all
 passed. PRs #30 (friend-facing release notes) and #31 (0.1.1) merged; #32
-(Prettier ignore) open at the time of writing.
+(Prettier ignore) open at the time of writing (merged since; see git log).
 
 ### Where everything lives now
 
