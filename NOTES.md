@@ -12,6 +12,85 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-17 — M6 PR 1 merged: the Stardust ledger
+
+**Status: M6 is under way; PR 1 of 4 is merged (#34).** Completed sessions
+earn 1 Stardust per focused minute. There's a footer pill with the balance, a
+panel listing entries, and "+N Stardust" on the result screen. The plan is
+`docs/plans/2026-10-17-m6-progression.md` (committed as `8ba6c33`). Nothing
+has been released: v0.2.0 ships at the end of M6.
+
+### Next
+
+- **PR 2 `feat/m6-streaks-goals`, on Sonnet.** Move the day math to
+  `shared/lib/days.ts`, then add streak and goal derivation, the goal setting,
+  goal/streak/constellation bonuses (new key namespaces in `reconcile.ts`) and
+  the idle-screen progress line. Plan cases 4–6.
+- Then PR 3 (shop and star styles), PR 4 (themes and packs, plus the full
+  pass 14–16), then release v0.2.0 on Opus.
+- **Before v0.2.0, push `20261017200000_m6_progression.sql` to the hosted
+  project.** It's the first migration on a server with real users. It's
+  additive only; leave `min_client_version` alone.
+
+### Decisions made along the way
+
+- **Ledger ids include the user id:** `stableId('<userId>:session:<id>')`.
+  The server's primary key is global, so unprefixed ids would collide between
+  people and one row would be silently dropped. This amends the plan.
+- **A ledger row's `createdAt` is the session's end, not when it was
+  recorded.** Every device then mints a byte-identical row.
+- **The reconciler runs only in the main window**, debounced on the count of
+  completed sessions (`useStardustReconciler` in `SignedIn`).
+- **"+N Stardust" is computed from the session itself** with the same rule,
+  so it shows before the ledger row is written.
+
+### Bug found and fixed in the PR
+
+Checking real v0.1.1 code against the M6 server: the old app synced fine and
+the server kept the M6 settings columns. But **a device that then updated to
+M6 never picked up the style, theme or goal another device had chosen**. Its
+last 0.1.x upload had the same settings version as the server row, so it
+thought it was current. The fix: at equal versions, adopt the server's M6
+fields; the Dexie v4 upgrade also drops the `user_settings` sync cursor once.
+Both have tests.
+
+### Things worth not rediscovering
+
+- **To run an old version against the local stack:** `git worktree add
+  --detach <dir> v0.1.1`, copy `.env.development.local`, `npm ci`, and run its
+  `npm run dev`. It needs port 5173, so stop the current dev server first.
+  Vite listens only on `localhost`, so both versions share one browser store.
+  Clear the `work-timer-account-*` database first to simulate a device that
+  only ever ran the old app.
+- **Removing that worktree fails with "Filename too long"** (node_modules
+  under the long scratchpad path). Delete it with `rd /s /q "\?\<path>"`,
+  then `git worktree prune`.
+- **Don't use `npx supabase db reset`** to apply a migration locally: it wipes
+  the test accounts. Use `npx supabase migration up`.
+- **The local `a@test.local` account holds made-up M6 settings**
+  (`it-style`, `it-theme`, 45 min) from the check above. Unknown keys render
+  as the defaults; PR 3's real styles will replace them.
+- **pgTAP fixtures must not be dated in the future**: the sessions table
+  refuses them. Use past dates, and compare server stamps with
+  `clock_timestamp()`.
+
+### Acceptance results (PR 1's cases)
+
+| Case | Result |
+|---|---|
+| 1 Earning rules | Pass (unit) |
+| 2 No double-crediting (twice, concurrent, two devices) | Pass (unit + live: 34 rows / 108 locally and on the server) |
+| 3 Old-app or pulled session credited once | Pass (unit + a real v0.1.1 session, +50) |
+| 12 pgTAP | Pass, 65/65 |
+| 13 M6 settings sync | Pass (unit) |
+| 14 (partial) Old app vs M6 server | Pass after the fix; ran v0.1.1's browser build, not its exe |
+| 17 Checks | Pass locally and in CI (db, desktop, web) |
+
+**Not verified:** "+N Stardust" on a live result screen (no real session was
+run), and the desktop exe of this build.
+
+---
+
 ## 2026-10-17 — Starkeep is live: v0.1.0 and v0.1.1 released, ready to share
 
 **Status: the Release milestone is done.** The hosted Supabase project is set
