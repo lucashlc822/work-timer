@@ -12,6 +12,81 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-17 — M6 PR 2 open: streaks, daily goal and bonuses (#37)
+
+**Status: PR 2 of 4 is open as #37, CI green (db, desktop, web), not merged.**
+Streaks and a daily goal are derived from sessions; the goal, streak
+milestones and finished constellations now pay Stardust through the
+reconciler. The idle screen shows "Today 35 of 60 min · 4-day streak", and the
+Stardust panel has today's progress, a ±5 min goal stepper and the streak.
+Nothing has been released; v0.2.0 still ships at the end of M6.
+
+### Next
+
+- **Merge #37 when Lucas says so**, then branch PR 3 from `master`.
+- **PR 3 `feat/m6-shop-styles`, on Sonnet.** Catalogue and prices, `buy` /
+  `owned`, star styles end to end (stamped on the session when it completes),
+  tier purchases, shop UI in the Stardust panel. Plan cases 7–10.
+- Then PR 4 (themes and packs, plus the full pass 14–16), then v0.2.0 on Opus.
+- **Before v0.2.0, push `20261017200000_m6_progression.sql` to the hosted
+  project** (unchanged from the PR 1 entry; additive only, leave
+  `min_client_version` alone).
+- Carried over: invite friends, set up the other machine, renew the Vercel
+  token, and the 7-day Supabase pause has no guard yet.
+
+### Decisions made along the way
+
+- **A day counts for the streak by the start of a completed session;** focus
+  toward the goal is the part of each *ended* session inside the day, so an
+  early ending counts toward the goal but earns no Stardust.
+- **Goal bonus looks only at today and yesterday,** so lowering the goal never
+  pays out old days. Its `createdAt` is the end of the session that tipped the
+  day over the goal, so every device mints an identical row.
+- **Bonus ids:** `goal:<day>`, `streak:<run start>:<days>`,
+  `constellation:<choice id>`, all user-prefixed. Recorded in CLAUDE.md.
+- **Day math moved to `shared/lib/days.ts`;** stats re-imports it, with no
+  behaviour change.
+- **Constellation completions reach the reconciler through `app/`:** sky
+  exports `useConstellationCompletions()`, `AuthGate` passes it to
+  `useStardustReconciler`. The reconciler waits until it has loaded.
+
+### Known and accepted
+
+A session that syncs in days late and extends a streak backwards moves that
+run's start day, so its milestones pay once more. Needs a session to arrive
+days late; documented in `reconcile.ts` and CLAUDE.md.
+
+### Things worth not rediscovering
+
+- **The Bash tool choked (unexpected EOF) on long heredocs** containing
+  Python or test files here. Writing files with the Write tool avoids it.
+- **A Python `open().write()` on Windows converts to CRLF.** Pass
+  `newline='\n'`, or run `prettier --write` afterwards (it did).
+- **The browser pane's page shifts when the Stardust panel's scrollbar
+  appears,** so a second click at the same coordinates can miss a button.
+  Re-screenshot between clicks.
+- **The local `a@test.local` account now has a goal of 35 min and a
+  "Daily goal reached" row** from the live check; harmless test data.
+
+### Acceptance results (PR 2's cases)
+
+| Case | Result |
+|---|---|
+| 4 Streaks (consecutive days, alive before today's first session, skipped day resets, London 23 h and 25 h days, midnight-spanning session) | Pass (unit) |
+| 5 Goal (split at midnight, once a day, today and yesterday only, lowering pays no old days) | Pass (unit) |
+| 6 Streak milestones once per run; constellation bonus by tier, once | Pass (unit) |
+| 2, extended to bonuses (two devices through `FakeRemote`) | Pass (unit) |
+| Live idle line, goal stepper, bonus row and balance (a@test.local, 108 → 128) | Pass, browser build on the local stack |
+| 17 lint, typecheck, format:check, test (418), build | Pass locally; CI green on #37 |
+
+**Not verified:** a real 3-day streak or a real finished constellation paying
+live (the test account has a 2-day streak), a goal change reaching a second
+live device, and the desktop exe. "+N Stardust" with bonuses on the result
+screen was not built (the result screen still shows only the session's own
+earning).
+
+---
+
 ## 2026-10-17 — M6 PR 1 merged: the Stardust ledger
 
 **Status: M6 is under way; PR 1 of 4 is merged (#34).** Completed sessions
@@ -21,6 +96,8 @@ panel listing entries, and "+N Stardust" on the result screen. The plan is
 has been released: v0.2.0 ships at the end of M6.
 
 ### Next
+
+*(Superseded: PR 2 is now open as #37; see the entry above.)*
 
 - **PR 2 `feat/m6-streaks-goals`, on Sonnet.** Move the day math to
   `shared/lib/days.ts`, then add streak and goal derivation, the goal setting,
