@@ -12,7 +12,92 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-18 — M6 PR 3 merged: the Stardust shop and star styles (#39)
+
+**Status: M6 is 3 of 4 PRs done; PR 3 is merged (#39) and CI on `master` is
+green.** You can spend Stardust on four star styles (Ember 300, Aurora 400,
+Crystal 500, Prism 600; classic is free) and buy medium (2,000) or hard
+(6,000) constellations early. Each new star is stamped with the style equipped
+when its session completes. Nothing has been released; v0.2.0 still ships at
+the end of M6.
+
+Note: #39 was merged while its own CI was still pending (Lucas said merge);
+the run on `master` finished green afterwards.
+
+### Next
+
+- **PR 4 `feat/m6-themes-packs`, on Sonnet.** Sky themes (`night` stays the
+  free default and must render exactly as today), two constellation packs
+  (easy/medium/hard shapes each, growth-order connected, hidden in the picker
+  until owned), their catalogue entries and prices (themes ~1,200, packs ~800).
+  Extend `ItemKind` in `progression/domain/catalogue.ts`; `META_KEYS.skyTheme`
+  and the server column already exist. Plan case 11, then the full pass 14-16.
+- **Case 16 is a visual review with Lucas.** Every style, theme and pack shape,
+  in the sky and on the result screen. Only Ember has been looked at so far.
+- Then v0.2.0 on Opus. **Push `20261017200000_m6_progression.sql` to the
+  hosted project first**; leave `min_client_version` alone.
+- Carried over: invite friends, set up the other machine, renew the Vercel
+  token, and nothing guards against the 7-day Supabase pause yet.
+
+### Decisions made along the way
+
+- **A style recolours and scales the glow only.** Size, brightness and twinkle
+  still say how long the session was, so they must read the same in any style.
+- **`classic` is pinned to the pre-M6 look** by golden values captured from the
+  old `starAppearance` before it was changed. An absent or unknown style key
+  draws as classic, so a style from a newer app degrades gracefully on an old one.
+- **The style is stamped inside `finishSession`,** in the same transaction, for
+  completed sessions only, and never rewritten. The result screen reads the
+  stamped value back (`ResultStarGlyph`), so it matches the sky.
+- **Purchase id = `stableId('<userId>:purchase:<itemKey>')`.** The same item
+  bought on two offline devices is one row and one deduction. Two devices
+  buying *different* items offline can push the balance negative; it is shown
+  as is and buying waits until it is positive again.
+- **Style colours live in `sky/domain/starStyles.ts`, not `design-tokens.mjs`.**
+  That file only mirrors values that also exist in `tokens.css`; these are
+  sky-only. (A departure from the plan's wording.)
+- **`app/` has a test that every style on sale can be drawn** (neither feature
+  imports the other).
+
+### Things worth not rediscovering
+
+- **The browser pane lost its sign-in again** (CLAUDE.md warns about this).
+  `a@test.local` / the password in `supabase/README.md` signs back in, and
+  history syncs down.
+- **An equipped key that isn't on sale shows no "Equipped" row.** `a@test.local`
+  still carries the made-up `it-style` from PR 1's check, so Classic showed
+  "Equip" until Ember was equipped. Harmless.
+- **`window.__starkeep.seed(n, minutes)` is the quickest way to get Stardust**
+  for testing the shop (12 x 40 min = +480). The 1-minute dev preset gives a
+  real completed session in about a minute.
+- **`read_page` and screenshots can lag a click in the browser pane.** The Ember
+  purchase had worked when a screenshot taken straight after still showed "Buy".
+  Take a second screenshot before concluding a click missed.
+- **Large heredocs full of code can break the Bash tool** (see the PR 2 entry).
+  Use the Write tool for test files.
+- **`a@test.local` now has seeded sessions, an Ember purchase (equipped) and
+  the Medium tier,** on the local stack only.
+
+### Acceptance results (PR 3's cases)
+
+| Case | Result |
+|---|---|
+| 7 Buy deducts; same item twice refused (also a double click, and two offline devices through `FakeRemote`); insufficient refused; owned = defaults + purchases | Pass (unit) |
+| 8 A bought tier is choosable without finishing an easier one; earned path still works | Pass (unit), and live in the real picker (Medium unlocked, Hard still locked) |
+| 9 `starAppearance(..., 'classic')` equals pre-M6 for fixed seeds; unknown style = classic | Pass (unit, golden values) |
+| 10 Completed session stamped with the equipped style; later changes leave finished stars alone; early ending unstamped | Pass (unit), and live (1-min session: orange result star, row `starStyle: "ember"`) |
+| Live shop: buy Ember (-300 row), equip, buy Medium | Pass, browser build on the local stack |
+| 17 lint, typecheck, format:check, test (450), build | Pass locally; CI green on `master` after the merge |
+
+**Not verified:** Aurora, Crystal and Prism by eye (PR 4's review covers them);
+a purchase or equip showing live on a second device (fake server only); styled
+stars in the full sky view; the desktop exe.
+
+---
+
 ## 2026-10-17 — M6 PR 2 open: streaks, daily goal and bonuses (#37)
+
+*(Superseded: #37 merged, and PR 3 followed; see the entry above.)*
 
 **Status: PR 2 of 4 is open as #37, CI green (db, desktop, web), not merged.**
 Streaks and a daily goal are derived from sessions; the goal, streak
