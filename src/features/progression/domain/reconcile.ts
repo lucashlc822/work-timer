@@ -1,7 +1,16 @@
 import type { LedgerRow, SessionRow } from '@/shared/db';
 import { stableId } from '@/shared/lib';
 
-import { sessionEarning } from './economy';
+import { bonusDays, goalReachedAt, goalRef } from './goal';
+import {
+  CONSTELLATION_BONUS,
+  DEFAULT_DAILY_GOAL_MIN,
+  GOAL_BONUS,
+  sessionEarning,
+  streakBonus,
+  type BonusTier,
+} from './economy';
+import { lastEndByDay, streakRuns } from './streak';
 
 /**
  * The ledger rows that *should* exist, computed from facts every device can
@@ -18,18 +27,61 @@ import { sessionEarning } from './economy';
  * The key includes the account: the server's primary key is global, so without
  * it two people's identical facts would share an id and one would be dropped.
  * The `session:` namespace is permanent; a future change to how sessions earn
- * must use a new one (`session.v2:`) rather than re-pricing existing ids.
+ * must use a new one (`session.v2:`) rather than re-pricing existing ids. The
+ * same goes for the bonus namespaces below.
+ *
+ * Bonuses (goal, streak, constellation) follow the same rule, each paid once:
+ * - `goal:<day>` � the day's focus reached the goal. Only today and yesterday
+ *   are evaluated, so lowering the goal later never pays out old days.
+ * - `streak:<run start>:<days>` � a run of consecutive days first reached a
+ *   milestone. Past runs pay too. (A very late-arriving session that extends a
+ *   run backwards moves its start day, which would pay its milestones again;
+ *   that needs a session to sync in days late, and is accepted.)
+ * - `constellation:<choice id>` � a constellation was finished, by tier.
  */
 
 export const sessionKey = (userId: string, sessionId: string): string =>
   `${userId}:session:${sessionId}`;
 
-export interface ReconcileInput {
-  userId: string;
-  sessions: readonly SessionRow[];
+/** A finished constellation, as the sky reports it. */
+export interface ConstellationCompletion {
+  choiceId: string;
+  tier: BonusTier;
+  completedAt: number;
 }
 
-export const expectedRows = ({ userId, sessions }: ReconcileInput): LedgerRow[] => {
+export interface ReconcileInput {
+  userId: string;
+  /** Every session; only the facts each rule needs are used. */
+  sessions: readonly SessionRow[];
+  completions?: readonly ConstellationCompletion[];
+  goalMin?: number;
+  /** Decides which days the goal bonus looks at. */
+  now?: number;
+}
+
+const bonusRow = (
+  userId: string,
+  kind: 'goal' | 'streak' | 'constellation',
+  ref: string,
+  delta: number,
+  createdAt: number,
+): LedgerRow => ({
+  id: stableId(`${userId}:${kind}:${ref}`),
+  reason: kind,
+  delta,
+  ref,
+  createdAt,
+  syncedAt: null,
+});
+
+export const expectedRows = ({
+  userId,
+  sessions,
+  completions = [],
+  goalMin = DEFAULT_DAILY_GOAL_MIN,
+  now = Date.now(),
+}: ReconcileInput): LedgerRow[] => {
   const rows: LedgerRow[] = [];
   for (const session of sessions) {
     const delta = sessionEarning(session);
@@ -46,5 +98,32 @@ export const expectedRows = ({ userId, sessions }: ReconcileInput): LedgerRow[] 
       syncedAt: null,
     });
   }
+
+  for (const day of bonusDays(now)) {
+    const reachedAt = goalReachedAt(sessions, day, goalMin);
+    if (reachedAt !== null) {
+      rows.push(bonusRow(userId, 'goal', goalRef(day), GOAL_BONUS, reachedAt));
+    }
+  }
+
+  const lastEnds = lastEndByDay(sessions);
+  for (const run of streakRuns(sessions)) {
+    run.days.forEach((day, index) => {
+      const days = index + 1;
+      const delta = streakBonus(days);
+      if (delta > 0) {
+        rows.push(
+          bonusRow(userId, 'streak', `${run.startDay}:${days}`, delta, lastEnds.get(day) ?? 0),
+        );
+      }
+    });
+  }
+
+  for (const c of completions) {
+    rows.push(
+      bonusRow(userId, 'constellation', c.choiceId, CONSTELLATION_BONUS[c.tier], c.completedAt),
+    );
+  }
+
   return rows;
 };

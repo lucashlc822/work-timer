@@ -327,6 +327,16 @@ rejected). Don't pre-populate this with guesses.
   global. That is what makes it safe on any device, any number of times, and
   what credits sessions from apps that predate the ledger. A changed earning
   rule gets a new key namespace (`session.v2:`); never re-price existing ids.
+- **Bonuses are reconciler rows too** (M6 PR 2, 2026-10-17): `goal:<day>`,
+  `streak:<run start>:<days>` and `constellation:<choice id>`, each prefixed
+  with the user id like the rest. The goal bonus looks only at today and
+  yesterday, so lowering the goal never pays out old days. A day counts toward
+  a streak by the *start* of a completed session; focus toward the goal is the
+  part of each ended session inside the day (same rule as the stats). Streaks
+  and goal progress are derived on every read, never stored; the day math
+  lives in `shared/lib/days.ts`. Known, accepted: a session syncing in days
+  late that extends a run backwards moves its start day and re-pays that run's
+  milestones once.
 - **What's owned is derived from purchase rows** (M6): a purchase is a ledger
   row with a negative `delta` and id `purchase:<itemKey>`. No unlocks table.
 - **Star style, sky theme and daily goal are their own `user_settings`
