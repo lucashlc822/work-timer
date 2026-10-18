@@ -2,6 +2,7 @@ import { LAVENDER_400, MINT_300, ROSE_300 } from '../../../../design-tokens.mjs'
 import { between, intBetween, pick, rngFromSeed } from '@/shared/lib';
 
 import { temperatureColor } from './starAppearance';
+import { skyThemeFor } from './skyThemes';
 
 /**
  * The ambient night: background stars in three parallax layers, plus pastel
@@ -10,6 +11,11 @@ import { temperatureColor } from './starAppearance';
  *
  * Coordinates are in the unit square and scaled to the viewport by the
  * renderer, so a resize re-lays the same field rather than re-rolling it.
+ *
+ * A sky theme (M6) only recolours the field: every random draw happens in the
+ * same order whatever the theme, so positions, sizes and twinkle are identical
+ * and `night` (the default, and the fallback for an unknown key) is exactly the
+ * pre-M6 sky.
  */
 
 export interface AmbientStar {
@@ -44,8 +50,9 @@ const STARS_PER_LAYER = [140, 60, 22] as const;
 /** Drift speed per layer, in viewport widths per minute. */
 export const LAYER_DRIFT = [0.004, 0.008, 0.014] as const;
 
-export const ambientField = (): AmbientField => {
+export const ambientField = (themeKey?: string | null): AmbientField => {
   const rng = rngFromSeed(AMBIENT_SEED);
+  const theme = skyThemeFor(themeKey);
 
   const stars: AmbientStar[] = [];
   STARS_PER_LAYER.forEach((count, layer) => {
@@ -56,7 +63,7 @@ export const ambientField = (): AmbientField => {
         layer: layer as AmbientStar['layer'],
         radius: between(rng, 0.35, 0.7) * (1 + layer * 0.6),
         alpha: between(rng, 0.25, 0.55) + layer * 0.15,
-        color: temperatureColor(rng()),
+        color: temperatureColor(rng(), theme.starPalette ?? undefined),
         twinklePhase: between(rng, 0, Math.PI * 2),
         twinklePeriodMs: between(rng, 2500, 6000),
       });
@@ -79,14 +86,15 @@ export const ambientField = (): AmbientField => {
     },
   ];
   const nebula: NebulaPuff[] = [];
-  for (const cloud of clouds) {
+  for (const [index, cloud] of clouds.entries()) {
+    const hue = theme.cloudHues?.[index] ?? cloud.hue;
     const puffs = intBetween(rng, 5, 8);
     for (let p = 0; p < puffs; p += 1) {
       nebula.push({
         x: cloud.x + between(rng, -0.16, 0.16),
         y: cloud.y + between(rng, -0.12, 0.12),
         radius: between(rng, 0.1, 0.26),
-        color: cloud.hue,
+        color: hue,
         alpha: between(rng, 0.04, 0.08),
       });
     }

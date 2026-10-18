@@ -90,4 +90,27 @@ describe('the other styles', () => {
       }
     }
   });
+
+  // Found in the PR 4 visual review: with a near-white palette, Crystal and
+  // Prism looked like free Classic on most stars. Someone paying for a style
+  // has to see it on (nearly) every star they earn.
+  it('look clearly different from classic on almost every star, not just the odd one', () => {
+    const rgb = (hex: string): number[] => {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const distance = (a: string, b: string): number =>
+      Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]!));
+    const seeds = Array.from({ length: 60 }, (_, i) => `seed-${i}`);
+
+    for (const style of others) {
+      const gaps = seeds.map((seed) =>
+        distance(starAppearance(seed, 1500).color, starAppearance(seed, 1500, style).color),
+      );
+      const mean = gaps.reduce((sum, g) => sum + g, 0) / gaps.length;
+      const clear = gaps.filter((g) => g >= 25).length / gaps.length;
+      expect(mean, `${style} average gap from classic`).toBeGreaterThanOrEqual(40);
+      expect(clear, `${style} share of stars clearly different`).toBeGreaterThanOrEqual(0.9);
+    }
+  });
 });

@@ -8,7 +8,7 @@ import {
 } from '@/shared/db';
 import { stableId } from '@/shared/lib';
 
-import { DEFAULT_STYLE_KEY, itemByKey, ownedKeys } from '../domain/catalogue';
+import { DEFAULT_STYLE_KEY, DEFAULT_THEME_KEY, itemByKey, ownedKeys } from '../domain/catalogue';
 import { clampDailyGoal, DEFAULT_DAILY_GOAL_MIN } from '../domain/economy';
 import { expectedRows, purchaseKey, type ConstellationCompletion } from '../domain/reconcile';
 
@@ -139,6 +139,30 @@ export const setEquippedStyle = (
     const rows = await db.ledger.toArray();
     if (!ownedKeys(rows).has(`style.${styleKey}`)) return false;
     await writeMeta(db, META_KEYS.starStyle, styleKey);
+    await touchSettings(db, now);
+    return true;
+  });
+
+/** The sky theme in force; the original night until another is equipped. */
+export const readEquippedTheme = async (db: WorkTimerDb): Promise<string> => {
+  const stored = await readMeta<unknown>(db, META_KEYS.skyTheme);
+  return typeof stored === 'string' ? stored : DEFAULT_THEME_KEY;
+};
+
+/**
+ * Equip an owned sky theme; it re-skins the sky at once and syncs to the
+ * account's other devices (newest edit wins). Resolves to false, changing
+ * nothing, for a theme that isn't owned.
+ */
+export const setEquippedTheme = (
+  db: WorkTimerDb,
+  themeKey: string,
+  now: number,
+): Promise<boolean> =>
+  db.transaction('rw', db.ledger, db.meta, async () => {
+    const rows = await db.ledger.toArray();
+    if (!ownedKeys(rows).has(`theme.${themeKey}`)) return false;
+    await writeMeta(db, META_KEYS.skyTheme, themeKey);
     await touchSettings(db, now);
     return true;
   });

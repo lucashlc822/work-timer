@@ -1,14 +1,15 @@
-import { STAR_STYLE_PRICES, TIER_PRICES } from './economy';
+import { PACK_PRICES, SKY_THEME_PRICES, STAR_STYLE_PRICES, TIER_PRICES } from './economy';
 
 /**
  * What the shop sells (M6). An item's `key` is permanent: it is written into
  * every purchase's ledger row (`ref`) and id, so a retired item stays owned
  * forever and a key is never reused for something else.
  *
- * The visuals for a star style live in `features/sky`, keyed by `styleKey`;
- * `app/` has a test that every style sold here can be drawn there.
+ * The visuals live in `features/sky`, keyed by `styleKey` / `themeKey` /
+ * `packKey`; `app/` has a test that everything sold here can be drawn or
+ * offered there.
  */
-export type ItemKind = 'star-style' | 'tier';
+export type ItemKind = 'star-style' | 'sky-theme' | 'pack' | 'tier';
 
 export type BuyableTier = keyof typeof TIER_PRICES;
 
@@ -20,6 +21,10 @@ export interface CatalogueItem {
   price: number;
   /** For a star style: the key `features/sky` draws it by. */
   styleKey?: string;
+  /** For a sky theme: the key `features/sky` draws it by. */
+  themeKey?: string;
+  /** For a constellation pack: the key its shapes carry in `features/sky`. */
+  packKey?: string;
   /** For a tier: which tier it unlocks. */
   tier?: BuyableTier;
 }
@@ -27,12 +32,31 @@ export interface CatalogueItem {
 /** The style everyone owns and every session starts with. */
 export const DEFAULT_STYLE_KEY = 'classic';
 
+/** The sky everyone owns: the original night. */
+export const DEFAULT_THEME_KEY = 'night';
+
 const style = (styleKey: string, name: string, price: number): CatalogueItem => ({
   key: `style.${styleKey}`,
   kind: 'star-style',
   name,
   price,
   styleKey,
+});
+
+const theme = (themeKey: string, name: string, price: number): CatalogueItem => ({
+  key: `theme.${themeKey}`,
+  kind: 'sky-theme',
+  name,
+  price,
+  themeKey,
+});
+
+const pack = (packKey: string, name: string, price: number): CatalogueItem => ({
+  key: `pack.${packKey}`,
+  kind: 'pack',
+  name,
+  price,
+  packKey,
 });
 
 const tier = (t: BuyableTier, name: string): CatalogueItem => ({
@@ -49,6 +73,12 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   style('aurora', 'Aurora', STAR_STYLE_PRICES.aurora),
   style('crystal', 'Crystal', STAR_STYLE_PRICES.crystal),
   style('prism', 'Prism', STAR_STYLE_PRICES.prism),
+  theme(DEFAULT_THEME_KEY, 'Night', 0),
+  theme('dusk', 'Dusk', SKY_THEME_PRICES.dusk),
+  theme('tide', 'Tide', SKY_THEME_PRICES.tide),
+  theme('bloom', 'Bloom', SKY_THEME_PRICES.bloom),
+  pack('woodland', 'Woodland pack', PACK_PRICES.woodland),
+  pack('harbour', 'Harbour pack', PACK_PRICES.harbour),
   tier('medium', 'Medium constellations'),
   tier('hard', 'Hard constellations'),
 ];
@@ -74,6 +104,25 @@ export const ownedKeys = (
   const owned = new Set<string>(FREE_ITEM_KEYS);
   for (const row of ledger) if (row.reason === 'purchase' && row.ref !== null) owned.add(row.ref);
   return owned;
+};
+
+/** The sky keys of every sky theme on sale, so `app/` can check each one can be drawn. */
+export const SHOP_THEME_KEYS: readonly string[] = itemsOfKind('sky-theme').flatMap((i) =>
+  i.themeKey === undefined ? [] : [i.themeKey],
+);
+
+/** The pack keys on sale, so `app/` can check each one has shapes in the sky. */
+export const SHOP_PACK_KEYS: readonly string[] = itemsOfKind('pack').flatMap((i) =>
+  i.packKey === undefined ? [] : [i.packKey],
+);
+
+/** The packs owned, from the owned set. */
+export const ownedPackKeys = (owned: ReadonlySet<string>): ReadonlySet<string> => {
+  const packs = new Set<string>();
+  for (const item of itemsOfKind('pack')) {
+    if (item.packKey !== undefined && owned.has(item.key)) packs.add(item.packKey);
+  }
+  return packs;
 };
 
 /** The tiers bought early, from the owned set. */

@@ -29,9 +29,9 @@ export const DEFAULT_STAR_STYLE = 'classic';
 export const STAR_STYLES: Readonly<Record<string, StarStyle>> = {
   classic: { palette: { cool: STAR_COOL, core: STAR_CORE, warm: STAR_WARM }, glow: 1 },
   ember: { palette: { cool: '#ffd9a8', core: '#ffb877', warm: '#ff8a5c' }, glow: 1.25 },
-  aurora: { palette: { cool: '#a8e6d0', core: '#d9fff0', warm: '#f3b8d4' }, glow: 1.2 },
-  crystal: { palette: { cool: '#bfe3ff', core: '#ffffff', warm: '#d9ccff' }, glow: 1.5 },
-  prism: { palette: { cool: '#ab93e6', core: '#fffdf8', warm: '#ffcf8a' }, glow: 1.35 },
+  aurora: { palette: { cool: '#7fe8c0', core: '#c8ffe6', warm: '#ff9fd0' }, glow: 1.2 },
+  crystal: { palette: { cool: '#7fc4ff', core: '#d8efff', warm: '#c9b6ff' }, glow: 1.5 },
+  prism: { palette: { cool: '#8fb4ff', core: '#ffd6f0', warm: '#ffe08a' }, glow: 1.35 },
 };
 
 /** The style for a stored key; anything unknown, or absent, is classic. */

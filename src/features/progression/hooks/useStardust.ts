@@ -9,14 +9,16 @@ import {
   readDailyGoal,
   readEndedSessions,
   readEquippedStyle,
+  readEquippedTheme,
   readOwned,
   readRecent,
   reconcile,
   setDailyGoal,
   setEquippedStyle,
+  setEquippedTheme,
   type BuyResult,
 } from '../data/ledgerRepository';
-import { boughtTiers, type BuyableTier } from '../domain/catalogue';
+import { boughtTiers, ownedPackKeys, type BuyableTier } from '../domain/catalogue';
 import { goalProgress, type GoalProgress } from '../domain/goal';
 import type { ConstellationCompletion } from '../domain/reconcile';
 import { streakAt } from '../domain/streak';
@@ -113,3 +115,16 @@ export const buyItem = (userId: string, itemKey: string): Promise<BuyResult> =>
 
 export const equipStyle = (styleKey: string): Promise<boolean> =>
   setEquippedStyle(db, styleKey, Date.now());
+
+/** The constellation packs owned, live; `undefined` until the first read. */
+export const useOwnedPacks = (): ReadonlySet<string> | undefined => {
+  const owned = useOwned();
+  return useMemo(() => (owned === undefined ? undefined : ownedPackKeys(owned)), [owned]);
+};
+
+/** The equipped sky theme, live. */
+export const useEquippedSkyTheme = (): string | undefined =>
+  useLiveQuery(() => readEquippedTheme(db), []);
+
+export const equipTheme = (themeKey: string): Promise<boolean> =>
+  setEquippedTheme(db, themeKey, Date.now());

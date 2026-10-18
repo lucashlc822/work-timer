@@ -4,10 +4,12 @@ import {
   ConstellationStatus,
   installDevTools,
   NewStarNote,
+  PackPreview,
   ResultStarGlyph,
   SkyBackdrop,
   StarGlyph,
   StartHint,
+  ThemeSwatch,
   useEarnedTiers,
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
@@ -17,6 +19,7 @@ import {
   StardustPanel,
   StardustPill,
   useBoughtTiers,
+  useOwnedPacks,
 } from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
@@ -47,11 +50,15 @@ const timerSlots: TimerSlots = {
 };
 
 const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
+const NO_PACKS: ReadonlySet<string> = new Set();
 
 /** The same star in each style, so the shop shows only what the style changes. */
 const renderStylePreview = (styleKey: string) => (
   <StarGlyph seed="shop-preview" focusS={1500} style={styleKey} size={40} />
 );
+
+const renderThemePreview = (themeKey: string) => <ThemeSwatch theme={themeKey} />;
+const renderPackPreview = (packKey: string) => <PackPreview pack={packKey} />;
 
 /**
  * The main window: the timer in front of your night sky.
@@ -67,6 +74,7 @@ export const HomeRoute = () => {
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
   const boughtTiers = useBoughtTiers() ?? NO_TIERS;
+  const ownedPacks = useOwnedPacks() ?? NO_PACKS;
   const earnedTiers = useEarnedTiers();
 
   useEffect(installDevTools, []);
@@ -102,7 +110,7 @@ export const HomeRoute = () => {
 
         <footer className="flex flex-col items-center gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <ConstellationStatus boughtTiers={boughtTiers} />
+            <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />
             <StardustPill onOpen={() => setView('stardust')} />
             <button
               type="button"
@@ -142,6 +150,8 @@ export const HomeRoute = () => {
             userId={account.userId}
             earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
             renderStylePreview={renderStylePreview}
+            renderThemePreview={renderThemePreview}
+            renderPackPreview={renderPackPreview}
           />
         </div>
       )}

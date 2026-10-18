@@ -351,6 +351,18 @@ rejected). Don't pre-populate this with guesses.
   scales the glow only; size, brightness and twinkle still say how long the
   session was. A tier bought early opens it in the picker (`unlockedTiers`
   takes the bought set) without touching the earned path.
+- **A sky theme only recolours; `night` is the pre-M6 sky** (M6 PR 4,
+  2026-10-18). `ambientField(themeKey)` makes every random draw in the same
+  order whatever the theme, so star and cloud positions are identical and only
+  colours change; `night` (default, and the fallback for an unknown key) is
+  pinned by a golden fingerprint of the old field. Themes are tinted ground +
+  cloud hues + background-star palette, all in `sky/domain/skyThemes.ts`.
+- **Constellation packs add shapes, they never gate existing ones** (M6 PR 4).
+  A pack's shapes carry `pack` in the sky catalogue and show in the picker only
+  when `pack.<key>` is owned; a choice already made resolves whatever is owned,
+  so nothing breaks if ownership changes. Pack shape keys are permanent like the
+  rest. An older app doesn't know them and draws a generated shape of the same
+  tier (`resolveDef`'s fallback).
 - **Star style, sky theme and daily goal are their own `user_settings`
   columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
   wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A
