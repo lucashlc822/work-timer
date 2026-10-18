@@ -12,7 +12,94 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-18 — M6 PR 4 merged: sky themes and constellation packs (#41)
+
+**Status: all four M6 PRs are merged and CI on `master` is green. Nothing is
+released.** The shop now sells three sky themes (Dusk, Tide, Bloom at 1,200;
+Night is free and is the original sky) and two constellation packs (Woodland and
+Harbour at 800, one easy, medium and hard shape each, hidden in the picker until
+owned). v0.2.0 is the next step and has not been started.
+
+### Next
+
+- **Before v0.2.0, run the two plan cases still open:**
+  - **Case 14:** a released v0.1.1 app against the M6 server. Only part of it
+    was run in PR 1 (browser build, not the exe).
+  - **Case 15:** desktop and browser on one account on the local stack: a
+    purchase or equip showing live on the other device, and a theme re-skinning
+    the other device. Not run at all, and nothing in M6 has been tried in the
+    desktop exe. These need the desktop build.
+- **Then release v0.2.0 on Opus, following `RELEASING.md`.** Push
+  `20261017200000_m6_progression.sql` to the hosted project **first**; it is the
+  first migration on a server with real users. Additive only; leave
+  `min_client_version` alone.
+- Carried over: invite friends, set up the other machine, renew the Vercel
+  token, and nothing guards against the 7-day Supabase pause yet.
+
+### Decisions made along the way
+
+- **A theme only recolours.** `ambientField(themeKey)` makes every random draw
+  in the same order for every theme, so positions are identical. `night` is
+  pinned by a golden fingerprint of the pre-M6 field and is also the fallback
+  for an unknown key.
+- **Packs add shapes and never gate existing ones.** The picker filters by
+  `pack.<key>` ownership; a choice already made resolves whatever is owned. An
+  older app draws an unknown pack shape as a generated shape of the same tier.
+- **Style, theme and pack colours live in the sky feature,** not
+  `design-tokens.mjs` (which only mirrors values also in `tokens.css`).
+- **`app/` has one test that everything on sale can be drawn or offered** (style,
+  theme and pack keys), since the two features can't import each other.
+
+### Found in the visual review, and fixed in the PR
+
+Crystal and Prism looked like free Classic on most stars: near-white palettes
+meant a mean colour gap of 23 and 39 from classic, with only 27% and 58% of
+stars clearly different. Stronger palettes (icy blue to violet; blue to pink to
+gold; deeper Aurora mint to pink) now differ on every sampled star, and a test
+guards it (mean gap >= 40 and >= 90% of stars >= 25 apart in RGB; it fails on the
+old palettes). **The new colours were only compared as swatches from the real
+colour code, not photographed in the app.**
+
+### Things worth not rediscovering
+
+- **The browser pane crops screenshots when its size changes,** and a
+  `resize_window` doesn't reflow the sky until a reload. Reload after resizing,
+  or set the size first.
+- **A screenshot straight after changing the DOM can show the old frame.** Take
+  a second one (the pane renders on demand, as CLAUDE.md says).
+- **To see a constellation shape large,** clone the picker's silhouette SVGs
+  into a full-screen overlay from the page console. An unfinished constellation
+  is only a faint dotted outline in the sky.
+- **To photograph one star per style,** write completed sessions with a
+  `starStyle` straight into the account's IndexedDB `sessions` store, then
+  reload (raw IndexedDB writes don't notify Dexie's live queries).
+- **`window.__starkeep` can be undefined for a moment after load;** wait a
+  second before `seed()`.
+- **`a@test.local` is full of test data** on the local stack: roughly 350 seeded
+  sessions, all themes and packs, all styles, the Hard tier, constellations
+  The Fox, The Sailboat and The Stag chosen, and still the made-up `it-style` /
+  `it-theme` settings from PR 1.
+
+### Acceptance results (PR 4's cases)
+
+| Case | Result |
+|---|---|
+| 11 Pack shapes valid; hidden until owned; shown with the originals once owned | Pass (unit), and live in the real picker (Fox chosen) |
+| Night is the pre-M6 sky byte for byte; unknown theme = night | Pass (unit, golden) |
+| Other themes change colour only, deterministic, valid hex, dark ground | Pass (unit) |
+| Buy and equip a theme or pack; equip refused unless owned | Pass (unit) |
+| 16 Visual review: themes, pack shapes, star styles | Done with Lucas's screenshots; Crystal and Prism found weak and fixed |
+| 17 lint, typecheck, format:check, test (493), build | Pass locally; CI green on `master` |
+
+**Not verified:** cases 14 and 15 above, the desktop exe for anything in M6, a
+theme or pack purchase showing live on a second device (fake server only), and
+the strengthened palettes photographed in the app.
+
+---
+
 ## 2026-10-18 — M6 PR 3 merged: the Stardust shop and star styles (#39)
+
+*(Superseded: PR 4 merged and M6's four PRs are done; see the entry above.)*
 
 **Status: M6 is 3 of 4 PRs done; PR 3 is merged (#39) and CI on `master` is
 green.** You can spend Stardust on four star styles (Ember 300, Aurora 400,
