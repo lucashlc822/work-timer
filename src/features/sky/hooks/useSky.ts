@@ -6,7 +6,7 @@ import { db } from '@/shared/db';
 import { readSkyInputs } from '../data/skyRepository';
 import { deriveSky } from '../domain/derive';
 import { tierRules } from '../domain/tiers';
-import type { SkyState } from '../domain/types';
+import type { SkyState, Tier } from '../domain/types';
 
 /** The tier rules in force for this build: shrunk minimums in dev only. */
 export const RULES = tierRules(import.meta.env.DEV);
@@ -23,5 +23,32 @@ export const useSky = (): SkyState | undefined => {
   return useMemo(
     () => (inputs === undefined ? undefined : deriveSky(inputs.sessions, inputs.choices, RULES)),
     [inputs],
+  );
+};
+
+/** A finished constellation, in the shape progression pays a bonus for. */
+export interface ConstellationCompletion {
+  choiceId: string;
+  tier: Tier;
+  completedAt: number;
+}
+
+/**
+ * Every constellation the person has finished, live — `undefined` until the
+ * first read. This is the sky's whole answer to "what has been completed?", so
+ * `app/` can hand it to progression without the two features meeting.
+ */
+export const useConstellationCompletions = (): ConstellationCompletion[] | undefined => {
+  const sky = useSky();
+  return useMemo(
+    () =>
+      sky === undefined
+        ? undefined
+        : sky.constellations.flatMap((c) =>
+            c.complete && c.completedAt !== null
+              ? [{ choiceId: c.choice.id, tier: c.def.tier, completedAt: c.completedAt }]
+              : [],
+          ),
+    [sky],
   );
 };

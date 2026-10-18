@@ -26,6 +26,8 @@ export interface TimerSlots {
   tagPicker?: (props: TagPickerProps) => ReactNode;
   /** Under the Start button. Receives the chosen length, in seconds. */
   startHint?: (plannedS: number) => ReactNode;
+  /** Under the start hint on the idle screen: today's progress and streak. */
+  progressLine?: () => ReactNode;
   /** Replaces the default star on a *completed* result. */
   resultStar?: (result: ResultInfo) => ReactNode;
   /** Under the result text, for both outcomes. */

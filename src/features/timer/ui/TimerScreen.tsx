@@ -173,6 +173,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
         {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}
       </button>
       {slots.startHint?.(plannedS)}
+      {slots.progressLine?.()}
       {timer.error !== null && <p className="text-faded text-xs">{timer.error}</p>}
     </div>
   );

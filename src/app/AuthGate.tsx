@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { AuthScreens, deleteAccount, signOut, type SignedInAccount } from '@/features/account';
 import { useStardustReconciler } from '@/features/progression';
+import { useConstellationCompletions } from '@/features/sky';
 import { clearLastUserId, getSupabase, readStoredAccount, writeLastUserId } from '@/shared/backend';
 import { APP_NAME } from '@/shared/config';
 import { bindAccountDb, db, deleteAccountDb } from '@/shared/db';
@@ -146,7 +147,8 @@ const SignedIn = ({
   children: ReactNode;
 }) => {
   const { syncNow, ...sync } = useSync(account.userId);
-  useStardustReconciler(account.userId);
+  const completions = useConstellationCompletions();
+  useStardustReconciler(account.userId, completions);
   return (
     <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
       {children}

@@ -1,6 +1,7 @@
 import { STARDUST_PER_MINUTE } from '../domain/economy';
 import { useBalance, useRecentLedger } from '../hooks/useStardust';
 import { signed, stardust } from './format';
+import { GoalAndStreak } from './GoalAndStreak';
 
 const REASONS: Record<string, string> = {
   session: 'Focus session',
@@ -18,8 +19,8 @@ const when = new Intl.DateTimeFormat(undefined, {
 });
 
 /**
- * The balance and where it came from. The shop joins it here in a later
- * release; for now it explains how Stardust is earned.
+ * The balance, the daily goal and streak, and where Stardust came from. The
+ * shop joins it here in a later release.
  */
 export const StardustPanel = () => {
   const balance = useBalance();
@@ -38,8 +39,11 @@ export const StardustPanel = () => {
 
       <p className="text-ink-secondary max-w-sm text-center text-sm">
         Every completed session earns {STARDUST_PER_MINUTE} Stardust per focused minute. Sessions
-        ended early earn nothing.
+        ended early earn nothing. Bonuses come from the daily goal, streaks and finished
+        constellations.
       </p>
+
+      <GoalAndStreak />
 
       {recent !== undefined && recent.length > 0 && (
         <ul className="border-night-600 bg-night-800/70 divide-night-600 w-full divide-y rounded-xl border">

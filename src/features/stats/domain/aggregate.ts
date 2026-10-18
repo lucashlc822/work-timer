@@ -1,4 +1,5 @@
 import type { SessionRow } from '@/shared/db';
+import { isEnded, overlapMs } from '@/shared/lib';
 
 import { bucketsFor, type Bucket, type Period } from './period';
 
@@ -19,15 +20,7 @@ import { bucketsFor, type Bucket, type Period } from './period';
  * A session still in flight is never counted; it has no outcome yet.
  */
 
-export const isEnded = (s: SessionRow): boolean => s.endedAt !== null && s.outcome !== null;
-
-const focusEndMs = (s: SessionRow): number => s.startedAt + s.actualFocusS * 1000;
-
-/** Milliseconds of this session's focus inside `[from, to)`. */
-export const overlapMs = (s: SessionRow, from: number, to: number): number => {
-  if (!isEnded(s) || s.actualFocusS <= 0) return 0;
-  return Math.max(0, Math.min(focusEndMs(s), to) - Math.max(s.startedAt, from));
-};
+export { isEnded };
 
 /** Whether the session began inside the period (ended sessions only). */
 export const startedIn = (s: SessionRow, period: Period): boolean =>

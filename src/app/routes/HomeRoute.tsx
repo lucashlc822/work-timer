@@ -9,7 +9,7 @@ import {
   StartHint,
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
-import { RewardNote, StardustPanel, StardustPill } from '@/features/progression';
+import { ProgressLine, RewardNote, StardustPanel, StardustPill } from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
@@ -26,6 +26,7 @@ import { useAccount } from '../accountContext';
 const timerSlots: TimerSlots = {
   tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
+  progressLine: () => <ProgressLine />,
   resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
   resultNote: (result) => (
     <>

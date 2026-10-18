@@ -7,6 +7,8 @@
  * midnight for the rest of the period.
  */
 
+import { addDays, dayStart } from '@/shared/lib';
+
 export type PeriodKind = 'week' | 'month' | 'all';
 
 /** Monday. 0 would be Sunday. */
@@ -27,14 +29,6 @@ export interface Bucket {
   end: number;
   label: string;
 }
-
-const dayStart = (at: number): Date => {
-  const d = new Date(at);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-};
-
-const addDays = (d: Date, days: number): Date =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
 
 const shortDate = (at: number): string =>
   new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(at);
