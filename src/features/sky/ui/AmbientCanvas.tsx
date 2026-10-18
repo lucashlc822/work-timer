@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { prefersReducedMotion, rngFromSeed } from '@/shared/lib';
 
 import { ambientField, LAYER_DRIFT } from '../domain/ambient';
+import { skyThemeFor } from '../domain/skyThemes';
 import { useElementSize } from '../hooks/useElementSize';
+import { useEquippedTheme } from '../hooks/useEquippedTheme';
 import { useFrameLoop } from '../hooks/useFrameLoop';
 
 /** Device pixel ratio, capped at 2: beyond that the cost rises and nobody can see it. */
@@ -45,7 +47,9 @@ export const AmbientCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nebulaRef = useRef<HTMLCanvasElement | null>(null);
   const { width, height } = useElementSize(canvasRef);
-  const field = useMemo(ambientField, []);
+  const themeKey = useEquippedTheme();
+  const field = useMemo(() => ambientField(themeKey), [themeKey]);
+  const theme = skyThemeFor(themeKey);
 
   // Size the backing store and repaint the nebula whenever the viewport changes.
   useEffect(() => {
@@ -60,6 +64,14 @@ export const AmbientCanvas = () => {
     nebula.height = Math.max(1, Math.round(height));
     const ctx = nebula.getContext('2d');
     if (ctx !== null) {
+      // A themed ground sits under the clouds; `night` has none and shows the app's own.
+      if (theme.ground !== null) {
+        const ground = ctx.createLinearGradient(0, 0, 0, nebula.height);
+        ground.addColorStop(0, theme.ground[0]);
+        ground.addColorStop(1, theme.ground[1]);
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, nebula.width, nebula.height);
+      }
       ctx.globalCompositeOperation = 'lighter';
       const scale = Math.max(nebula.width, nebula.height);
       for (const puff of field.nebula) {
@@ -76,7 +88,7 @@ export const AmbientCanvas = () => {
       dither(ctx, nebula.width, nebula.height);
     }
     nebulaRef.current = nebula;
-  }, [width, height, field]);
+  }, [width, height, field, theme]);
 
   const draw = useCallback(
     (elapsedMs: number) => {

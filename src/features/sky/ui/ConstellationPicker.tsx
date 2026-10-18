@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { LAVENDER_300 } from '../../../../design-tokens.mjs';
 import { db, getLocalUserId } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
 
@@ -12,6 +11,7 @@ import { approximateFocusS, TIERS, UNLOCKED_BY } from '../domain/tiers';
 import { TIER_ORDER, type ShapeDef, type SkyState, type Tier } from '../domain/types';
 import { RULES } from '../hooks/useSky';
 import { focusLabel, minimumLabel } from './describe';
+import { Silhouette } from './Silhouette';
 
 const WILD_OPTIONS_PER_TIER = 3;
 
@@ -31,8 +31,14 @@ interface Option {
 const wildSeed = (userId: string, tier: Tier, choiceCount: number, reroll: number, i: number) =>
   `${userId}:${tier}:${choiceCount}:${reroll}:${i}`;
 
-const optionsFor = (tier: Tier, userId: string, choiceCount: number, reroll: number): Option[] => [
-  ...catalogueKeysForTier(tier).map((key) => ({
+const optionsFor = (
+  tier: Tier,
+  userId: string,
+  choiceCount: number,
+  reroll: number,
+  ownedPacks: ReadonlySet<string>,
+): Option[] => [
+  ...catalogueKeysForTier(tier, ownedPacks).map((key) => ({
     key,
     draft: { source: 'catalogue' as const, shapeId: key, seed: null, tier },
     name: CATALOGUE[key].name,
@@ -59,11 +65,14 @@ const optionsFor = (tier: Tier, userId: string, choiceCount: number, reroll: num
 export const ConstellationPicker = ({
   sky,
   boughtTiers,
+  ownedPacks,
   onClose,
 }: {
   sky: SkyState;
   /** Tiers bought early with Stardust; choosable without finishing the tier below. */
   boughtTiers: ReadonlySet<Tier>;
+  /** Shop packs owned; their shapes join the hand-designed ones. */
+  ownedPacks: ReadonlySet<string>;
   onClose: () => void;
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -160,23 +169,27 @@ export const ConstellationPicker = ({
                   </p>
                 ) : userId === null ? null : (
                   <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {optionsFor(tier, userId, sky.constellations.length, reroll).map((option) => (
-                      <li key={option.key}>
-                        <button
-                          type="button"
-                          onClick={() => select(option)}
-                          className="rounded-soft border-night-600 hover:border-lavender-400 flex w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
-                        >
-                          <Silhouette shape={option.shape} />
-                          <span className="text-ink-primary text-xs">{option.name}</span>
-                          <span className="text-ink-muted text-[10px]">
-                            {option.draft.source === 'generated' && 'Wild · '}
-                            {option.shape.points.length} stars · ≈
-                            {focusLabel(approximateFocusS(tier, option.shape.points.length, RULES))}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                    {optionsFor(tier, userId, sky.constellations.length, reroll, ownedPacks).map(
+                      (option) => (
+                        <li key={option.key}>
+                          <button
+                            type="button"
+                            onClick={() => select(option)}
+                            className="rounded-soft border-night-600 hover:border-lavender-400 flex w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
+                          >
+                            <Silhouette shape={option.shape} />
+                            <span className="text-ink-primary text-xs">{option.name}</span>
+                            <span className="text-ink-muted text-[10px]">
+                              {option.draft.source === 'generated' && 'Wild · '}
+                              {option.shape.points.length} stars · ≈
+                              {focusLabel(
+                                approximateFocusS(tier, option.shape.points.length, RULES),
+                              )}
+                            </span>
+                          </button>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 )}
               </section>
@@ -196,24 +209,3 @@ export const ConstellationPicker = ({
     </div>
   );
 };
-
-/** A small preview of a shape: every star and line, unearned. */
-const Silhouette = ({ shape }: { shape: ShapeDef }) => (
-  <svg width={72} height={72} viewBox="-0.08 -0.08 1.16 1.16" aria-hidden="true">
-    {shape.edges.map(([a, b]) => (
-      <line
-        key={`${a}-${b}`}
-        x1={shape.points[a]![0]}
-        y1={shape.points[a]![1]}
-        x2={shape.points[b]![0]}
-        y2={shape.points[b]![1]}
-        stroke={LAVENDER_300}
-        strokeOpacity={0.5}
-        strokeWidth={0.015}
-      />
-    ))}
-    {shape.points.map(([x, y], i) => (
-      <circle key={i} cx={x} cy={y} r={0.03} fill={LAVENDER_300} />
-    ))}
-  </svg>
-);

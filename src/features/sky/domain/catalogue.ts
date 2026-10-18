@@ -1,4 +1,4 @@
-import type { ShapeDef, Tier } from './types';
+import { TIER_ORDER, type ShapeDef, type Tier } from './types';
 
 /**
  * The hand-designed constellations.
@@ -16,6 +16,8 @@ export interface CatalogueEntry {
   name: string;
   tier: Tier;
   shape: ShapeDef;
+  /** The shop pack this shape belongs to (M6); absent for the shapes everyone has. */
+  pack?: string;
 }
 
 export const CATALOGUE = {
@@ -272,6 +274,182 @@ export const CATALOGUE = {
       ],
     },
   },
+
+  // Constellation packs (M6): sold in the shop, one easy, one medium and one
+  // hard shape each. Same rules as every other entry; the picker shows a pack's
+  // shapes only to someone who owns it.
+  fox: {
+    name: 'The Fox',
+    tier: 'easy',
+    pack: 'woodland',
+    shape: {
+      points: [
+        [0.2, 0.15],
+        [0.3, 0.45],
+        [0.5, 0.82],
+        [0.7, 0.45],
+        [0.8, 0.15],
+      ],
+      edges: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 4],
+        [1, 3],
+      ],
+    },
+  },
+  owl: {
+    name: 'The Owl',
+    tier: 'medium',
+    pack: 'woodland',
+    shape: {
+      points: [
+        [0.22, 0.1],
+        [0.3, 0.32],
+        [0.7, 0.32],
+        [0.78, 0.1],
+        [0.22, 0.7],
+        [0.78, 0.7],
+        [0.5, 0.92],
+        [0.5, 0.5],
+      ],
+      edges: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [1, 4],
+        [2, 5],
+        [4, 6],
+        [5, 6],
+        [7, 1],
+        [7, 2],
+      ],
+    },
+  },
+  stag: {
+    name: 'The Stag',
+    tier: 'hard',
+    pack: 'woodland',
+    shape: {
+      points: [
+        [0.12, 0.52],
+        [0.26, 0.42],
+        [0.4, 0.38],
+        [0.55, 0.45],
+        [0.82, 0.46],
+        [0.9, 0.6],
+        [0.84, 0.9],
+        [0.6, 0.64],
+        [0.42, 0.9],
+        [0.3, 0.3],
+        [0.22, 0.08],
+        [0.4, 0.12],
+        [0.34, 0.04],
+      ],
+      edges: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 4],
+        [4, 5],
+        [5, 6],
+        [3, 7],
+        [7, 8],
+        [5, 7],
+        [1, 9],
+        [9, 10],
+        [9, 11],
+        [11, 12],
+      ],
+    },
+  },
+  sailboat: {
+    name: 'The Sailboat',
+    tier: 'easy',
+    pack: 'harbour',
+    shape: {
+      points: [
+        [0.5, 0.08],
+        [0.5, 0.62],
+        [0.84, 0.62],
+        [0.72, 0.9],
+        [0.2, 0.9],
+      ],
+      edges: [
+        [0, 1],
+        [0, 2],
+        [1, 2],
+        [2, 3],
+        [3, 4],
+        [4, 1],
+      ],
+    },
+  },
+  anchor: {
+    name: 'The Anchor',
+    tier: 'medium',
+    pack: 'harbour',
+    shape: {
+      points: [
+        [0.5, 0.06],
+        [0.5, 0.26],
+        [0.3, 0.26],
+        [0.7, 0.26],
+        [0.5, 0.84],
+        [0.14, 0.62],
+        [0.86, 0.62],
+      ],
+      edges: [
+        [0, 1],
+        [1, 2],
+        [1, 3],
+        [1, 4],
+        [4, 5],
+        [4, 6],
+      ],
+    },
+  },
+  galleon: {
+    name: 'The Galleon',
+    tier: 'hard',
+    pack: 'harbour',
+    shape: {
+      points: [
+        [0.06, 0.62],
+        [0.2, 0.86],
+        [0.8, 0.86],
+        [0.94, 0.62],
+        [0.35, 0.62],
+        [0.68, 0.62],
+        [0.35, 0.1],
+        [0.68, 0.16],
+        [0.14, 0.44],
+        [0.52, 0.38],
+        [0.84, 0.44],
+        [0.78, 0.06],
+      ],
+      edges: [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [0, 4],
+        [4, 5],
+        [5, 3],
+        [4, 6],
+        [5, 7],
+        [6, 8],
+        [8, 4],
+        [6, 9],
+        [9, 4],
+        [7, 9],
+        [9, 5],
+        [7, 10],
+        [10, 5],
+        [7, 11],
+      ],
+    },
+  },
 } as const satisfies Record<string, CatalogueEntry>;
 
 export type CatalogueKey = keyof typeof CATALOGUE;
@@ -279,5 +457,32 @@ export type CatalogueKey = keyof typeof CATALOGUE;
 export const catalogueEntry = (key: string): CatalogueEntry | undefined =>
   (CATALOGUE as Record<string, CatalogueEntry>)[key];
 
-export const catalogueKeysForTier = (tier: Tier): CatalogueKey[] =>
-  (Object.keys(CATALOGUE) as CatalogueKey[]).filter((key) => CATALOGUE[key].tier === tier);
+/**
+ * The shapes offered for a tier: the ones everyone has, plus those of any pack
+ * in `ownedPacks`. This only decides what the picker *shows* � a choice already
+ * made stays valid whatever is owned, since `resolveDef` doesn't ask.
+ */
+export const catalogueKeysForTier = (
+  tier: Tier,
+  ownedPacks: ReadonlySet<string> = new Set(),
+): CatalogueKey[] =>
+  (Object.keys(CATALOGUE) as CatalogueKey[]).filter((key) => {
+    const entry: CatalogueEntry = CATALOGUE[key];
+    return entry.tier === tier && (entry.pack === undefined || ownedPacks.has(entry.pack));
+  });
+
+/** The shapes of one pack, easiest first, for the shop's preview. */
+export const packShapes = (pack: string): { key: CatalogueKey; entry: CatalogueEntry }[] =>
+  (Object.keys(CATALOGUE) as CatalogueKey[])
+    .map((key): { key: CatalogueKey; entry: CatalogueEntry } => ({ key, entry: CATALOGUE[key] }))
+    .filter(({ entry }) => entry.pack === pack)
+    .sort((a, b) => TIER_ORDER.indexOf(a.entry.tier) - TIER_ORDER.indexOf(b.entry.tier));
+
+/** Every pack key this build has shapes for; `app/` checks the shop sells only these. */
+export const PACK_KEYS: readonly string[] = [
+  ...new Set(
+    Object.values(CATALOGUE as Record<string, CatalogueEntry>).flatMap((e) =>
+      e.pack === undefined ? [] : [e.pack],
+    ),
+  ),
+];

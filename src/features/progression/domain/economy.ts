@@ -67,3 +67,7 @@ export const clampDailyGoal = (minutes: number): number =>
  */
 export const STAR_STYLE_PRICES = { ember: 300, aurora: 400, crystal: 500, prism: 600 } as const;
 export const TIER_PRICES = { medium: 2000, hard: 6000 } as const;
+
+/** ~2 weeks of an hour a day for a theme; a pack is a smaller, cheaper treat. */
+export const SKY_THEME_PRICES = { dusk: 1200, tide: 1200, bloom: 1200 } as const;
+export const PACK_PRICES = { woodland: 800, harbour: 800 } as const;

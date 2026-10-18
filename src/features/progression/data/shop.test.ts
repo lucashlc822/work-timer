@@ -158,13 +158,13 @@ describe('buy', () => {
 describe('owned', () => {
   it('is the free defaults plus every purchase, and nothing else', async () => {
     const db = newDb();
-    expect([...(await readOwned(db))]).toEqual(['style.classic']);
+    expect([...(await readOwned(db))].sort()).toEqual(['style.classic', 'theme.night']);
 
     await fund(db, 10_000);
     await buy(db, USER, 'style.prism', NOW);
     await buy(db, USER, 'tier.medium', NOW);
     expect([...(await readOwned(db))].sort()).toEqual(
-      ['style.classic', 'style.prism', 'tier.medium'].sort(),
+      ['style.classic', 'theme.night', 'style.prism', 'tier.medium'].sort(),
     );
   });
 

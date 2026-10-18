@@ -8,7 +8,13 @@ import { ConstellationPicker } from './ConstellationPicker';
  * What is being built right now, and the way into the picker. Highlighted
  * when nothing is in progress, since every session until then wanders.
  */
-export const ConstellationStatus = ({ boughtTiers }: { boughtTiers: ReadonlySet<Tier> }) => {
+export const ConstellationStatus = ({
+  boughtTiers,
+  ownedPacks,
+}: {
+  boughtTiers: ReadonlySet<Tier>;
+  ownedPacks: ReadonlySet<string>;
+}) => {
   const sky = useSky();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -37,7 +43,14 @@ export const ConstellationStatus = ({ boughtTiers }: { boughtTiers: ReadonlySet<
       >
         {label}
       </button>
-      {open && <ConstellationPicker sky={sky} boughtTiers={boughtTiers} onClose={close} />}
+      {open && (
+        <ConstellationPicker
+          sky={sky}
+          boughtTiers={boughtTiers}
+          ownedPacks={ownedPacks}
+          onClose={close}
+        />
+      )}
     </>
   );
 };
