@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { db } from '@/shared/db';
 
 import { readSkyInputs } from '../data/skyRepository';
-import { deriveSky } from '../domain/derive';
+import { deriveSky, unlockedTiers } from '../domain/derive';
 import { tierRules } from '../domain/tiers';
 import type { SkyState, Tier } from '../domain/types';
 
@@ -51,4 +51,10 @@ export const useConstellationCompletions = (): ConstellationCompletion[] | undef
           ),
     [sky],
   );
+};
+
+/** The tiers earned by finishing the tier below, live; bought tiers are not included. */
+export const useEarnedTiers = (): Record<Tier, boolean> | undefined => {
+  const sky = useSky();
+  return useMemo(() => (sky === undefined ? undefined : unlockedTiers(sky)), [sky]);
 };

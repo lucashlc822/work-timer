@@ -56,7 +56,16 @@ const optionsFor = (tier: Tier, userId: string, choiceCount: number, reroll: num
  * "wild" ones. Locked tiers say what unlocks them. Switching away from a
  * constellation with stars in it asks first, since it stays unfinished.
  */
-export const ConstellationPicker = ({ sky, onClose }: { sky: SkyState; onClose: () => void }) => {
+export const ConstellationPicker = ({
+  sky,
+  boughtTiers,
+  onClose,
+}: {
+  sky: SkyState;
+  /** Tiers bought early with Stardust; choosable without finishing the tier below. */
+  boughtTiers: ReadonlySet<Tier>;
+  onClose: () => void;
+}) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [reroll, setReroll] = useState(0);
   const [pending, setPending] = useState<Option | null>(null);
@@ -72,7 +81,7 @@ export const ConstellationPicker = ({ sky, onClose }: { sky: SkyState; onClose: 
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const unlocked = unlockedTiers(sky);
+  const unlocked = unlockedTiers(sky, boughtTiers);
   const inProgress = sky.current !== null && sky.current.stars.length > 0 ? sky.current : null;
 
   const choose = async (option: Option) => {
@@ -147,7 +156,7 @@ export const ConstellationPicker = ({ sky, onClose }: { sky: SkyState; onClose: 
                 </h3>
                 {!unlocked[tier] ? (
                   <p className="text-ink-muted text-xs">
-                    Finish one {UNLOCKED_BY[tier]} constellation to unlock.
+                    Finish one {UNLOCKED_BY[tier]} constellation to unlock, or buy it with Stardust.
                   </p>
                 ) : userId === null ? null : (
                   <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">

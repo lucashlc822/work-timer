@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import type { Tier } from '../domain/types';
 import { useSky } from '../hooks/useSky';
 import { ConstellationPicker } from './ConstellationPicker';
 
@@ -7,7 +8,7 @@ import { ConstellationPicker } from './ConstellationPicker';
  * What is being built right now, and the way into the picker. Highlighted
  * when nothing is in progress, since every session until then wanders.
  */
-export const ConstellationStatus = () => {
+export const ConstellationStatus = ({ boughtTiers }: { boughtTiers: ReadonlySet<Tier> }) => {
   const sky = useSky();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
@@ -36,7 +37,7 @@ export const ConstellationStatus = () => {
       >
         {label}
       </button>
-      {open && <ConstellationPicker sky={sky} onClose={close} />}
+      {open && <ConstellationPicker sky={sky} boughtTiers={boughtTiers} onClose={close} />}
     </>
   );
 };

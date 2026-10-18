@@ -122,13 +122,20 @@ export const completedByTier = (sky: SkyState): Record<Tier, number> => {
   return counts;
 };
 
-/** Which tiers can be chosen: easy always, each other after one of the tier below. */
-export const unlockedTiers = (sky: SkyState): Record<Tier, boolean> => {
+/**
+ * Which tiers can be chosen: easy always, each other after one of the tier
+ * below is finished, or because it was bought early with Stardust (M6), which
+ * skips the requirement without touching the earned path.
+ */
+export const unlockedTiers = (
+  sky: SkyState,
+  bought: ReadonlySet<Tier> = new Set(),
+): Record<Tier, boolean> => {
   const done = completedByTier(sky);
   const result = {} as Record<Tier, boolean>;
   for (const tier of TIER_ORDER) {
     const requires = UNLOCKED_BY[tier];
-    result[tier] = requires === null || done[requires] >= 1;
+    result[tier] = requires === null || done[requires] >= 1 || bought.has(tier);
   }
   return result;
 };

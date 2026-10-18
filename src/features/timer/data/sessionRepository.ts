@@ -209,10 +209,16 @@ export const finishSession = (
     const ownsRun = run !== null && row?.runId === run.id;
 
     if (isInFlight(row)) {
+      // A completed star is born in the style equipped right now (M6) and keeps
+      // it: this is the only place the style is written, and a finished row is
+      // never rewritten. An early ending earns no star, so it gets no style.
+      const style =
+        end.outcome === 'completed' ? await readMeta<unknown>(db, META_KEYS.starStyle) : undefined;
       await db.sessions.update(id, {
         outcome: end.outcome,
         endedAt: end.endedAt,
         actualFocusS: end.actualFocusS,
+        ...(typeof style === 'string' && { starStyle: style }),
       });
 
       if (run !== null && ownsRun) {

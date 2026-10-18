@@ -339,6 +339,18 @@ rejected). Don't pre-populate this with guesses.
   milestones once.
 - **What's owned is derived from purchase rows** (M6): a purchase is a ledger
   row with a negative `delta` and id `purchase:<itemKey>`. No unlocks table.
+  Item keys (`style.ember`, `tier.medium`) are permanent, and like every
+  ledger id the purchase id is prefixed with the user id, so the same item
+  bought on two offline devices is one deduction. The default `style.classic`
+  is free and owned by everyone.
+- **A star's style is stamped when its session completes** (M6 PR 3,
+  2026-10-18): `finishSession` copies the equipped `META_KEYS.starStyle` onto
+  the row, in the same transaction, and never again. Early endings get none.
+  An absent or unknown style key draws as `classic`, which must always equal
+  the pre-M6 look (golden test). A style recolours the temperature axis and
+  scales the glow only; size, brightness and twinkle still say how long the
+  session was. A tier bought early opens it in the picker (`unlockedTiers`
+  takes the bought set) without touching the earned path.
 - **Star style, sky theme and daily goal are their own `user_settings`
   columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
   wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A

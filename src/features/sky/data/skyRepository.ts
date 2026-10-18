@@ -36,6 +36,7 @@ const toCompleted = (row: SessionRow): CompletedSession | null =>
         startedAt: row.startedAt,
         endedAt: row.endedAt,
         actualFocusS: row.actualFocusS,
+        ...(row.starStyle !== undefined && { starStyle: row.starStyle }),
       }
     : null;
 
