@@ -59,3 +59,11 @@ export type BonusTier = keyof typeof CONSTELLATION_BONUS;
 /** Clamp a typed or synced goal to something the server accepts. */
 export const clampDailyGoal = (minutes: number): number =>
   Math.min(MAX_DAILY_GOAL_MIN, Math.max(MIN_DAILY_GOAL_MIN, Math.round(minutes)));
+
+/**
+ * Shop prices, in Stardust. About an hour a day earns ~80 a day, so a style
+ * is roughly a week of habit; buying a tier outright costs ~33 h / ~100 h of
+ * focus ("quite costly") against finishing one easier constellation.
+ */
+export const STAR_STYLE_PRICES = { ember: 300, aurora: 400, crystal: 500, prism: 600 } as const;
+export const TIER_PRICES = { medium: 2000, hard: 6000 } as const;

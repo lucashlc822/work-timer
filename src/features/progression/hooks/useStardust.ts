@@ -4,13 +4,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { db, type LedgerRow } from '@/shared/db';
 
 import {
+  buy,
   readBalance,
   readDailyGoal,
   readEndedSessions,
+  readEquippedStyle,
+  readOwned,
   readRecent,
   reconcile,
   setDailyGoal,
+  setEquippedStyle,
+  type BuyResult,
 } from '../data/ledgerRepository';
+import { boughtTiers, type BuyableTier } from '../domain/catalogue';
 import { goalProgress, type GoalProgress } from '../domain/goal';
 import type { ConstellationCompletion } from '../domain/reconcile';
 import { streakAt } from '../domain/streak';
@@ -87,3 +93,23 @@ export const useProgress = (): Progress | undefined => {
     [sessions, goalMin, now],
   );
 };
+
+/** What the account owns, live: the free defaults plus every purchase. */
+export const useOwned = (): ReadonlySet<string> | undefined =>
+  useLiveQuery(() => readOwned(db), []);
+
+/** The tiers bought early, live; `undefined` until the first read. */
+export const useBoughtTiers = (): ReadonlySet<BuyableTier> | undefined => {
+  const owned = useOwned();
+  return useMemo(() => (owned === undefined ? undefined : boughtTiers(owned)), [owned]);
+};
+
+/** The equipped star style, live. */
+export const useEquippedStyle = (): string | undefined =>
+  useLiveQuery(() => readEquippedStyle(db), []);
+
+export const buyItem = (userId: string, itemKey: string): Promise<BuyResult> =>
+  buy(db, userId, itemKey, Date.now());
+
+export const equipStyle = (styleKey: string): Promise<boolean> =>
+  setEquippedStyle(db, styleKey, Date.now());

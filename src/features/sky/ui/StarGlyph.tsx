@@ -12,20 +12,27 @@ import { starAppearance } from '../domain/starAppearance';
 export const StarGlyph = ({
   seed,
   focusS,
+  style,
   size = 80,
 }: {
   seed: string;
   focusS: number;
+  /** A star style key (M6); absent or unknown draws the classic look. */
+  style?: string | null | undefined;
   size?: number;
 }) => {
   const id = `glyph${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
-  const look = starAppearance(seed, focusS);
+  const look = starAppearance(seed, focusS, style);
 
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <defs>
         <radialGradient id={`${id}-halo`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={look.color} stopOpacity={0.55 * look.brightness} />
+          <stop
+            offset="0%"
+            stopColor={look.color}
+            stopOpacity={Math.min(1, 0.55 * look.brightness * look.glow)}
+          />
           <stop offset="60%" stopColor={look.color} stopOpacity={0.12} />
           <stop offset="100%" stopColor={look.color} stopOpacity={0} />
         </radialGradient>

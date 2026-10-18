@@ -2,6 +2,7 @@ import { STARDUST_PER_MINUTE } from '../domain/economy';
 import { useBalance, useRecentLedger } from '../hooks/useStardust';
 import { signed, stardust } from './format';
 import { GoalAndStreak } from './GoalAndStreak';
+import { Shop, type ShopProps } from './Shop';
 
 const REASONS: Record<string, string> = {
   session: 'Focus session',
@@ -19,10 +20,10 @@ const when = new Intl.DateTimeFormat(undefined, {
 });
 
 /**
- * The balance, the daily goal and streak, and where Stardust came from. The
- * shop joins it here in a later release.
+ * The balance, the daily goal and streak, the shop, and where Stardust came
+ * from.
  */
-export const StardustPanel = () => {
+export const StardustPanel = (shop: ShopProps) => {
   const balance = useBalance();
   const recent = useRecentLedger(20);
 
@@ -44,6 +45,8 @@ export const StardustPanel = () => {
       </p>
 
       <GoalAndStreak />
+
+      <Shop {...shop} />
 
       {recent !== undefined && recent.length > 0 && (
         <ul className="border-night-600 bg-night-800/70 divide-night-600 w-full divide-y rounded-xl border">

@@ -4,12 +4,20 @@ import {
   ConstellationStatus,
   installDevTools,
   NewStarNote,
+  ResultStarGlyph,
   SkyBackdrop,
   StarGlyph,
   StartHint,
+  useEarnedTiers,
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
-import { ProgressLine, RewardNote, StardustPanel, StardustPill } from '@/features/progression';
+import {
+  ProgressLine,
+  RewardNote,
+  StardustPanel,
+  StardustPill,
+  useBoughtTiers,
+} from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import { TimerScreen, type TimerSlots } from '@/features/timer';
@@ -27,7 +35,9 @@ const timerSlots: TimerSlots = {
   tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   progressLine: () => <ProgressLine />,
-  resultStar: (result) => <StarGlyph seed={result.seed} focusS={result.actualFocusS} />,
+  resultStar: (result) => (
+    <ResultStarGlyph sessionId={result.sessionId} seed={result.seed} focusS={result.actualFocusS} />
+  ),
   resultNote: (result) => (
     <>
       {result.outcome === 'completed' && <NewStarNote sessionId={result.sessionId} />}
@@ -35,6 +45,13 @@ const timerSlots: TimerSlots = {
     </>
   ),
 };
+
+const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
+
+/** The same star in each style, so the shop shows only what the style changes. */
+const renderStylePreview = (styleKey: string) => (
+  <StarGlyph seed="shop-preview" focusS={1500} style={styleKey} size={40} />
+);
 
 /**
  * The main window: the timer in front of your night sky.
@@ -49,6 +66,8 @@ export const HomeRoute = () => {
   const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'stardust' | 'account'>('timer');
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
+  const boughtTiers = useBoughtTiers() ?? NO_TIERS;
+  const earnedTiers = useEarnedTiers();
 
   useEffect(installDevTools, []);
   useEffect(installStatsDevTools, []);
@@ -83,7 +102,7 @@ export const HomeRoute = () => {
 
         <footer className="flex flex-col items-center gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <ConstellationStatus />
+            <ConstellationStatus boughtTiers={boughtTiers} />
             <StardustPill onOpen={() => setView('stardust')} />
             <button
               type="button"
@@ -119,7 +138,11 @@ export const HomeRoute = () => {
 
       {view === 'stardust' && (
         <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
-          <StardustPanel />
+          <StardustPanel
+            userId={account.userId}
+            earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
+            renderStylePreview={renderStylePreview}
+          />
         </div>
       )}
 

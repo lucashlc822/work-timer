@@ -43,6 +43,14 @@ import { lastEndByDay, streakRuns } from './streak';
 export const sessionKey = (userId: string, sessionId: string): string =>
   `${userId}:session:${sessionId}`;
 
+/**
+ * A purchase's id. Unlike the earnings it is written by the shop, not the
+ * reconciler — but it follows the same rule: derived from what it is for, so
+ * the same item bought on two offline devices is one row, and one deduction.
+ */
+export const purchaseKey = (userId: string, itemKey: string): string =>
+  `${userId}:purchase:${itemKey}`;
+
 /** A finished constellation, as the sky reports it. */
 export interface ConstellationCompletion {
   choiceId: string;

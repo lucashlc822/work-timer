@@ -68,7 +68,7 @@ export const ConstellationLayer = ({ sky, mode, width, height }: Props) => {
 
       {sky.wandering.map(({ session }) => {
         const [x, y] = wanderingPosition(session.seed, width, height);
-        const look = starAppearance(session.seed, session.actualFocusS);
+        const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         return (
           <circle
             key={session.id}
@@ -215,9 +215,9 @@ const Figure = ({
 
       {stars.map((session, i) => {
         const [x, y] = points[i]!;
-        const look = starAppearance(session.seed, session.actualFocusS);
+        const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         const r = starRadius * look.radius;
-        const halo = style === 'plain' ? 2.2 : style === 'glow' ? 2.8 : 3.3;
+        const halo = (style === 'plain' ? 2.2 : style === 'glow' ? 2.8 : 3.3) * look.glow;
         const label = starLabel(session.endedAt, session.actualFocusS);
         return (
           <g

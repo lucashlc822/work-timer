@@ -1,5 +1,6 @@
-import { STAR_COOL, STAR_CORE, STAR_WARM } from '../../../../design-tokens.mjs';
 import { between, rngFromSeed } from '@/shared/lib';
+
+import { starStyleFor, STAR_STYLES, type StarStyle } from './starStyles';
 
 /**
  * How one star looks, as a pure function of its session.
@@ -11,6 +12,10 @@ import { between, rngFromSeed } from '@/shared/lib';
  *
  * Longer sessions make brighter, larger stars. That is how total focus time
  * shows up in the sky without becoming a second progress bar.
+ *
+ * A star style (M6) only recolours the temperature axis and scales the glow;
+ * with the default `classic` style every field is exactly what it was before
+ * styles existed, and an unknown style key draws as classic.
  */
 export interface StarAppearance {
   /** `#rrggbb`. */
@@ -22,6 +27,8 @@ export interface StarAppearance {
   /** Radians. */
   twinklePhase: number;
   twinklePeriodMs: number;
+  /** Multiplier for the halo; 1 for the classic style. */
+  glow: number;
 }
 
 const MIN_FOCUS_S = 5 * 60;
@@ -41,11 +48,16 @@ const mix = (a: string, b: string, t: number): string => {
   return rgbToHex([ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t]);
 };
 
-/** Temperature in [0, 1]: 0 cool, 0.5 white, 1 warm. */
-export const temperatureColor = (temperature: number): string =>
+const CLASSIC = STAR_STYLES['classic'] as StarStyle;
+
+/** Temperature in [0, 1]: 0 cool, 0.5 white, 1 warm, on a style's palette (classic by default). */
+export const temperatureColor = (
+  temperature: number,
+  palette: StarStyle['palette'] = CLASSIC.palette,
+): string =>
   temperature < 0.5
-    ? mix(STAR_COOL, STAR_CORE, temperature * 2)
-    : mix(STAR_CORE, STAR_WARM, (temperature - 0.5) * 2);
+    ? mix(palette.cool, palette.core, temperature * 2)
+    : mix(palette.core, palette.warm, (temperature - 0.5) * 2);
 
 /** 0 for a 5-minute session, 1 for three hours, on a square-root curve. */
 export const focusWeight = (focusS: number): number => {
@@ -53,15 +65,21 @@ export const focusWeight = (focusS: number): number => {
   return Math.sqrt((clamped - MIN_FOCUS_S) / (MAX_FOCUS_S - MIN_FOCUS_S));
 };
 
-export const starAppearance = (seed: string, focusS: number): StarAppearance => {
+export const starAppearance = (
+  seed: string,
+  focusS: number,
+  styleKey?: string | null,
+): StarAppearance => {
   const rng = rngFromSeed(`star:${seed}`);
   const weight = focusWeight(focusS);
+  const style = starStyleFor(styleKey);
 
   return {
-    color: temperatureColor(rng()),
+    color: temperatureColor(rng(), style.palette),
     radius: (0.75 + weight * 0.75) * between(rng, 0.9, 1.1),
     brightness: 0.7 + weight * 0.3,
     twinklePhase: between(rng, 0, Math.PI * 2),
     twinklePeriodMs: between(rng, 2800, 5200),
+    glow: style.glow,
   };
 };

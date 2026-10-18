@@ -55,6 +55,8 @@ export interface CompletedSession {
   startedAt: number;
   endedAt: number;
   actualFocusS: number;
+  /** The star style equipped when it completed (M6); absent for older sessions. */
+  starStyle?: string;
 }
 
 export interface ConstellationState {
