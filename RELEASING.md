@@ -58,7 +58,20 @@ missing. `.env.example` lists every name.
    written for friends (how to install); add a line about what changed above it.
 5. **Publish.** This is the "go": installed apps will find it on their next check
    (within hours, and never mid-session), and the `Deploy web` workflow publishes the
-   web version.
+   web version. From the Releases page, check the tag box still says `vX.Y.Z`
+   before pressing Publish. From the command line, a draft can't be looked up by its
+   tag, so publish by id **and name the tag in the same call**:
+   ```bash
+   gh api repos/lucashlc822/work-timer/releases --jq '.[] | select(.draft) | "\(.id) \(.tag_name)"'
+   gh api -X PATCH repos/lucashlc822/work-timer/releases/<id> -F draft=false -f make_latest=true -f tag_name=vX.Y.Z
+   ```
+   Then confirm the published release's tag is `vX.Y.Z`, not `untagged-…`
+   (`gh release list --limit 1`). Publishing v0.2.0 without `tag_name` came back as
+   `untagged-…`: `latest.json` points at `/download/vX.Y.Z/…`, so installed apps
+   would have failed to download the update, and `Deploy web` checked out the
+   `untagged-…` ref instead of the tag. If it happens anyway, re-tag at once with
+   `gh api -X PATCH …/releases/<id> -f tag_name=vX.Y.Z`, check the web deploy built
+   the tagged commit, and delete the stray `untagged-…` git tag.
 6. **Verify.**
    - The web address loads, and signing in works.
    - `https://github.com/lucashlc822/work-timer/releases/latest/download/Starkeep-setup.exe`
