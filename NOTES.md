@@ -12,7 +12,86 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-18 — v0.2.0 released: M6 is live
+
+**Status: Starkeep v0.2.0 is published and verified, and M6 is done (plan case
+18 passed).** The hosted server has the M6 schema, installed apps update to 0.2.0,
+and https://starkeep.vercel.app serves 0.2.0. `min_client_version` is still
+`null`, so friends still on 0.1.x keep syncing. Release plan, approved before
+running: `~/.claude/plans/what-do-you-suggest-mossy-kahn.md`.
+
+### Next
+
+- **Tell friends 0.2.0 is out** (the release notes now say what's new). Their
+  installed apps offer the update themselves between sessions.
+- **Merge the `RELEASING.md` fix** for the publish step (its own PR; see
+  "Found along the way").
+- **Not confirmed:** whether 5 Stardust was Lucas's full history. It matches
+  only the 5-minute session from test 3; if he had completed sessions before
+  today, the balance should be higher. Asked, not yet answered.
+- Carried over: set up the other machine, renew the Vercel token, and nothing
+  guards against the 7-day Supabase pause yet. Next milestone not chosen.
+
+### What was done, in order
+
+1. **Migration first.** `npx supabase db push` from the repo root (Lucas asked
+   Claude to run it). It needed no database password: the CLI's linked login
+   role was enough, the same as `supabase migration list --linked`. A
+   `--dry-run` listed exactly `20261017200000_m6_progression.sql`; the push
+   applied it, and the hosted history then matched local.
+2. **Version bump** #44 (`npm run version:set -- 0.2.0`), CI green, merged as
+   `56f0d92`; tag `v0.2.0` pushed on that commit.
+3. **Release run** green (version + desktop jobs). The draft had the four
+   assets; `latest.json` says `0.2.0`; the `.sig` key id is `8E3AF18012526DA8`,
+   matching `tauri.conf.json`. The "what's new" paragraph was added above the
+   install text while still a draft.
+4. **Published** by id with `gh api -X PATCH .../releases/416871350
+   -F draft=false -f make_latest=true` — which came back with tag
+   `untagged-742543e7fb81fd80aea6` (see below). Re-tagged to `v0.2.0` within a
+   minute, then the stray tag was deleted from GitHub (Lucas asked).
+
+### Found along the way
+
+- **Publishing by id can leave the release without its tag.** The draft had
+  been found by `tag_name == "v0.2.0"` minutes earlier, but the publish response
+  said `untagged-…`, and GitHub created a git tag of that name on the same
+  commit. `latest.json` points at `/download/v0.2.0/…`, so left alone the
+  desktop update would have 404'd. Fixed with
+  `gh api -X PATCH .../releases/<id> -f tag_name=vX.Y.Z`. Cause not found; the
+  same command worked for 0.1.0 and 0.1.1. The one difference this time: the
+  description was edited (PATCH `body`) on the draft first. The `RELEASING.md`
+  fix publishes with `tag_name` in the same call and checks the tag after.
+- **`Deploy web` ran from the published event's tag name**, so it checked out
+  `refs/tags/untagged-…`. That tag pointed at `56f0d92`, so it built the right
+  code (the live bundle reports `0.2.0` and contains Stardust), but only by luck
+  of where GitHub put it.
+- **"Permission denied" is the healthy answer** when probing the hosted schema
+  with the publishable key: a column that exists returns 401 (42501), one that
+  doesn't returns 400 (42703), and a missing table 404 (PGRST205). Anonymous
+  callers have never been granted these tables.
+
+### Acceptance results (release plan)
+
+| # | Case | Result |
+|---|---|---|
+| 1 | Hosted before push | Pass: `ledger` 404, `star_style` columns 400, `min_client_version` null |
+| 2 | Hosted after push | Pass: `ledger` and both `star_style` columns exist (401 like `sessions.id`, vs 400 for a made-up column); history matches; `min_client_version` null |
+| 3 | Installed v0.1.1 after the migration | Pass (Lucas): a 5-minute session, Account panel "Backed up · synced just now" |
+| 4 | Draft release | Pass: 4 assets, `latest.json` 0.2.0, key `8E3AF18012526DA8` |
+| 5 | Web after publish | Pass (Lucas's screenshots): 0.2.0, signed in, synced, 5 Stardust |
+| 6 | Download links | Pass: `latest.json` 200 (0.2.0); installer and `Starkeep-setup.exe` 200, 2,317,817 bytes |
+| 7 | Installed app updates | Pass (Lucas's screenshot): Starkeep 0.2.0, signed in, synced |
+| 8 | Desktop + web live | Pass (Lucas): a 5-minute session added +5 on both, balances match |
+| 9 | `min_client_version` after publish | Pass: null |
+
+**Not verified:** a friend's machine updating (only Lucas's), and whether the
+starting balance covered all of Lucas's past sessions (see Next).
+
+---
+
 ## 2026-10-18 — M6 cases 14 and 15 pass; ready to plan v0.2.0
+
+*(Superseded: v0.2.0 was planned and released; see the entry above.)*
 
 **Status: every plan case for M6 has now been run, and none failed. Nothing is
 released and no code changed.** The two cases that needed the desktop app were
