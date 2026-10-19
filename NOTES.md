@@ -24,11 +24,12 @@ running: `~/.claude/plans/what-do-you-suggest-mossy-kahn.md`.
 
 - **Tell friends 0.2.0 is out** (the release notes now say what's new). Their
   installed apps offer the update themselves between sessions.
-- **Merge the `RELEASING.md` fix** for the publish step (its own PR; see
-  "Found along the way").
-- **Not confirmed:** whether 5 Stardust was Lucas's full history. It matches
-  only the 5-minute session from test 3; if he had completed sessions before
-  today, the balance should be higher. Asked, not yet answered.
+- The `RELEASING.md` fix for the publish step is merged (#46; see "Found along
+  the way").
+- **Lucas's balance is confirmed right:** 5 Stardust. His all-time stats list 6
+  sessions, and only one is completed (5 min, Sun Oct 18, 11:35 PM); the other
+  five ended early, which earns nothing, and no bonus applies yet (1-day streak,
+  goal 60 min).
 - Carried over: set up the other machine, renew the Vercel token, and nothing
   guards against the 7-day Supabase pause yet. Next milestone not chosen.
 
@@ -76,7 +77,7 @@ running: `~/.claude/plans/what-do-you-suggest-mossy-kahn.md`.
 |---|---|---|
 | 1 | Hosted before push | Pass: `ledger` 404, `star_style` columns 400, `min_client_version` null |
 | 2 | Hosted after push | Pass: `ledger` and both `star_style` columns exist (401 like `sessions.id`, vs 400 for a made-up column); history matches; `min_client_version` null |
-| 3 | Installed v0.1.1 after the migration | Pass (Lucas): a 5-minute session, Account panel "Backed up · synced just now" |
+| 3 | Installed v0.1.1 after the migration | Pass (Lucas): a session ended early (Sun Oct 18, 11:14 PM, 0 min; an ended-early session uploads like any other), Account panel "Backed up · synced just now" |
 | 4 | Draft release | Pass: 4 assets, `latest.json` 0.2.0, key `8E3AF18012526DA8` |
 | 5 | Web after publish | Pass (Lucas's screenshots): 0.2.0, signed in, synced, 5 Stardust |
 | 6 | Download links | Pass: `latest.json` 200 (0.2.0); installer and `Starkeep-setup.exe` 200, 2,317,817 bytes |
@@ -84,8 +85,9 @@ running: `~/.claude/plans/what-do-you-suggest-mossy-kahn.md`.
 | 8 | Desktop + web live | Pass (Lucas): a 5-minute session added +5 on both, balances match |
 | 9 | `min_client_version` after publish | Pass: null |
 
-**Not verified:** a friend's machine updating (only Lucas's), and whether the
-starting balance covered all of Lucas's past sessions (see Next).
+**Not verified:** a friend's machine updating (only Lucas's). Lucas's history
+had no completed sessions before the release, so crediting a long real history
+on the hosted server is exercised only by the local tests (cases 2, 3, 14).
 
 ---
 
