@@ -12,6 +12,104 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-18 — M6 cases 14 and 15 pass; ready to plan v0.2.0
+
+**Status: every plan case for M6 has now been run, and none failed. Nothing is
+released and no code changed.** The two cases that needed the desktop app were
+run against the local stack with `npm run tauri:dev` builds (debug, not the
+packaged installer), driven by script over WebView2's debug port as described
+in "How to drive the desktop app from a script" in the 2026-10-08 entry. v0.2.0
+has not been started.
+
+### Next
+
+- **Plan v0.2.0 on Opus, following `RELEASING.md`, with acceptance tests first.**
+  Push `20261017200000_m6_progression.sql` to the hosted project **before**
+  tagging; it is the first migration on a server with real users. Additive only;
+  leave `min_client_version` alone.
+- **After release, re-check on the real server:** a purchase and an equip
+  showing on a second device, and the installed app updating itself.
+- **Still not looked at by eye:** the desktop window's layout (only scripted),
+  the packaged installer build, and the strengthened Crystal/Prism/Aurora colours
+  photographed in the app (compared as swatches only).
+- Carried over: invite friends, set up the other machine, renew the Vercel
+  token, and nothing guards against the 7-day Supabase pause yet.
+
+### What was run
+
+**Case 14, old app against the M6 server.** Built tag `v0.1.1` in a worktree and
+ran it as a desktop window (the running exe's path was the worktree's). It
+signed in to `a@test.local`, synced, finished a 1-minute session and changed the
+Pomodoro focus length from 34 to 39 min, all with no sync error. On the server
+the M6 settings stayed `ember | night | 35`, the Pomodoro `focus_s` became 2340,
+and its session was stored with no style. Then the M6 build was started in the
+same profile: it upgraded the old store in place, showed the 39 min, "of 35",
+Ember and Night equipped, and credited the old session once (server 469 rows /
+1,960 to 470 rows / 1,961; a second sync added nothing).
+
+**Case 15, desktop and browser on one account.** The M6 desktop and Claude's
+browser pane (separate stores), waited on with no reload:
+
+- A fresh desktop pulled the history: balance 1,959 equal to the server's
+  ledger sum (468 rows).
+- A session finished on the desktop showed "+1 Stardust" and the browser
+  reached 1,960 on its own; the new session was stamped `ember`.
+- On `b@test.local`, 150 seeded sessions reconciled on both devices into 151
+  server rows summing to 6,020: no double crediting.
+- Crystal bought and equipped on the browser appeared on the desktop (5,520).
+  Dusk bought on the browser re-skinned the desktop: its sky canvas went from
+  transparent (Night) to opaque `(24,14,37)` top and `(42,20,37)` bottom, which
+  match Dusk's `#190f26` and `#2b1526`.
+- Woodland pack and Medium tier bought on the desktop: the browser's picker then
+  listed The Fox and The Owl and had Medium unlocked; both showed 1,520.
+- The next star took the equipped style (`crystal`); the 150 seeded sessions
+  still have none. Server ledger for `b`: 156 rows summing to 1,521, with
+  purchases of -4,500 (500 + 1,200 + 800 + 2,000).
+
+### Things worth not rediscovering
+
+- **The old and new desktop builds share one WebView2 profile** (same app id),
+  so IndexedDB and the stored sign-in are shared. v0.1.1 (Dexie v3) cannot open a
+  store M6 (Dexie v4) has upgraded. To run an old build: delete that account's
+  `work-timer-account-<id>` database from the desktop profile, and sign out
+  every account that has a v4 store first. Running the M6 build afterwards is
+  the real "device updates from 0.1.x" path.
+- **Docker Desktop wasn't running** at the start of this work on this machine;
+  `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` and
+  `npx supabase status` brought the stack back within a minute, with the M6
+  migration already applied.
+- **A fresh `cargo` build in a second worktree took ~50 s** here, not several
+  minutes, because dependencies were cached.
+- **Removing a worktree under the scratchpad fails with "Filename too long".**
+  Delete the folder with `cmd /c 'rd /s /q "\\?\<full path>"'` (a literal path:
+  the tool refuses it if it sees an unexpanded variable), then
+  `git worktree prune`.
+- **A tiny Node script using the built-in `WebSocket` runs JavaScript in the
+  desktop window** (`Runtime.evaluate` plus
+  `Emulation.setFocusEmulationEnabled`). Pass React-controlled inputs through the
+  native value setter and dispatch an `input` event.
+- **A 1-minute dev preset gives a real completed session in ~65 s,** and
+  `window.__starkeep.seed(n, minutes)` is the quickest way to Stardust; wait
+  until `window.__starkeep` exists after a load.
+- **Test data on the local stack:** `a@test.local` has ~350 seeded sessions and
+  owns every shop item; `b@test.local` has 150 seeded sessions, Crystal, Dusk,
+  the Woodland pack and the Medium tier. The browser pane is still signed in as
+  `b@test.local`. Use `b@test.local`-style fresh accounts for purchase tests,
+  since `a@test.local` can't buy anything.
+
+### Acceptance results
+
+| Case | Result |
+|---|---|
+| 14 Old app against the M6 server | Pass (details above); v0.1.1 source under `tauri dev`, not the released installer |
+| 15 Desktop and browser, one account, live | Pass (details above); scripted, nobody looked at the desktop screen |
+
+**Not verified:** anything on the hosted server, the packaged desktop build,
+how long cross-device updates take (waited 5-10 s each, not timed), and
+behaviour when Realtime is down.
+
+---
+
 ## 2026-10-18 — M6 PR 4 merged: sky themes and constellation packs (#41)
 
 **Status: all four M6 PRs are merged and CI on `master` is green. Nothing is
@@ -21,6 +119,8 @@ Harbour at 800, one easy, medium and hard shape each, hidden in the picker until
 owned). v0.2.0 is the next step and has not been started.
 
 ### Next
+
+*(Superseded: cases 14 and 15 have been run and passed; see the entry above.)*
 
 - **Before v0.2.0, run the two plan cases still open:**
   - **Case 14:** a released v0.1.1 app against the M6 server. Only part of it
