@@ -66,7 +66,7 @@ branch was cut from `master` without it.** Plan:
   (`LINKED_PROJECT_REF` shows in `status -o env`). The e2e code only ever runs
   `status`, never a `--linked` command.
 
-### Acceptance results (plan cases 1, 3, 4; 7 pending CI)
+### Acceptance results (plan cases 1, 3, 4, 7)
 
 | # | Case | Result |
 |---|---|---|
@@ -76,7 +76,7 @@ branch was cut from `master` without it.** Plan:
 | 1c | e2e reads no `.env.*` file | Pass: no reference; the only file read is `dist` |
 | 3 | Realtime: B hears none of A's changes; A's control hears all 3 | Pass |
 | 4 | All 7 specs, three runs in a row, no reset | Pass: 7/7, 7/7, 7/7 (~13 s each) |
-| 7 | CI `e2e` job green; a deliberate failure shows red with report | Pending (on the PR) |
+| 7 | CI `e2e` job green; a deliberate failure shows red with report | Pass: #50's `e2e` job green (7 passed). Throwaway draft #51 (expects 999 Stardust, gets 0): `e2e` red with only that test failing (1 failed, 6 passed), the other jobs green, `playwright-report` artifact kept (5 MB). #51 closed and its branch deleted |
 
 Lint, format, typecheck, `npm test` (493 passed, 10 skipped, as before) and
 `npm run build` all pass.
