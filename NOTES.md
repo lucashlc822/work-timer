@@ -14,14 +14,11 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ## 2026-10-20 — QA PR B: e2e foundation (Playwright, production fence, auth)
 
-**Status: PR B open, not merged. PR A (#49, pgTAP isolation) is also open; this
-branch was cut from `master` without it.** Plan:
+**Status: PR B (#50) merged, after PR A (#49, pgTAP isolation).** Plan:
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
 
 ### Next
 
-- Merge #49 and this PR (either order; if this one goes second, its NOTES.md
-  entry may need a one-line conflict fix).
 - **PR C on Sonnet:** sync conflicts between two devices, the timer with a
   fast-forwarded clock, and offline. The offline spec must wait for
   `navigator.serviceWorker.controller` before going offline.
@@ -84,6 +81,62 @@ Lint, format, typecheck, `npm test` (493 passed, 10 skipped, as before) and
 **Not verified:** that the hosted project's user list is unchanged. I didn't
 query it, to keep the run from touching production at all. The evidence is
 structural (cases 1a-1c).
+
+---
+
+## 2026-10-20 — QA plan approved; PR A (pgTAP isolation) merged
+
+**Status: the QA plan is approved, and PR A of six is merged (#49).** Plan
+(with Lucas's five changes at approval):
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`. PR A adds
+`supabase/tests/isolation.test.sql` (50 checks), which CI's `db` job already
+runs. No app or migration change.
+
+### Next
+
+- **PR B on Opus** (now merged as #50; see the entry above): the e2e foundation
+  (production fence, fresh test users, Mailpit codes, auth specs,
+  realtime-isolation spec, the `e2e` CI job, raised local auth rate limits).
+- Then C (sync, timer, offline; Sonnet), D (accessibility plus report-only
+  performance; Sonnet), E (desktop, local only; Opus), F (`qa-lead` agent; Opus).
+- The keep-alive's first scheduled run (case 9 of that plan) is still to be
+  checked: `gh run list --workflow keep-alive.yml`.
+
+### What PR A checks
+
+- **Catalogue guards** (these fail on a future migration, before any row
+  exists): RLS on every public table. The only tables without `user_id` are
+  `app_config` and `invites`. Exact `anon` and `authenticated` grants (no delete
+  anywhere). Every per-user policy is `authenticated` only and matches
+  `auth.uid()` to `user_id`. The only security definer functions are
+  `delete_my_account` and `enforce_invite`, and neither can be run by `anon`.
+  The Realtime publication is exactly the five per-user tables, all with RLS.
+- **Matrix**, B against A in `tags`, `constellations`, `sessions`,
+  `user_settings`, `ledger`: read, insert as A, update, delete, upsert onto A's
+  id (`do update` refused, `do nothing` ignored), moving B's own row to A,
+  signed-out reads, and B deleting their account. Afterwards an md5
+  fingerprint of all of A's rows is unchanged.
+
+### Acceptance results (plan case 2)
+
+| Check | Result |
+|---|---|
+| `npx supabase test db` | Pass: 3 files, 115 tests (50 new) |
+| Mutation: new table without RLS | Caught (tests 1-4) |
+| Mutation: `using (true)` read policy on sessions | Caught (5, 13) |
+| Mutation: delete grant + open policy on ledger | Caught (4, 5, 30) |
+| Mutation: RLS off on tags | Caught (1, 10, 11, 16, 31, 42, 49) |
+| Mutation: extra security definer function | Caught (6, 7) |
+| Mutation: `grant select on sessions to anon` | Caught (3, 45) |
+| Mutation: `invites` added to Realtime | Caught (9) |
+
+Each mutation was inserted into a throwaway copy of the file, inside its
+rolled-back transaction, and the copy was deleted. No migration was written for
+it, so this differs slightly from the plan's "scratch branch" wording but
+proves the same thing.
+
+**Not covered here (later PRs):** Realtime delivery itself. The publication is
+checked, but whether B's websocket receives A's changes is PR B's Node spec.
 
 ---
 
