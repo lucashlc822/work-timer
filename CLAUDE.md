@@ -44,6 +44,7 @@ npm install
 npx supabase start   # the local server (first run downloads images)
 npm run tauri:dev    # the desktop app
 npm run dev          # the browser build
+npm run e2e:web      # end-to-end tests (needs the local stack running)
 ```
 
 Both dev commands read `.env.development.local`, which points at the local
@@ -191,6 +192,15 @@ in `NOTES.md`.
   a rename field's save-on-blur never runs unless the page has focus. Use real
   input in the browser pane, or `Emulation.setFocusEmulationEnabled` over the
   DevTools protocol. A rename that "didn't save" in a script is this first.
+- **End-to-end tests only ever talk to the local stack.** `npm run e2e:web`
+  builds the app in mode `e2e` (never reads `.env.production.local`), serves it
+  on port 4174, and reads addresses and keys from `npx supabase status`;
+  `e2e/support/localStack.ts` refuses any non-local URL and
+  `e2e/check-build.mjs` refuses a build containing a hosted address. A run that
+  stops with "Refusing to run" is the fence working, not a broken test. Each
+  test makes its own `e2e-…@test.local` users, so they pile up in the local
+  database until `npx supabase db reset`: harmless. A change to
+  `supabase/config.toml` needs `npx supabase stop && npx supabase start`.
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.

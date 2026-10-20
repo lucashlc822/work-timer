@@ -37,3 +37,7 @@ npm-debug.log*
 
 # Vercel CLI link/build output (project ids, pulled settings)
 .vercel/
+
+# Playwright output
+playwright-report/
+test-results/

@@ -196,20 +196,25 @@ password_requirements = ""
 # rp_id = "localhost"
 # rp_origins = ["http://127.0.0.1:3000"]
 
+# LOCAL STACK ONLY. These limits are raised far above the hosted project's so
+# the end-to-end tests (many sign-ups, sign-ins and codes in a few minutes,
+# from one IP) never trip them. This file never reaches the hosted project:
+# only `supabase config push` would send it, and that command is never run
+# here (the hosted auth settings are set in the dashboard; `db push` sends
+# migrations only). See supabase/README.md.
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-# Raised locally so acceptance runs never trip it; the hosted project sets its own.
-email_sent = 100
+email_sent = 1000
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
-token_refresh = 150
+token_refresh = 1000
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+sign_in_sign_ups = 1000
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
-token_verifications = 30
+token_verifications = 1000
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
 web3 = 30
 
