@@ -156,7 +156,8 @@ test('after sign-out, the next account on the same browser sees none of the firs
   await expect(page.getByText(a.email)).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to timer' }).click();
 
-  await expect(stardustPill(page)).toHaveText(/\b0 Stardust$/);
+  // DELIBERATELY BROKEN (scratch branch only): proves the CI e2e job goes red.
+  await expect(stardustPill(page)).toHaveText(/\b999 Stardust$/);
   const panel = await openTagPicker(page);
   await expect(panel.getByText(tagName)).toHaveCount(0);
 });
