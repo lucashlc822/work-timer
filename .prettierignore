@@ -16,3 +16,7 @@ public/*.png
 # without these lines format:check fails only on machines that have linked.
 supabase/.temp
 supabase/.branches
+
+# Playwright output
+playwright-report
+test-results

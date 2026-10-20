@@ -8,7 +8,16 @@ export default tseslint.config(
   // src-tauri/target holds Rust build output, including compressed copies of
   // the web assets after a release build — never source, never lintable.
   {
-    ignores: ['dist', 'dev-dist', 'coverage', 'node_modules', 'src-tauri/target', 'src-tauri/gen'],
+    ignores: [
+      'dist',
+      'dev-dist',
+      'coverage',
+      'node_modules',
+      'src-tauri/target',
+      'src-tauri/gen',
+      'playwright-report',
+      'test-results',
+    ],
   },
 
   {
@@ -97,8 +106,14 @@ export default tseslint.config(
   },
 
   {
-    files: ['*.js', '*.mjs', 'scripts/**/*.mjs'],
+    files: ['*.js', '*.mjs', 'scripts/**/*.mjs', 'e2e/**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+  },
+
+  // End-to-end tests run in Node (Playwright), not the browser bundle.
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
     languageOptions: { globals: globals.node },
   },
 );

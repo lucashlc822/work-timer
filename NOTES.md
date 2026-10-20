@@ -12,9 +12,81 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
-## 2026-10-20 — QA plan approved; PR A (pgTAP isolation) open
+## 2026-10-20 — QA PR B: e2e foundation (Playwright, production fence, auth)
 
-**Status: the QA plan is approved, and PR A of six is open, not merged.** Plan
+**Status: PR B (#50) merged, after PR A (#49, pgTAP isolation).** Plan:
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- **PR C on Sonnet:** sync conflicts between two devices, the timer with a
+  fast-forwarded clock, and offline. The offline spec must wait for
+  `navigator.serviceWorker.controller` before going offline.
+- Then D (accessibility + report-only performance), E (desktop, local only),
+  F (`qa-lead`).
+
+### What was built
+
+- `playwright.config.ts`: projects `web` and `api`. The app is built with
+  `vite build --mode e2e`, so `.env.production.local` is never loaded, and the
+  local address goes in through the environment. `e2e/check-build.mjs`
+  refuses a build containing a `https://<ref>.supabase.co` address or missing
+  the local one, then `vite preview` serves it on 4174. No retries.
+- `e2e/support/localStack.ts`: everything comes from `npx supabase status -o env`.
+  `assertLocal` refuses any host but 127.0.0.1, localhost or ::1. Never reads
+  `.env.*.local`.
+- `e2e/support/users.ts`: fresh invited, confirmed `e2e-…@test.local` users
+  per test, made with the local secret key. `inbox.ts` reads codes from Mailpit.
+  `app.ts` holds the page helpers.
+- Specs: `web/auth.spec.ts` (6 tests) and `api/realtime-isolation.spec.ts`.
+- `supabase/config.toml`: local auth rate limits raised to 1000, with a
+  "never `config push`" note there and in `supabase/README.md` and `RELEASING.md`.
+- CI: new `e2e` job (ubuntu, local stack minus unused services, Chromium),
+  which uploads the report when it fails.
+
+### Things worth not rediscovering
+
+- **supabase-js itself contains the text `*.supabase.co`** (an allow-list
+  pattern), so "does the bundle mention supabase.co" is always yes. The check
+  looks for a full `https://<ref>.supabase.co` URL. A normal `vite build` on
+  this machine contains `https://nbjehnbdgtrsglqxgxug.supabase.co`, and the check
+  refuses it.
+- **Realtime: "SUBSCRIBED" isn't "listening".** A change made before the
+  channel's `system` message `{extension: 'postgres_changes', status: 'ok'}`
+  arrives is never delivered. The realtime spec waits for both. (The app copes
+  because a re-subscribe triggers a full sync.)
+- **The sign-up password label also wraps its hint**, so the label's text is
+  "PasswordAt least 8 characters." and `getByLabel('Password', {exact})`
+  finds nothing. The helper uses `input[type="password"]`. This may come up
+  again in the accessibility pass (PR D).
+- The `supabase` CLI here is linked to the hosted project
+  (`LINKED_PROJECT_REF` shows in `status -o env`). The e2e code only ever runs
+  `status`, never a `--linked` command.
+
+### Acceptance results (plan cases 1, 3, 4, 7)
+
+| # | Case | Result |
+|---|---|---|
+| 1a | `E2E_SUPABASE_URL=https://x.supabase.co npx playwright test` | Pass: "Refusing to run…", exit 1, no browser started |
+| 1b | e2e build with `.env.production.local` present | Pass: hosted ref 0 times in `dist`, local URL present |
+| 1b' | Control: a production build put through the check | Pass: refused, naming the file with the hosted URL |
+| 1c | e2e reads no `.env.*` file | Pass: no reference; the only file read is `dist` |
+| 3 | Realtime: B hears none of A's changes; A's control hears all 3 | Pass |
+| 4 | All 7 specs, three runs in a row, no reset | Pass: 7/7, 7/7, 7/7 (~13 s each) |
+| 7 | CI `e2e` job green; a deliberate failure shows red with report | Pass: #50's `e2e` job green (7 passed). Throwaway draft #51 (expects 999 Stardust, gets 0): `e2e` red with only that test failing (1 failed, 6 passed), the other jobs green, `playwright-report` artifact kept (5 MB). #51 closed and its branch deleted |
+
+Lint, format, typecheck, `npm test` (493 passed, 10 skipped, as before) and
+`npm run build` all pass.
+
+**Not verified:** that the hosted project's user list is unchanged. I didn't
+query it, to keep the run from touching production at all. The evidence is
+structural (cases 1a-1c).
+
+---
+
+## 2026-10-20 — QA plan approved; PR A (pgTAP isolation) merged
+
+**Status: the QA plan is approved, and PR A of six is merged (#49).** Plan
 (with Lucas's five changes at approval):
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`. PR A adds
 `supabase/tests/isolation.test.sql` (50 checks), which CI's `db` job already
@@ -22,7 +94,7 @@ runs. No app or migration change.
 
 ### Next
 
-- **Merge PR A when ready**, then **PR B on Opus**: the e2e foundation
+- **PR B on Opus** (now merged as #50; see the entry above): the e2e foundation
   (production fence, fresh test users, Mailpit codes, auth specs,
   realtime-isolation spec, the `e2e` CI job, raised local auth rate limits).
 - Then C (sync, timer, offline; Sonnet), D (accessibility plus report-only

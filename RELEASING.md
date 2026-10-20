@@ -42,6 +42,10 @@ missing. `.env.example` lists every name.
 1. **Migration first, if there is one.** `npx supabase db push` to the hosted
    project *before* publishing. Migrations are backward compatible (CLAUDE.md), so
    apps still on the previous version keep working against the new schema.
+   `db push` sends migrations only. **Never run `supabase config push`**: it would
+   send `supabase/config.toml`, whose auth rate limits are raised far above
+   safe levels for the local end-to-end tests. The hosted project's auth settings
+   are set in the dashboard.
 2. **Bump the version.** On a branch: `npm run version:set -- X.Y.Z`. It rewrites the
    five files that state the version, one line each. Open a PR, let CI pass, merge.
 3. **Tag `master`.**

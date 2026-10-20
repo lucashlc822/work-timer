@@ -60,6 +60,20 @@ the hosted project, and `db reset` removes them):
 
 Invite them first: `npm run invite -- add a@test.local --local` (and `b@…`).
 
+## End-to-end tests
+
+`npm run e2e:web` runs the Playwright tests (`e2e/`) against this local stack
+only. They make their own users (`e2e-…@test.local`, invited and confirmed with
+the local secret key) and read sign-up and reset codes from the local inbox, so
+they need no accounts set up and no `db reset` between runs. They refuse to
+start if the server address isn't this computer.
+
+The auth rate limits in `config.toml` are raised far above the hosted
+project's, so a test run never trips them. That file never reaches the hosted
+project: only `supabase config push` would send it, and **it is never run
+here**. The hosted auth settings are set in the dashboard (below), and
+`db push` sends migrations only.
+
 ## Setting up the hosted project
 
 Done once, by the person who runs the server:
