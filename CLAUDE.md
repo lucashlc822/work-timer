@@ -139,7 +139,11 @@ in `NOTES.md`.
   `http://127.0.0.1:54323`.
 - **The hosted free tier pauses after ~7 days with no activity.** The app keeps
   working offline and can't sync until the project is restored from the
-  dashboard. Not a sync bug.
+  dashboard. Not a sync bug. `.github/workflows/keep-alive.yml` reads the
+  server every ~3 days to prevent it; a red "Keep server awake" run (GitHub
+  emails it) is the first sign of a pause or a changed URL/key. GitHub switches
+  scheduled workflows off after 60 days with no repository activity —
+  re-enable it in the Actions tab, or push any commit.
 - **Supabase's built-in email only reaches the project's own team.** The hosted
   project sends through Gmail as custom SMTP (~500 emails/day). A friend not
   getting a code is an SMTP setting first, an app bug second.
