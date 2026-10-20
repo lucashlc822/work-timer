@@ -12,6 +12,54 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-20 — Supabase pause guard (keep-alive workflow)
+
+**Status: built on `chore/supabase-keep-alive`, PR open, not merged.** A scheduled
+GitHub workflow now reads the hosted server every ~3 days so the free tier
+doesn't pause it after 7 quiet days. Plan:
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- **Merge the PR when ready ("merge PR #N"), then run acceptance cases 8 and 9:**
+  `gh workflow run "Keep server awake"` and watch it go green; a few days later
+  check `gh run list --workflow keep-alive.yml` for a green `schedule` run.
+  GitHub only dispatches or schedules workflows that exist on `master`, so
+  neither could run before the merge.
+- Carried over: tell friends 0.2.0 is out, set up the other machine, renew the
+  Vercel token. Next milestone not chosen.
+
+### What was done
+
+- `scripts/keep-alive.mjs`: one `GET /rest/v1/app_config?select=min_client_version`
+  with the publishable key; passes only on HTTP 200 and exactly one row with that
+  column, so a paused project, bad key or error page all fail. No dependencies.
+- `.github/workflows/keep-alive.yml`: cron `17 6 */3 * *` plus manual dispatch,
+  using the existing `VITE_SUPABASE_*` repository variables. No new secret, no
+  migration, no server change.
+- Docs: `CLAUDE.md` Environment bullet and `supabase/README.md`.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| 1 | Ping the hosted server | Pass: exit 0, `min_client_version = null` |
+| 2 | Missing `SUPABASE_URL` | Pass: exit 1, names the variable, no request |
+| 3 | Bad key | Pass: exit 1, HTTP 401 + hint, key not printed |
+| 4 | Unreachable server | Pass: exit 1, "fetch failed" + hint |
+| 5 | Body check | Pass, but against a throwaway fake HTTP server, not the local stack (Docker was off): good row exits 0; `[]`, an HTML page, and a row without the column each exit 1 |
+| 6 | Nothing secret added | Pass: no `secrets.*`; the only `sb_publishable`/`supabase.co` text is placeholders in a comment |
+| 7 | CI | ESLint and Prettier clean locally; CI result on the PR |
+| 8 | Manual run on GitHub | Not run: needs the merge |
+| 9 | Scheduled run happens | Not run: needs the merge and a few days |
+
+**Not verified:** that Supabase counts these reads as activity (it doesn't
+publish the rule; a PostgREST read that runs a Postgres query is the commonly
+used signal). The proof is the project staying unpaused through a quiet week.
+Also, GitHub disables scheduled workflows after 60 days with no repo activity.
+
+---
+
 ## 2026-10-18 — v0.2.0 released: M6 is live
 
 **Status: Starkeep v0.2.0 is published and verified, and M6 is done (plan case

@@ -81,3 +81,15 @@ Done once, by the person who runs the server:
    `.env.admin.local` on the machine you manage invites from — never anywhere
    else.
 7. `npm run invite -- add you@example.com`, then sign up from the app.
+
+## Keeping the hosted project awake
+
+The free tier pauses a project after about 7 days with no activity.
+`.github/workflows/keep-alive.yml` prevents that by running
+`scripts/keep-alive.mjs` every ~3 days: one read of the public `app_config`
+table with the publishable key. A failed run means the project is paused (restore
+it from the dashboard) or its URL or key changed. To ping by hand:
+
+```
+SUPABASE_URL=https://<ref>.supabase.co SUPABASE_PUBLISHABLE_KEY=sb_publishable_... node scripts/keep-alive.mjs
+```
