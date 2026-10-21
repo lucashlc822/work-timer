@@ -153,8 +153,12 @@ test('a session finished offline on each device: both are kept, 50 Stardust, no 
   browser,
 }) => {
   const user = await createUser('sessions');
-  const one = await openDevice(browser, BASE_URL, user, { clockMinutesAgo: 180 });
-  const two = await openDevice(browser, BASE_URL, user, { clockMinutesAgo: 90 });
+  // Both clocks start at the same time in the past. With different offsets the
+  // devices disagree about which day it is for a few hours after midnight, and
+  // a session from "tomorrow" is left out of the other device's history, so the
+  // test would fail at certain hours of the day for a reason that isn't sync.
+  const one = await openDevice(browser, BASE_URL, user, { clockMinutesAgo: 120 });
+  const two = await openDevice(browser, BASE_URL, user, { clockMinutesAgo: 120 });
   try {
     await one.context.setOffline(true);
     await two.context.setOffline(true);

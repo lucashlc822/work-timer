@@ -207,13 +207,17 @@ in `NOTES.md`.
   (`session_not_from_the_future`). `e2e/support/clock.ts` does it; a test that
   fast-forwards without it sees the session sit unuploaded, which is the check
   working, not a sync bug.
-- **The accessibility scan is report-only for now.** `e2e/web/a11y.spec.ts`
-  (axe) attaches every finding per screen but `ENFORCE` in
-  `e2e/support/a11y.ts` is false, so it never fails until someone has looked at
-  the first findings (`NOTES.md`). Bundle size (`npm run perf:size`, against
-  `e2e/perf-baseline.json`) and Lighthouse (`npm run perf:lighthouse`, needs an
-  installed Chrome or Edge) are report-only by design. Scores on localhost are
-  optimistic; read them as a trend.
+- **The accessibility scan fails on serious and critical findings.**
+  `e2e/web/a11y.spec.ts` (axe) scans every screen; `ENFORCE` in
+  `e2e/support/a11y.ts` is true and nothing is acknowledged. `--color-ink-muted`
+  is for text on night-900/800 only (not night-700). Bundle size
+  (`npm run perf:size`, against `e2e/perf-baseline.json`) and Lighthouse
+  (`npm run perf:lighthouse`, needs an installed Chrome or Edge) are report-only
+  by design; Lighthouse scores on localhost are optimistic, so read them as a
+  trend.
+- **A day-based view read with a shifted test clock can fail near midnight.**
+  Between midnight and about 03:00 a clock set hours back is on yesterday while
+  real time is today. Give both devices in a test the same offset.
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.

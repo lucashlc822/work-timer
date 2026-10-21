@@ -5,13 +5,20 @@ interface Props {
   /** Fraction elapsed, in [0, 1]. */
   progress: number;
   size?: 'large' | 'small';
+  /** What the bar measures, for screen readers: "Session progress" or "Break progress". */
+  label?: string;
 }
 
 /**
  * The remaining time and a thin progress bar. Purely presentational: callers
  * compute both numbers from the clock at render time.
  */
-export const CountdownDisplay = ({ remainingMs, progress, size = 'large' }: Props) => (
+export const CountdownDisplay = ({
+  remainingMs,
+  progress,
+  size = 'large',
+  label = 'Session progress',
+}: Props) => (
   <div className="flex w-full flex-col items-center gap-3">
     <p
       role="timer"
@@ -22,13 +29,20 @@ export const CountdownDisplay = ({ remainingMs, progress, size = 'large' }: Prop
     >
       {formatRemaining(remainingMs)}
     </p>
-    <ProgressBar progress={progress} />
+    <ProgressBar progress={progress} label={label} />
   </div>
 );
 
-export const ProgressBar = ({ progress }: { progress: number }) => (
+export const ProgressBar = ({
+  progress,
+  label = 'Session progress',
+}: {
+  progress: number;
+  label?: string;
+}) => (
   <div
     role="progressbar"
+    aria-label={label}
     aria-valuemin={0}
     aria-valuemax={100}
     aria-valuenow={Math.round(progress * 100)}

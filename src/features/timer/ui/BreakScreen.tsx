@@ -86,6 +86,7 @@ export const BreakScreen = ({
           <CountdownDisplay
             remainingMs={breakRemainingMs(brk, now)}
             progress={breakProgress(brk, now)}
+            label="Break progress"
           />
           <p className="text-ink-muted text-xs">
             Back at {formatTimeOfDay(breakEndsAt(brk))} · block {nextBlock} waits for you

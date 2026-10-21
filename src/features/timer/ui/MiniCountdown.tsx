@@ -40,7 +40,10 @@ export const MiniCountdown = () => {
         {remaining !== null ? formatRemaining(remaining) : '--:--'}
       </p>
       <div className="w-4/5">
-        <ProgressBar progress={fraction} />
+        <ProgressBar
+          progress={fraction}
+          label={brk !== null ? 'Break progress' : 'Session progress'}
+        />
       </div>
     </>
   );

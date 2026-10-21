@@ -57,8 +57,12 @@
   /* --- Text ------------------------------------------------------------- */
   --color-ink-primary: #f4f1ff;
   --color-ink-secondary: #b9b2d4;
-  /* ~4.3:1 on night-900. Decorative and large text only — never body copy. */
-  --color-ink-muted: #7c749b;
+  /* 4.9:1 on night-900 and 4.5-4.6:1 on the night-800 panels and cards: passes
+     WCAG AA for body text there, but NOT on night-700 (4.1:1), so don't put it
+     on that. It was #7c749b (4.2:1), which failed on links and hints; the
+     accessibility scan in e2e/web/a11y.spec.ts keeps it honest. Still the
+     quietest of the three text colours. */
+  --color-ink-muted: #817a9f;
 
   /* --- Semantic --------------------------------------------------------- */
   --color-success: #a8e6d0;

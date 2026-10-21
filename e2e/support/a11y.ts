@@ -16,13 +16,13 @@ import { expect, type Page, type TestInfo } from '@playwright/test';
  */
 
 /**
- * Report-only until the first findings have been looked at by the person who
- * owns the design (QA plan, PR D). While false the scan runs, attaches and
- * prints everything, and never fails. Turning it on is a one-word change, made
- * together with fixing or acknowledging what the first run found (see the
- * 2026-10-21 entry in NOTES.md).
+ * Whether serious and critical findings fail the test. They do. (It started
+ * report-only so the first findings could be looked at before anything could
+ * fail; they were fixed, and this was turned on in the same change.) Setting it
+ * false again turns the scan back into a report, and should only ever be a
+ * temporary step.
  */
-export const ENFORCE = false;
+export const ENFORCE = true;
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'];
 
