@@ -356,6 +356,9 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
     return order < 0;
   };
 
+  // Set once the current round has begun reading rows to upload.
+  let startedReading = false;
+
   const round = async (): Promise<SyncOutcome> => {
     if (!(await remote.hasSession())) return { ok: false, reason: 'signedOut' };
     try {
@@ -364,6 +367,10 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
       if (e instanceof RemoteError) return { ok: false, reason: e.kind, message: e.message };
       throw e;
     }
+
+    // From here on the round is reading what to upload; a request that arrives
+    // later can't be sure to be covered by it (see `syncNow`).
+    startedReading = true;
 
     const counts: SyncCounts = { pushed: 0, pulled: 0, skipped: 0, rejected: 0 };
     const stored = (await readMeta<Rejected>(db, META_KEYS.syncRejected)) ?? {};
@@ -521,19 +528,46 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
     }
   };
 
+  const once = async (): Promise<SyncOutcome> => {
+    startedReading = false;
+    if (lock === null) return round();
+    const result = await lock.run(round);
+    return result === 'busy' ? ({ ok: false, reason: 'busy' } as const) : result;
+  };
+
   // Single flight within this window; the lock covers other windows and tabs.
   let inFlight: Promise<SyncOutcome> | null = null;
+  let again = false;
 
   return {
+    /**
+     * Runs a round, or joins the one already running.
+     *
+     * Joining is right while that round hasn't begun reading what to upload:
+     * it will take everything pending. After that it isn't: a session that
+     * finished while the round was downloading is not in it, and the caller
+     * (asking because something new is waiting) would be told "done" with the
+     * row still waiting. So a request arriving later asks for one more round,
+     * run as soon as this one ends; any number of such requests share it.
+     * No follow-up after a failure: the caller's own retry timer owns that, and
+     * an immediate second try would only fail the same way.
+     */
     syncNow: () => {
-      if (inFlight !== null) return inFlight;
+      if (inFlight !== null) {
+        if (startedReading) again = true;
+        return inFlight;
+      }
       inFlight = (async () => {
         try {
-          if (lock === null) return await round();
-          const result = await lock.run(round);
-          return result === 'busy' ? ({ ok: false, reason: 'busy' } as const) : result;
+          let outcome = await once();
+          while (again && outcome.ok) {
+            again = false;
+            outcome = await once();
+          }
+          return outcome;
         } finally {
           inFlight = null;
+          again = false;
         }
       })();
       return inFlight;

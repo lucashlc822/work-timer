@@ -34,6 +34,8 @@ export class FakeRemote implements RemoteStore {
   /** Runs before each push is applied — lets a test edit the local store mid-upload. */
   onPush: ((table: SyncTable, rows: readonly Record<string, unknown>[]) => Promise<void>) | null =
     null;
+  /** Runs before each pull returns — lets a test hold a round in its download step. */
+  onPull: ((table: SyncTable) => Promise<void>) | null = null;
   hasSessionCalls = 0;
   pushCalls = 0;
   pullCalls = 0;
@@ -91,14 +93,16 @@ export class FakeRemote implements RemoteStore {
     }
   }
 
-  pull(table: SyncTable, since: string | null, limit: number): Promise<WireRow[]> {
-    if (this.offline) return Promise.reject(new RemoteError('network', 'offline'));
+  async pull(table: SyncTable, since: string | null, limit: number): Promise<WireRow[]> {
+    if (this.offline) throw new RemoteError('network', 'offline');
     this.pullCalls += 1;
+    await this.onPull?.(table);
+    if (this.offline) throw new RemoteError('network', 'offline');
     const rows = [...this.tables[table].values()]
       .filter((r) => since === null || Date.parse(r.server_updated_at) > Date.parse(since))
       .sort((a, b) => Date.parse(a.server_updated_at) - Date.parse(b.server_updated_at))
       .slice(0, limit);
-    return Promise.resolve(rows);
+    return rows;
   }
 
   subscribe(_userId: string, onChange: () => void): () => void {

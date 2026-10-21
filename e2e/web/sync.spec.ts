@@ -292,36 +292,19 @@ test('settings arriving through sync do not change a Pomodoro run already in pro
   }
 });
 
-// --- KNOWN DEFECT: a change made during a sync round waits for the next trigger
+// --- a change made during a sync round is not left waiting -------------------
 
 /**
- * Pins a real defect in the app (found writing these specs; reported in the
- * PR and NOTES.md, deliberately not fixed here).
- *
- * `useSync` uploads 2 s after something new is waiting, by calling `run()`,
- * and `engine.syncNow()` hands back the round already in flight instead of
- * starting another. If that round is past its upload step (it is pulling), it
- * finishes "successfully" without the new session, nothing schedules another,
- * and the session sits as "2 changes waiting" until some other trigger: the
- * window becoming visible, the connection returning, a change announced from
- * another device, or the five-minute check-in. In practice it needs a round
- * that lasts a while (a slow or flaky connection; the server library retries
- * failed reads), which is what the held request below stands in for.
- *
- * The assertion states the CORRECT behaviour: the session reaches the server
- * soon after the round ends, with no new trigger. `test.fail` keeps CI green
- * while the defect stands, and turns red the day it is fixed, at which point
- * delete the `test.fail` line. A second device with "2 changes waiting" and a
- * green "Backed up · synced just now" is this.
+ * A session finishing while a sync round is in flight (here one held in its
+ * download step, standing in for a slow or flaky connection) is uploaded soon
+ * after that round ends, without any new trigger. Once a bug: the app's
+ * upload request joined the running round, which ended without the new rows,
+ * leaving "2 changes waiting" under a green "Backed up" until the window
+ * became visible, the connection returned, or the five-minute check-in.
  */
 test('a session finished while a sync round is in flight still uploads without another trigger', async ({
   browser,
 }) => {
-  test.fail(
-    true,
-    'Known defect: the upload joins the in-flight round and is never retried (see comment).',
-  );
-
   const user = await createUser('inflight');
   const device = await openDevice(browser, BASE_URL, user, { clockMinutesAgo: 120 });
   try {
