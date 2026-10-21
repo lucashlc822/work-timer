@@ -12,6 +12,99 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — QA PR D: accessibility scan, bundle size and Lighthouse (report only)
+
+**Status: PR D open, not merged. Needs a decision from Lucas** (below). Tests and
+scripts only; no app code changed. Plan:
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- **Decide what to do with the 2 accessibility problems, then flip `ENFORCE`.**
+  The scan is report-only (`ENFORCE = false` in `e2e/support/a11y.ts`) until you
+  have seen the findings, as the plan asked. Recommended: a small follow-up PR
+  that fixes both, then sets `ENFORCE = true` in the same PR so any new problem
+  fails CI:
+  1. **The timer's progress bar has no name** (`aria-progressbar-name`, serious;
+     running screen and the end-early dialog). Fix: an `aria-label`, one line.
+  2. **"Muted" text is too faint** (`color-contrast`, serious; sign-in, sign-up,
+     forgot-password links and hints, the constellation picker's captions, and
+     the "End session" button). `--color-ink-muted` is `#7c749b`: 4.2:1 on the
+     dark panels, 4.5:1 needed. The token's own comment says "decorative and
+     large text only — never body copy", but it is used for links and hints. The
+     smallest fix is lightening the token to about `#817a9f` (4.5-4.6:1), almost
+     no visible change; the alternative is using `ink-secondary` for those
+     links and hints. A design decision, so not made here.
+- Then PR E (desktop, local only; Opus) and PR F (`qa-lead`; Opus).
+- Carried over: the keep-alive's first scheduled run, tell friends 0.2.0 is out
+  (the sync fix #53 is merged but unreleased), the other machine, the Vercel token.
+
+### What was built
+
+- `e2e/web/a11y.spec.ts` (axe-core, WCAG 2.0/2.1 A and AA plus best practice):
+  signed-out sign-in, sign-up and forgot-password; signed-in timer idle, tag
+  picker open, constellation picker, Pomodoro settings, timer running, the
+  end-early dialog, the session result, sky, stats, Stardust and shop, account.
+  Findings go to the HTML report and `accessibility-findings.json` per test.
+  `ACKNOWLEDGED` is empty: no rule is switched off.
+- `e2e/perf/bundle-size.mjs` (`npm run perf:size`): gzip size of the built JS and
+  CSS against `e2e/perf-baseline.json`; warns above +10%, never fails; CI's `web`
+  job runs it and writes the table into the job summary. `--update` rewrites the
+  baseline.
+- `e2e/perf/lighthouse.spec.ts` (`npm run perf:lighthouse`, own `perf` project,
+  not part of `npm run e2e`): Lighthouse 12.8.2 via `npx`, desktop preset, on the
+  sign-in page and the signed-in home page, against the e2e build. Attaches a
+  score table; asserts nothing about the numbers. Uses an installed Chrome or
+  Edge (`CHROME_PATH` overrides), skips if none.
+
+### First measurements (this machine, localhost)
+
+- Bundle: JS 247.2 kB gzipped (the main file 238.0 kB, 800 kB raw; Vite warns
+  above 500 kB raw), CSS 6.1 kB.
+- Lighthouse: sign-in 100 (first paint 470 ms, largest paint 576 ms, blocking 0
+  ms, layout shift 0); signed-in home 100 (largest paint 194 ms, layout shift
+  0.011). Localhost with no real network, so optimistic; a trend, not a promise.
+- The main bundle holds the whole app in one file. Splitting it (shop, stats and
+  sky picker loaded on demand) would shrink the first download; not needed yet.
+
+### Things worth not rediscovering
+
+- **Playwright's full Chromium doesn't start on this machine** ("side-by-side
+  configuration is incorrect"), only its headless shell does. Lighthouse needs a
+  full Chrome, hence the installed one.
+- **Lighthouse times out ("PROTOCOL_TIMEOUT") if Playwright is still attached to
+  the same browser**: Playwright holds every new page for itself. The spec
+  closes the Playwright connection (which only disconnects) before Lighthouse
+  runs, and gives each measurement its own browser and debugging port.
+- **Commands run through a shell need quoted paths here** (`Claude Code
+  Projects` has spaces): `--output-path` and the browser path are quoted.
+- **The sign-up password label includes its hint** ("PasswordAt least 8
+  characters."), as foreseen in the QA PR B notes; axe didn't flag it.
+- Moderate finding, not blocking: the stats, Stardust and account panels sit
+  outside any landmark (`region`), as overlays on top of the inert main page.
+
+### Acceptance results (plan cases 8, performance)
+
+| # | Case | Result |
+|---|---|---|
+| 8a | Scan runs on every screen and reports findings first | Pass: 10 findings, identical in 3 runs: 2 rules serious (contrast on 5 screens, progress-bar name on 2), `region` moderate on 3 |
+| 8b | Findings are real, not scan noise | Checked in the node text: contrast values 4.18 and 4.24; progress bar has `role="progressbar"` and no label |
+| 8c | With `ENFORCE = true` the scan fails on them | Pass (seen on the first run, before it was made report-only): 2 tests failed listing the serious findings |
+| P1 | Bundle report: no baseline, update, steady, +20% growth | Pass: prints, writes, "+0.0%", and "+20.0% ⚠" with exit 0 each time |
+| P2 | Lighthouse report on both pages | Pass: table printed and attached (scores above) |
+| — | Whole e2e suite, 3 runs in a row | Pass: 21 passed each (19 + 2 scans) |
+
+Lint, format, typecheck, `npm test` (498 passed, 10 skipped), `npm run build` and
+`npx supabase test db` (115) pass.
+
+**Not verified:** Lighthouse in CI (run locally only; the plan keeps it
+report-only and qa-lead will run it); Lighthouse under a throttled mobile
+profile (mobile is out of scope); screen-reader behaviour (axe finds roughly
+a third of real accessibility problems; keyboard-only and screen-reader checks
+need a person).
+
+---
+
 ## 2026-10-21 — Fix: a change made during a sync round no longer waits for the next trigger
 
 **Status: fix open as a PR, stacked on PR C (#52, still open), not merged.** The

@@ -45,6 +45,11 @@ jobs:
 
       - run: npm test
 
+      # How big the built app is, against e2e/perf-baseline.json. Report only:
+      # it prints a table into the job summary and never fails the job.
+      - name: Bundle size (report only)
+        run: npm run perf:size
+
       # The generated app icons are committed, so regenerating them must be a
       # no-op. A failure means the generator or the palette changed without
       # `npm run icons` being re-run.

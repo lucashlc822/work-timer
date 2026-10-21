@@ -35,6 +35,8 @@ export default defineConfig({
   projects: [
     { name: 'web', testDir: './e2e/web', use: { ...devices['Desktop Chrome'] } },
     { name: 'api', testDir: './e2e/api' },
+    // Report-only Lighthouse (`npm run perf:lighthouse`); not part of `npm run e2e`.
+    { name: 'perf', testDir: './e2e/perf' },
   ],
   webServer: {
     command:
