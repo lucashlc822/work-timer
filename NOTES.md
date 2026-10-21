@@ -12,6 +12,57 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — Accessibility fixes, and the scan now enforces
+
+**Status: PR open, not merged.** Follows QA PR D (#54, merged). Fixes the 2 serious
+findings it reported and turns `ENFORCE` on in `e2e/support/a11y.ts`, so any new
+serious or critical finding fails CI. Chosen by Lucas after seeing a before/after of
+the colour.
+
+### Next
+
+- Merge (say "merge PR #N"), then **PR E on Opus** (desktop over WebView2, local
+  only) and **PR F** (`qa-lead` agent).
+- Still open from the scan, moderate and not blocking: the stats, Stardust and
+  account panels sit outside any landmark. Left alone on purpose.
+
+### What changed
+
+- `CountdownDisplay.tsx`: the progress bar now has `aria-label` ("Session
+  progress", or "Break progress" on the break screen and in the mini window while
+  on a break). New unit test `CountdownDisplay.test.tsx`.
+- `tokens.css`: `--color-ink-muted` `#7c749b` to `#817a9f`. 4.2:1 became 4.5-4.6:1
+  on the night-800 panels and cards, 4.9:1 on night-900. It does **not** reach
+  4.5:1 on night-700 (4.1:1), so it must not be used on that; the comment says so.
+  The scan covers every screen as it stands today.
+- `ENFORCE = true`. No finding is acknowledged.
+
+### Found along the way
+
+- **A test of mine failed at certain hours of the day (not an app bug).** The
+  two-device session test used clocks 180 and 90 minutes in the past. Between
+  midnight and about 03:00 local the two clocks fall on different days, and a
+  session from "tomorrow" is left out of the other device's All-time history. It
+  passed earlier in the evening and failed 4 of 4 at 01:43. Both devices now start
+  from the same time. Worth remembering: anything in e2e that reads a day-based
+  view with a shifted clock can misbehave near midnight.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| 1 | Scan with `ENFORCE = true` after the fixes | Pass: both tests green; only the 3 moderate `region` notes remain |
+| 2 | Scan fails if the old colour returns | Pass (checked, then restored): 3 serious contrast findings on sign in, sign up, forgot password, and the signed-in test fails too |
+| 3 | Progress bar named | Pass: 3 new unit tests; the scan no longer lists `aria-progressbar-name` |
+| 4 | Whole e2e suite, 3 runs in a row | Pass: 21 passed each (after the clock fix) |
+| 5 | `npm test` | Pass: 501 passed, 10 skipped (498 + 3) |
+| 6 | lint, format, typecheck, build, bundle size | Pass; bundle +0.0% |
+
+**Not verified:** the colour on screens the scan can't reach (any text only seen in
+states the scan doesn't visit); keyboard-only and screen-reader use by a person.
+
+---
+
 ## 2026-10-21 — QA PR D: accessibility scan, bundle size and Lighthouse (report only)
 
 **Status: PR D open, not merged. Needs a decision from Lucas** (below). Tests and
