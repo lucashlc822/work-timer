@@ -207,11 +207,6 @@ in `NOTES.md`.
   (`session_not_from_the_future`). `e2e/support/clock.ts` does it; a test that
   fast-forwards without it sees the session sit unuploaded, which is the check
   working, not a sync bug.
-- **A change made while a sync round is in flight waits for the next trigger.**
-  Known defect, pinned by an expected-failure test in `e2e/web/sync.spec.ts`
-  (details in `NOTES.md`). A second device showing "Backed up · synced just now
-  · 2 changes waiting" is this: press "Sync now", or wait for the next trigger
-  (≤ 5 min).
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.

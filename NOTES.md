@@ -12,6 +12,53 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — Fix: a change made during a sync round no longer waits for the next trigger
+
+**Status: fix open as a PR, stacked on PR C (#52, still open), not merged.** The
+branch is cut from `test/e2e-sync-timer-offline` because the e2e defect test it
+un-marks lives there; merge #52 first, then this (GitHub retargets it to
+`master`). Fixes the defect described in the QA PR C entry below.
+
+### Next
+
+- Merge #52, then this PR (say "merge PR #N").
+- PR D (accessibility + report-only performance), then E and F, as in the QA plan.
+
+### What changed
+
+- `src/shared/sync/engine.ts`: `syncNow()` still joins a round already running
+  if that round hasn't begun reading what to upload (so two simultaneous
+  triggers still make one round, case 17). Once it has, a new request sets one
+  "again" flag; when the round ends **successfully** one more round runs, and any
+  number of such requests share it. A failed round gets no immediate follow-up
+  (the hook's 5 s doubling retry owns that). All callers get the last round's
+  outcome. No change to `useSync`, the lock, backoff, or the server.
+- `src/shared/sync/fakeRemote.ts`: an `onPull` hook (like `onPush`) to hold a
+  round in its download step.
+- `src/shared/sync/engine.test.ts`: 5 new tests. Three fail without the fix.
+  Two pin what must not change (a request before any reading joins; no
+  follow-up after a failure).
+- `e2e/web/sync.spec.ts`: the defect test is now a normal test (its
+  `test.fail` and "known defect" wording are gone). Removed the matching note from
+  `CLAUDE.md`'s Environment section and the stale comment in `support/devices.ts`.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| 1 | Engine unit tests, before the fix | 3 of the 5 new tests fail (late row not uploaded; 1 round instead of 2; third request not covered) |
+| 2 | Engine unit tests, after | Pass: 45 in the file, all green |
+| 3 | e2e defect test without the fix (src reverted for the check) | Fails: nothing on the server (expected 1, received 0) |
+| 4 | e2e defect test with the fix; whole e2e suite, 3 runs in a row | Pass: 19 passed each time (~21 s), no expected failures left |
+| 5 | `npm test` | Pass: 498 passed, 10 skipped (was 493 + 5 new) |
+| 6 | lint, format, typecheck, build, `npx supabase test db` | Pass (115 database tests) |
+
+**Not verified:** a real slow or flaky connection (the in-flight round is a held
+request). One extra pull-only round after a joined request is by design: it
+costs about six small reads.
+
+---
+
 ## 2026-10-21 — QA PR C: timer, offline and two-device sync specs; one app defect found
 
 **Status: PR C open, not merged.** Tests only; no app code changed. 12 new

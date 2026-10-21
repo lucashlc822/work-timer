@@ -36,12 +36,10 @@ export const openDevice = async (
  * Waits until no sync round is running and the last one succeeded ("Backed up"
  * in the Account panel), then returns to the timer.
  *
- * Tests cut a device's network right after it signs in. A round still in
- * flight at that moment can outlive the outage (the server library retries
- * reads), and a change made meanwhile is then not uploaded until the next
- * trigger: a real app defect, pinned by its own test in sync.spec.ts. The
- * tests about other things start from a settled device so they don't depend
- * on it.
+ * Tests cut a device's network right after it signs in. A sign-in round
+ * still running at that moment would be cut mid-way, and what the tests then
+ * assert (what is pending, what reconnects first) should start from a quiet
+ * device rather than depend on that race.
  */
 export const settle = async (page: Page): Promise<void> => {
   await openView(page, 'Account');

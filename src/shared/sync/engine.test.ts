@@ -314,6 +314,118 @@ describe('concurrency', () => {
     expect(remote.tables.sessions.size).toBe(1);
   });
 
+  // The defect behind "N changes waiting" under a green "Backed up": the app
+  // asks for a round 2 s after something new is pending, and that ask used to
+  // be handed the round already running. If that round was past its upload
+  // step it ended without the new row, and nothing asked again.
+  describe('a request that arrives while a round is already in flight', () => {
+    /** Starts a round and holds it in its download step, after its uploads were read. */
+    const holdInDownload = async (
+      remote: FakeRemote,
+      engine: ReturnType<typeof device>['engine'],
+    ) => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      let entered!: () => void;
+      const inDownload = new Promise<void>((resolve) => (entered = resolve));
+      remote.onPull = async () => {
+        remote.onPull = null; // only the first pull is held
+        entered();
+        await gate;
+      };
+      const first = engine.syncNow();
+      await inDownload;
+      return { first, release };
+    };
+
+    it('uploads what became pending after the round read its uploads', async () => {
+      const remote = new FakeRemote();
+      const { db, engine } = device(remote);
+      const { first, release } = await holdInDownload(remote, engine);
+
+      const late = session();
+      await db.sessions.add(late); // finished while the round is pulling
+      const second = engine.syncNow(); // the app's upload request, 2 s later
+      release();
+
+      const [a, b] = await Promise.all([first, second]);
+      expect(a).toBe(b);
+      expect(a.ok).toBe(true);
+      expect(remote.tables.sessions.has(late.id)).toBe(true);
+      expect((await db.sessions.get(late.id))?.syncedAt).not.toBeNull();
+      expect((await countPending(db)).pending).toBe(0);
+    });
+
+    it('several such requests cause one follow-up round, not one each', async () => {
+      const remote = new FakeRemote();
+      const { db, engine } = device(remote);
+      const { first, release } = await holdInDownload(remote, engine);
+
+      await db.sessions.add(session());
+      const requests = [engine.syncNow(), engine.syncNow(), engine.syncNow()];
+      release();
+      await Promise.all([first, ...requests]);
+
+      expect(remote.hasSessionCalls).toBe(2); // the round, and one follow-up
+    });
+
+    it('a request made before the round has read anything simply joins it', async () => {
+      const remote = new FakeRemote();
+      const { engine } = device(remote);
+
+      await Promise.all([engine.syncNow(), engine.syncNow()]);
+
+      expect(remote.hasSessionCalls).toBe(1);
+    });
+
+    it('does not start a follow-up straight after a failed round (the retry timer owns that)', async () => {
+      const remote = new FakeRemote();
+      const { db, engine } = device(remote);
+      const { first, release } = await holdInDownload(remote, engine);
+
+      await db.sessions.add(session());
+      const second = engine.syncNow();
+      remote.offline = true; // the connection drops while the round is held
+      release();
+
+      const outcome = await first;
+      expect(await second).toBe(outcome);
+      expect(outcome).toMatchObject({ ok: false, reason: 'network' });
+      expect(remote.hasSessionCalls).toBe(1);
+    });
+
+    it('a request made during the follow-up round gets another one, so nothing is left behind', async () => {
+      const remote = new FakeRemote();
+      const { db, engine } = device(remote);
+      const { first, release } = await holdInDownload(remote, engine);
+
+      await db.sessions.add(session());
+      const second = engine.syncNow();
+      // Hold the follow-up round in its download step as well.
+      let release2!: () => void;
+      const gate2 = new Promise<void>((resolve) => (release2 = resolve));
+      let entered2!: () => void;
+      const inFollowUp = new Promise<void>((resolve) => (entered2 = resolve));
+      remote.onPull = async () => {
+        if (remote.hasSessionCalls < 2) return; // still the first round's pulls
+        remote.onPull = null;
+        entered2();
+        await gate2;
+      };
+      release();
+      await inFollowUp;
+
+      const lateAgain = session();
+      await db.sessions.add(lateAgain);
+      const third = engine.syncNow();
+      release2();
+
+      await Promise.all([first, second, third]);
+      expect(remote.tables.sessions.has(lateAgain.id)).toBe(true);
+      expect(remote.hasSessionCalls).toBe(3);
+    });
+  });
+
   it('another window holding the lock means this one skips', async () => {
     const remote = new FakeRemote();
     const held: SyncLock = { run: () => Promise.resolve('busy' as const) };
