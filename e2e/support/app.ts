@@ -56,3 +56,49 @@ export const openTagPicker = async (page: Page) => {
   await expect(panel).toBeVisible();
   return panel;
 };
+
+/** The footer's Stardust balance as a number. */
+export const stardustBalance = async (page: Page): Promise<number> => {
+  const text = (await stardustPill(page).textContent()) ?? '';
+  return Number(text.replace(/[^\d]/g, ''));
+};
+
+/** Opens a footer view ("Stats", "Account", ...). */
+export const openView = async (page: Page, name: 'View sky' | 'Stats' | 'Account') => {
+  await page.getByRole('button', { name, exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
+};
+
+export const backToTimer = async (page: Page): Promise<void> => {
+  await page.getByRole('button', { name: 'Back to timer' }).click();
+  await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
+};
+
+/** The sync line in the Account panel ("Backed up · synced just now", "Offline", ...). */
+export const syncLine = (page: Page) =>
+  page.getByRole('region', { name: 'Sync' }).getByRole('status');
+
+/**
+ * Shows the Account panel's sync line, runs "Sync now" and waits for the
+ * round to finish. Leaves the app on the timer.
+ */
+export const syncNow = async (page: Page): Promise<void> => {
+  await openView(page, 'Account');
+  await page.getByRole('button', { name: 'Sync now' }).click();
+  await expect(syncLine(page)).toContainText('Backed up', { timeout: 20_000 });
+  await backToTimer(page);
+};
+
+/**
+ * How many sessions this device's own history holds, from Stats → All time
+ * ("Sessions · 2"). Reads the device's local copy, so it shows whether a
+ * session from another device really arrived, not only its Stardust.
+ */
+export const sessionsOnDevice = async (page: Page): Promise<number> => {
+  await openView(page, 'Stats');
+  await page.getByRole('tab', { name: 'All time' }).click();
+  const heading = page.getByRole('region', { name: 'Sessions' }).getByRole('heading');
+  const text = (await heading.isVisible()) ? await heading.innerText() : '';
+  await backToTimer(page);
+  return Number(/·\s*(\d+)/.exec(text)?.[1] ?? 0);
+};

@@ -12,6 +12,96 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — QA PR C: timer, offline and two-device sync specs; one app defect found
+
+**Status: PR C open, not merged.** Tests only; no app code changed. 12 new
+specs (19 in the suite, 3 runs in a row all green, ~30 s). Plan:
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- **Decide about the defect below** (its own PR; a fix is small). Today its test
+  is marked expected-to-fail, so the day it is fixed that test goes red and
+  tells you to delete one line (`test.fail(...)`).
+- **PR D on Sonnet:** accessibility (axe) plus report-only performance
+  (bundle size baseline, Lighthouse). The sign-up password label wraps its
+  length hint ("PasswordAt least 8 characters."), which is likely an axe/label
+  finding.
+- Then E (desktop, local only; Opus), F (`qa-lead` agent; Opus).
+- Carried over: first scheduled keep-alive run (`gh run list --workflow
+  keep-alive.yml`), tell friends 0.2.0 is out, the other machine, the Vercel token.
+
+### What was built
+
+- `e2e/web/timer.spec.ts`: a 25-minute session fast-forwarded to completion
+  (star result, +25, pill, server session and ledger, "Backed up", nothing
+  refused); ending early after 10 minutes with "Keep going" first (saved as
+  cancelled, 600 s, no Stardust); a running session surviving a reload.
+- `e2e/web/offline.spec.ts`: waits for the service worker to control the page
+  (reloading once if needed), cuts the network, reloads (the shell and account
+  open offline, the page is controlled by an `activated` worker), finishes a
+  session, sees "Offline · N changes waiting", confirms the server has nothing,
+  restores the network and sees everything upload. Control: with
+  `serviceWorkers: 'block'` the same offline reload fails.
+- `e2e/web/sync.spec.ts` (two browser contexts = two devices): tag renamed on
+  both (later edit wins, in both reconnect orders); settings changed on both
+  (newest whole settings win); a session offline on each (both on the server,
+  both in each device's own history, 50 Stardust, exactly 2 ledger rows); the
+  same shop item bought on both (one deduction); settings arriving by sync
+  leave a running Pomodoro run's lengths alone; and the defect test.
+- Helpers: `support/clock.ts`, `support/devices.ts`, more in `support/app.ts`.
+
+### Found along the way
+
+- **DEFECT (app, pre-existing, not fixed here): a change made while a sync round
+  is in flight waits for the next trigger.** `useSync` calls `run()` 2 s after
+  something new is pending; `engine.syncNow()` returns the round already in
+  flight rather than starting one. If that round is past its upload step it
+  finishes OK, pulls, says "Backed up · synced just now" and leaves the new rows
+  as "N changes waiting" until another trigger: the window becoming visible,
+  the connection returning, a Realtime event, or the 5-minute check-in. A round
+  lasts long when the connection is slow or flaky, because `postgrest-js` retries
+  failed reads by default. Data is safe on the device; the backup is late (≤ 5
+  min). Found as a ~1-in-2 flake in the two-device session test: the device
+  that signed in just before going offline still had its start-up round open.
+  Reproduced deterministically by holding the pull's first request (5 of 5
+  runs, nothing uploaded in 20 s). Confirmed against `master`: this PR changes
+  no app code. A fix: have `run()` note "run again" when called during a round
+  and start another when it ends (or have `syncNow` queue one follow-up).
+- **The test clock starts in the past.** `ended_at` must be within 5 minutes of
+  the server's clock (`session_not_from_the_future`); a page clock moved 25
+  minutes forward from "now" makes a session the server refuses.
+- **Tests that cut the network start from a settled device** (`settle()` in
+  `support/devices.ts`): Account panel shows "Backed up" first, so they don't
+  trip over the defect above.
+- **Offline, "Syncing…" can show for several seconds** before "Offline · N
+  changes waiting" (the retrying reads again). The spec waits up to 30 s.
+- **I dropped and recreated two triggers by mistake** while restoring the local
+  database after the last-write-wins mutation: `drop function lww_guard
+  cascade` removed `tags_lww` and `user_settings_lww`. They were recreated from
+  the migration and `npx supabase test db` passes (115). Local database only.
+
+### Acceptance results (plan cases 5, 6; case 7 re-run on the PR)
+
+| # | Case | Result |
+|---|---|---|
+| 5a | Tag race, both reconnect orders; settings race | Pass; with `lww_guard` deliberately reversed on the local server all three fail (the newer edit loses) |
+| 5b | Purchase on both devices is one deduction | Pass; with purchase ids made random in `reconcile.ts` it fails (3 extra ledger rows) |
+| 5c | Both sessions on both devices | Pass; with `pullTable('sessions')` never adopting a session it fails (history shows 1, expected 2). The first version of this test passed under that break (Stardust alone doesn't show it); fixed by also reading each device's history |
+| 6a | Timer: complete, end early, reload | Pass |
+| 6b | Offline: shell opens, session finishes, uploads on reconnect | Pass; control (service worker blocked) cannot reload offline |
+| 6c | Offline spec waits for the service worker | Done as asked. Removing the wait did not fail the test on this machine (the worker was already controlling), so the wait guards a timing race on slow machines rather than being exercised by a mutation |
+| — | Whole suite, 3 runs in a row | Pass: 19 passed each time (including 1 expected failure) |
+
+Lint, format, typecheck, `npm test` (493 passed, 10 skipped) and `npm run build`
+pass.
+
+**Not verified:** behaviour under a genuinely slow network (the in-flight
+round was simulated by holding one request); Realtime-triggered sync timing
+between the devices; a Pomodoro run completing and breaking across devices.
+
+---
+
 ## 2026-10-20 — QA PR B: e2e foundation (Playwright, production fence, auth)
 
 **Status: PR B (#50) merged, after PR A (#49, pgTAP isolation).** Plan:
