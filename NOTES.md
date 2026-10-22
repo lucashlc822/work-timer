@@ -12,6 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-22 — Released 0.2.1
+
+**Status: 0.2.1 is published (tag `v0.2.1`, Latest) and the web version is
+deployed from the same commit (`aa05bce`).** Friends get it on their next
+update check. It ships the late-upload sync fix (#53) and the accessibility
+fixes (#55). No migration, no `min_client_version` change. Nothing in flight.
+
+### Next
+
+- **Keep-alive case 9:** after 2026-10-22 06:17 UTC, `gh run list --workflow
+  keep-alive.yml` should show a green `schedule` run. Record it here.
+- `cargo install cargo-audit` once, so qa-lead's Rust audit stops reading "not run".
+- Carried over: tell friends 0.2.1 is out, set up the other machine. No next
+  milestone has been chosen.
+- **Vercel token expires 2027-10-16**; renew it before then (new token into the
+  `VERCEL_TOKEN` GitHub secret, delete the old one), or web deploys fail.
+
+### What was done
+
+Version bump PR #60 (five files, one line each), merged; tag `v0.2.1` on
+`master`; CI built the draft; published by id with `tag_name` named, per
+`RELEASING.md` step 5.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| A1 | Bump touches exactly the five version files; version tests pass; CI green | Pass: 6 lines in 5 files; `setVersion` and `brand` tests pass; db, desktop, e2e, web all green |
+| A2 | `npm run e2e:desktop` passes, nothing left running | Pass on the second run (4 passed, 2.7 min); no `starkeep.exe`, nothing listening on 5173/9222. **The first run failed**, see below |
+| A3 | Desktop checklist walked by hand | Pass (Lucas, tray, notification, window); startup and update items not walked before release |
+| A4 | Release run green; draft holds the four files; `latest.json` points at `/download/v0.2.1/` | Pass; both installers 2,317,601 bytes; version 0.2.1, signed |
+| A5 | Published under `v0.2.1`; Deploy web green on the tagged commit | Pass: Latest is `v0.2.1`, no `untagged-` tag; deploy built `aa05bce` |
+| A6 | Web address loads, sign-in works | Pass: 200 and a built page (me); sign-in checked by Lucas |
+| A7 | `Starkeep-setup.exe` download link resolves | Pass: 200 after redirects |
+| A8 | Installed app shows "Starkeep 0.2.1 is ready" and restarts onto it | Pass (Lucas, by eye) |
+
+### Things worth not rediscovering
+
+- **One unexplained desktop-test hang.** On the first run, the sign-up test in
+  `desktop.spec.ts` waited 10 minutes for "New here? Create an account" to become
+  clickable ("visible, enabled and stable"), then timed out (the run took 11.9
+  min; the fourth test did not run). The immediate re-run passed 4/4 in 2.7 min.
+  Not reproduced, so the cause is unknown: a window that wasn't drawing is the
+  guess. The release changed no desktop code. If it recurs, look at that
+  `click` first.
+- CI's `desktop` job does not run the WebView2 tests; they are local only.
+
+---
+
 ## 2026-10-21 — Session wrap-up: the QA plan is complete
 
 **Status: everything from this session is merged to `master` (#48–#58; #51 was
@@ -40,6 +89,8 @@ are still on 0.2.0, which lacks the sync fix (#53) and the accessibility fixes
   2026-10-22 06:17 UTC.
 
 ### Next
+
+*(Superseded: 0.2.1 is released, see the 2026-10-22 entry above.)*
 
 - **Release 0.2.1** following `RELEASING.md`. There is no migration this time.
   It ships the late-upload sync fix (#53) and the clearer muted text and named
