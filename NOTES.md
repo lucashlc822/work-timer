@@ -12,6 +12,87 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — QA PR E: desktop end-to-end tests (local only)
+
+**Status: PR E open, not merged.** The detailed plan for this PR (written before
+building, with the safety findings) is at the end of
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`. These tests are
+**not** GitHub checks: GitHub's Windows runners can't run the local Supabase
+server.
+
+### Next
+
+- Merge (say "merge PR #N"), then **PR F**: the `qa-lead` agent (Opus).
+- Before a release that touches the tray, notifications, startup or updates, run
+  `npm run e2e:desktop` and `npm run e2e:update` and walk
+  `docs/qa-desktop-checklist.md` with the real app.
+
+### What was built
+
+- `e2e/desktop/launch.ts`: starts `tauri dev` (or a built exe), connects
+  Playwright over WebView2's DevTools port 9222, and stops the whole process
+  tree. Fresh WebView2 profile per launch via `WEBVIEW2_USER_DATA_FOLDER`,
+  checked to be in use, deleted on stop. Refuses while any `starkeep.exe` runs or
+  5173/9222 are taken; `localStack()` refuses a non-local server.
+- `e2e/desktop/desktop.spec.ts`: sign-up with the emailed code, sign out, sign
+  in on the desktop; a real 1-minute session on the desktop reaches a web
+  "device" (Stardust and history), and a tag made on the web appears on the
+  desktop live.
+- `e2e/desktop/native.spec.ts`: the tooltip reads "Starkeep — 1 min left";
+  closing the window hides it to the tray and the page turns `hidden`; the
+  notification fires on time while hidden ("Session complete — 1 minute of
+  focus."), the tooltip resets; launching the exe again brings the window back
+  `visible` with the result; the session is on the server. Autostart: toggling
+  adds an entry for the debug exe and removes it, and the test always cleans up.
+- `e2e/desktop-update/update.spec.ts` (`npm run e2e:update`, ~2 min after the
+  first release build): throwaway key, local `latest.json` for the next patch
+  version, release build with a config overlay and the e2e frontend. The notice
+  shows on sign-in and when idle, is gone during a session, and is back after.
+  It never installs.
+- Rust: `native_log` and the `debug_native_log` command, both
+  `#[cfg(debug_assertions)]`; release builds contain neither.
+- `docs/qa-desktop-checklist.md`: what a person checks by eye.
+
+### Things worth not rediscovering
+
+- **The dev build shares the installed app's WebView2 profile** unless told
+  otherwise (same identifier). Without the throwaway profile these tests would
+  have signed Lucas out of his real app.
+- **With Playwright attached, `document.visibilityState` stays `visible`**
+  even with the window hidden. Detached, the app's fix works ("hidden"). The
+  hidden-to-tray test detaches and reads state over a plain DevTools socket.
+- **Git Bash turns `reg … /v Name` into a path**, so `reg query/delete` fail
+  with "Invalid syntax". One cleanup of mine silently did nothing because of
+  this. Use PowerShell or Node's `execSync`.
+- **The autostart checkbox flips only after the app re-reads the setting**, so
+  `locator.check()` fails; click, then expect.
+- **An early version of the autostart test failed mid-way and left the debug
+  exe's startup entry behind.** I removed it (it pointed at
+  `target\debug\starkeep.exe`; there was no Starkeep entry before) and the test
+  now removes anything its build added in a `finally`.
+
+### Acceptance results (PR E plan cases)
+
+| # | Case | Result |
+|---|---|---|
+| E1 | `npm run e2e:desktop` passes; nothing left running | Pass, twice: 4 passed each; no `starkeep.exe`, 5173/9222 free, no temp profiles left |
+| E2 | Installed app's profile unchanged | Pass: 592 files, identical names and modification times before and after both runs |
+| E3 | Hosted URL refused before anything starts | Pass: "Refusing to run…", no process started |
+| E4 | Tooltip during a 1-minute session, reset after; one notification | Pass |
+| E5 | Autostart entry appears and disappears | Pass (no real entry existed, so it ran rather than skipped) |
+| E6 | No `debug_native_log` in a release build | Pass: the call is rejected in the update test's release exe |
+| E7 | Update notice: offered idle, hidden mid-session; `tauri.conf.json` unchanged | Pass; with the mid-session rule deliberately removed from `DesktopUpdatePrompt` it fails ("Expected hidden, received visible"), then restored |
+| E8 | Web suite still green | Pass: 21 passed |
+
+Lint, format, typecheck, `npm test` (501 passed, 10 skipped), build, `cargo fmt`
+and `cargo clippy -D warnings` (debug and release) pass.
+
+**Not verified:** what Windows actually draws (tray icon, toast; see the
+checklist); actually installing an update (the test stops at the notice);
+autostart across a real Windows sign-in; the mini window; macOS.
+
+---
+
 ## 2026-10-21 — Accessibility fixes, and the scan now enforces
 
 **Status: PR open, not merged.** Follows QA PR D (#54, merged). Fixes the 2 serious

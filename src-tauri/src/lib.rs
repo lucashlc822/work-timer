@@ -31,8 +31,56 @@ fn set_tray_status(app: tauri::AppHandle, text: Option<String>) -> Result<(), St
         .tray_by_id(TRAY_ID)
         .ok_or_else(|| "tray icon not found".to_string())?;
 
-    tray.set_tooltip(Some(&tray_tooltip(text.as_deref())))
-        .map_err(|e| e.to_string())
+    let tooltip = tray_tooltip(text.as_deref());
+    #[cfg(debug_assertions)]
+    native_log::tooltip(&tooltip);
+    tray.set_tooltip(Some(&tooltip)).map_err(|e| e.to_string())
+}
+
+/// Debug builds only: what the app last asked Windows to show, for the
+/// end-to-end tests (`e2e/desktop/native.spec.ts`). Windows offers no way for a
+/// test to read a tray tooltip or a toast back, so the requests are recorded
+/// here instead. Compiled out of release builds entirely, command included.
+#[cfg(debug_assertions)]
+pub(crate) mod native_log {
+    use std::sync::Mutex;
+
+    #[derive(Clone, serde::Serialize)]
+    pub struct Notice {
+        title: String,
+        body: String,
+    }
+
+    #[derive(Clone, serde::Serialize)]
+    pub struct Log {
+        tooltip: Option<String>,
+        notifications: Vec<Notice>,
+    }
+
+    static LOG: Mutex<Log> = Mutex::new(Log {
+        tooltip: None,
+        notifications: Vec::new(),
+    });
+
+    pub fn tooltip(text: &str) {
+        if let Ok(mut log) = LOG.lock() {
+            log.tooltip = Some(text.to_string());
+        }
+    }
+
+    pub fn notification(title: &str, body: &str) {
+        if let Ok(mut log) = LOG.lock() {
+            log.notifications.push(Notice {
+                title: title.to_string(),
+                body: body.to_string(),
+            });
+        }
+    }
+
+    #[tauri::command]
+    pub fn debug_native_log() -> Option<Log> {
+        LOG.lock().ok().map(|log| log.clone())
+    }
 }
 
 fn tray_tooltip(status: Option<&str>) -> String {
@@ -46,7 +94,10 @@ fn tray_tooltip(status: Option<&str>) -> String {
 /// as the deadline thread. Tray text is cosmetic, so failures are dropped.
 pub(crate) fn set_tooltip(app: &tauri::AppHandle, status: Option<&str>) {
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        let _ = tray.set_tooltip(Some(&tray_tooltip(status)));
+        let tooltip = tray_tooltip(status);
+        #[cfg(debug_assertions)]
+        native_log::tooltip(&tooltip);
+        let _ = tray.set_tooltip(Some(&tooltip));
     }
 }
 
@@ -90,7 +141,7 @@ fn show_main_window(app: &tauri::AppHandle) {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // Single instance must be registered first, so a second launch is
         // intercepted before any other plugin initialises. Two processes
         // sharing one IndexedDB would corrupt session state.
@@ -110,12 +161,25 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .manage(deadline::DeadlineState::default())
-        .invoke_handler(tauri::generate_handler![
-            set_tray_status,
-            deadline::arm_deadline,
-            deadline::disarm_deadline
-        ])
+        .manage(deadline::DeadlineState::default());
+
+    // The end-to-end tests' window into the tray and notifications exists in
+    // debug builds only (see `native_log`).
+    #[cfg(debug_assertions)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        set_tray_status,
+        deadline::arm_deadline,
+        deadline::disarm_deadline,
+        native_log::debug_native_log
+    ]);
+    #[cfg(not(debug_assertions))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        set_tray_status,
+        deadline::arm_deadline,
+        deadline::disarm_deadline
+    ]);
+
+    builder
         .setup(|app| {
             let open_item = MenuItem::with_id(app, "open", "Open Starkeep", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

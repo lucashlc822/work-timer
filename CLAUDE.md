@@ -45,6 +45,7 @@ npx supabase start   # the local server (first run downloads images)
 npm run tauri:dev    # the desktop app
 npm run dev          # the browser build
 npm run e2e:web      # end-to-end tests (needs the local stack running)
+npm run e2e:desktop  # the same against the desktop app (Windows, local only)
 ```
 
 Both dev commands read `.env.development.local`, which points at the local
@@ -218,6 +219,23 @@ in `NOTES.md`.
 - **A day-based view read with a shifted test clock can fail near midnight.**
   Between midnight and about 03:00 a clock set hours back is on yesterday while
   real time is today. Give both devices in a test the same offset.
+- **Desktop end-to-end tests run in a throwaway WebView2 profile.** The dev
+  build has the installed app's identifier, so by default they'd share one
+  profile (sign-in, IndexedDB). `e2e/desktop/launch.ts` sets
+  `WEBVIEW2_USER_DATA_FOLDER` to a fresh temp folder per launch and refuses to
+  start while any `starkeep.exe` runs (single-instance would hand over to it).
+  Quit the installed app from the tray first. The autostart test skips itself
+  if a Starkeep startup entry already exists.
+- **With Playwright attached, a WebView2 page always reports itself
+  visible.** Hidden-to-tray checks detach Playwright and read
+  `document.visibilityState` over a plain DevTools socket (`rawEvaluate`). With
+  nothing attached the app's visibility fix works. Not an app bug.
+- **`debug_native_log` exists in debug builds only.** It records the tray
+  tooltip and notifications the app asked for, since Windows lets no test read
+  them back. A release build has no such command (the update test checks).
+- **Git Bash rewrites `reg` switches like `/v` into paths** ("ERROR: Invalid
+  syntax"). Use PowerShell (`Get-ItemProperty`, `Remove-ItemProperty`) or
+  Node's `execSync`, which goes through cmd.
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.

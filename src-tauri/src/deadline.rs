@@ -191,6 +191,8 @@ fn watch(app: AppHandle, generation: u64, stages: Vec<Stage>) {
                     armed.session_id = stages.peek().map(|next| next.session_id.clone());
                     crate::set_tooltip(&app, None);
                     drop(armed);
+                    #[cfg(debug_assertions)]
+                    crate::native_log::notification(&stage.title, &stage.body);
                     let _ = app
                         .notification()
                         .builder()

@@ -37,6 +37,26 @@ export default defineConfig({
     { name: 'api', testDir: './e2e/api' },
     // Report-only Lighthouse (`npm run perf:lighthouse`); not part of `npm run e2e`.
     { name: 'perf', testDir: './e2e/perf' },
+    // The Windows desktop app over WebView2's DevTools port (`npm run e2e:desktop`):
+    // local only, one app at a time, not part of `npm run e2e`.
+    {
+      name: 'desktop',
+      testDir: './e2e/desktop',
+      fullyParallel: false,
+      timeout: 600_000,
+      // Traces and screenshots belong to browsers Playwright launched; this one
+      // is the app's own WebView2, which is closed under them at the end.
+      use: { trace: 'off', screenshot: 'off', video: 'off' },
+    },
+    // The desktop update notice against a throwaway key and a local "release"
+    // (`npm run e2e:update`): makes a release build, so slow and run by hand.
+    {
+      name: 'desktop-update',
+      testDir: './e2e/desktop-update',
+      fullyParallel: false,
+      timeout: 40 * 60_000,
+      use: { trace: 'off', screenshot: 'off', video: 'off' },
+    },
   ],
   webServer: {
     command:
