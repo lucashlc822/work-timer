@@ -12,6 +12,69 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — QA PR F: the qa-lead agent (acceptance runs pending)
+
+**Status: PR F open, not merged, stacked on PR E (#56). The agent itself has not
+run yet**: it only loads in a Claude Code session started after it was added,
+and the headless run (`claude -p --agent qa-lead`) stopped at "OAuth session
+expired". Its guard hook is fully tested. Plan: end of
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- **Run the four agent acceptance cases** (below), in a new Claude Code session
+  or after `claude` is signed in again. They block merging this PR.
+- Merge #56, then this one (retarget it to `master` if GitHub doesn't).
+- The QA plan is then complete. Carried over: release the sync fix and the
+  accessibility fixes (unreleased on `master`), tell friends, the other machine,
+  the Vercel token, the first scheduled keep-alive run.
+
+### What was built
+
+- `.claude/agents/qa-lead.md`: tools Read, Grep, Glob, Bash, Skill; `memory:
+  project` (`.claude/agent-memory/qa-lead/`); model `sonnet` (change it there for
+  a deeper review). It reads CLAUDE.md's Environment section and its memory
+  first, records the starting `git status` and diff hash, checks the stack, then
+  runs:
+  - lint, format, typecheck, unit tests, build and bundle size; Rust fmt and
+    clippy
+  - pgTAP, `e2e:web` (with accessibility), Lighthouse
+  - `npm audit --omit=dev` and `cargo audit` (reported as not run, with the
+    install hint, when missing: it is missing here)
+  - the `security-review` skill
+  - guardrail checks (no `supabase config push` in scripts or workflows;
+    accessibility still enforcing)
+  - desktop tests only when asked
+
+  Reports Changes-outside-memory (always Critical, first), Critical, Should fix,
+  Minor, Passed, Not run. Rules: never edits, skips or loosens anything; never
+  touches production; may re-run a failing test once only to classify it, and
+  reports both results.
+- `.claude/hooks/qa-lead-guard.mjs`: the agent's PreToolUse hook on
+  Edit/Write/MultiEdit/NotebookEdit. It allows only paths inside its memory
+  folder, case-insensitively on Windows, after resolving `..`. It **fails
+  closed**: any error exits 2 (Claude Code treats every other non-zero exit as
+  allow).
+- Checked against the subagent docs: `memory` auto-enables Read/Write/Edit (hence
+  the guard); frontmatter `hooks` support PreToolUse and exit 2 blocks; a
+  subagent can call skills through the Skill tool. Project frontmatter hooks
+  run only once the folder is trusted.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| G | Guard: 11 cases (relative, Windows absolute and lower-case paths, `..` escape, lookalike folder, the guard itself, empty path, garbage input, a non-edit tool) | Pass: 11/11 |
+| 11a | Clean run: report has the sections and a Not run list | **Not run**: CLI sign-in expired; the agent did load (it created its memory folder) |
+| 11b | Planted failing assertion is reported, file not edited | **Not run** (same reason) |
+| 11c | Docker/stack stopped: "not run — stack down" | **Not run** (same reason) |
+| 11d | Its Edit of a test file is refused by the hook, in a real run | **Not run** (same reason); the hook script itself passes the cases above |
+
+**Found along the way:** a hook that crashes lets the call through, so the guard
+was rewritten to fail closed after a malformed test input made it crash.
+
+---
+
 ## 2026-10-21 — QA PR E: desktop end-to-end tests (local only)
 
 **Status: PR E open, not merged.** The detailed plan for this PR (written before

@@ -48,6 +48,11 @@ npm run e2e:web      # end-to-end tests (needs the local stack running)
 npm run e2e:desktop  # the same against the desktop app (Windows, local only)
 ```
 
+For a full QA pass, ask Claude Code to use the **`qa-lead`** agent
+(`.claude/agents/qa-lead.md`): it runs every check above plus the database
+tests, accessibility, size, Lighthouse, dependency audits and a security
+review, and reports Critical / Should fix / Minor. It never edits the project.
+
 Both dev commands read `.env.development.local`, which points at the local
 stack; `.env.example` explains every env file. Without it the app shows "This
 build isn't connected to a server" — tests and `npm run build` still pass with
@@ -236,6 +241,11 @@ in `NOTES.md`.
 - **Git Bash rewrites `reg` switches like `/v` into paths** ("ERROR: Invalid
   syntax"). Use PowerShell (`Get-ItemProperty`, `Remove-ItemProperty`) or
   Node's `execSync`, which goes through cmd.
+- **`qa-lead` only appears in sessions started after it was added**, and a
+  headless run (`claude -p --agent qa-lead …`) needs the CLI signed in. A guard
+  hook (`.claude/hooks/qa-lead-guard.mjs`) refuses its Edit/Write outside
+  `.claude/agent-memory/qa-lead/` and fails closed; Bash isn't hookable, so the
+  agent ends every run with a `git status` comparison instead.
 - **Claude's browser pane doesn't keep site data across a reboot.** Its
   IndexedDB and `localStorage` come back empty, so local test accounts have to
   sign in again. Not data loss in the app.
