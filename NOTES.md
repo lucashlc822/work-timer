@@ -12,6 +12,80 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — QA PR F: the qa-lead agent
+
+**Status: PR F open, not merged, stacked on PR E (#56). All acceptance cases
+pass**, run headless with `claude -p --agent qa-lead` (the agent only appears to
+the Agent tool in sessions started after it was added). Plan: end of
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Next
+
+- Merge #56, then this one (retarget it to `master` if GitHub doesn't).
+- **Install `cargo-audit` once** (`cargo install cargo-audit`) so qa-lead's Rust
+  dependency audit stops being "not run".
+- **Decide whether qa-lead's memory is committed.** It is `memory: project`, so
+  it lives in `.claude/agent-memory/qa-lead/` in the repo; its first runs left
+  three small files there (index, a run log, "cargo-audit missing"), currently
+  untracked. Committing shares baselines across machines; leaving it untracked
+  keeps run logs out of git.
+- The QA plan is then complete. Carried over: release the sync fix and the
+  accessibility fixes (unreleased on `master`), tell friends, the other machine,
+  the Vercel token, the first scheduled keep-alive run.
+
+### Running the CLI from inside a Claude Code session
+
+- The desktop app's session passes its own `CLAUDE_*` / `ANTHROPIC_*` variables
+  to any `claude` it starts, and those can't refresh a sign-in. Run the CLI with
+  them removed. The CLI also needs its own sign-in: `claude auth login` in the
+  Terminal panel, then `claude auth status` shows `"loggedIn": true`.
+
+### What was built
+
+- `.claude/agents/qa-lead.md`: tools Read, Grep, Glob, Bash, Skill; `memory:
+  project` (`.claude/agent-memory/qa-lead/`); model `sonnet` (change it there for
+  a deeper review). It reads CLAUDE.md's Environment section and its memory
+  first, records the starting `git status` and diff hash, checks the stack, then
+  runs:
+  - lint, format, typecheck, unit tests, build and bundle size; Rust fmt and
+    clippy
+  - pgTAP, `e2e:web` (with accessibility), Lighthouse
+  - `npm audit --omit=dev` and `cargo audit` (reported as not run, with the
+    install hint, when missing: it is missing here)
+  - the `security-review` skill
+  - guardrail checks (no `supabase config push` in scripts or workflows;
+    accessibility still enforcing)
+  - desktop tests only when asked
+
+  Reports Changes-outside-memory (always Critical, first), Critical, Should fix,
+  Minor, Passed, Not run. Rules: never edits, skips or loosens anything; never
+  touches production; may re-run a failing test once only to classify it, and
+  reports both results.
+- `.claude/hooks/qa-lead-guard.mjs`: the agent's PreToolUse hook on
+  Edit/Write/MultiEdit/NotebookEdit. It allows only paths inside its memory
+  folder, case-insensitively on Windows, after resolving `..`. It **fails
+  closed**: any error exits 2 (Claude Code treats every other non-zero exit as
+  allow).
+- Checked against the subagent docs: `memory` auto-enables Read/Write/Edit (hence
+  the guard); frontmatter `hooks` support PreToolUse and exit 2 blocks; a
+  subagent can call skills through the Skill tool. Project frontmatter hooks
+  run only once the folder is trusted.
+
+### Acceptance results
+
+| # | Case | Result |
+|---|---|---|
+| G | Guard: 11 cases (relative, Windows absolute and lower-case paths, `..` escape, lookalike folder, the guard itself, empty path, garbage input, a non-edit tool) | Pass: 11/11 |
+| 11a | Full run on the branch: all sections, a Not run list | Pass (232 s): everything green (lint, format, types, 501 unit, build, size, fmt, clippy, 115 pgTAP, 21 e2e incl. accessibility, Lighthouse 100/100, npm audit 0, security review, both guardrails); Minor: the 800 kB chunk warning; Not run: desktop (not asked) and `cargo audit` (missing, with the install command); memory written only in its folder, no secrets |
+| 11b | Planted failing assertion (`CountdownDisplay.test.tsx`, '40' to '41') | Pass: reported as Critical with file:line, the failing output, and that only the test changed; it suggested reverting but did not touch the file (checksum unchanged); finish check matched the start |
+| 11c | Stack stopped (`npx supabase stop`) | Pass: database, e2e and Lighthouse listed as "not run — stack down" with the start command; it did not start the stack (still down afterwards) |
+| 11d | Its Edit of a test file, in a real run | Pass: refused by the hook ("qa-lead only reports: …"), file checksum unchanged, `git status` clean |
+
+**Found along the way:** a hook that crashes lets the call through, so the guard
+was rewritten to fail closed after a malformed test input made it crash.
+
+---
+
 ## 2026-10-21 — QA PR E: desktop end-to-end tests (local only)
 
 **Status: PR E open, not merged.** The detailed plan for this PR (written before
