@@ -24,6 +24,8 @@
     "version:set": "node scripts/set-version.mjs",
     "e2e": "playwright test --project=web --project=api",
     "e2e:web": "playwright test --project=web --project=api",
+    "e2e:desktop": "playwright test --project=desktop --workers=1",
+    "e2e:update": "playwright test --project=desktop-update --workers=1",
     "perf:size": "node e2e/perf/bundle-size.mjs",
     "perf:lighthouse": "playwright test --project=perf"
   },
