@@ -12,6 +12,62 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-21 — Session wrap-up: the QA plan is complete
+
+**Status: everything from this session is merged to `master` (#48–#58; #51 was
+a throwaway red-CI check, closed) and CI is green.** Local `master` matches
+`origin/master`, with nothing uncommitted. **Nothing has been released**: friends
+are still on 0.2.0, which lacks the sync fix (#53) and the accessibility fixes
+(#55). The approved plan is
+`~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
+
+### Where things stand
+
+- **Every pull request now runs:** 115 pgTAP tests (50 prove one person can't
+  reach another's rows); 21 browser and API tests against the local stack
+  (sign-up, sync conflicts between two devices, timer, offline, live-update
+  isolation, accessibility, enforced); lint, types, 501 unit tests, the build, a
+  report-only bundle size check, and Rust fmt and clippy.
+- **Run by hand on Windows:** `npm run e2e:desktop` (~2.5 min) and
+  `npm run e2e:update` (~2 min after the first release build). Both run in a
+  throwaway WebView2 profile. Quit the installed Starkeep first.
+- **`qa-lead` agent:** ask any new session for a QA pass. It reports Critical /
+  Should fix / Minor and can't edit the project. Its baselines are in
+  `.claude/agent-memory/qa-lead/` (#58). For a headless run from inside a
+  session, see the QA PR F entry.
+- **Keep-alive:** the manual run passed on 2026-10-20 (case 8). Case 9, a green
+  run with event `schedule`, is still unseen; the first scheduled run is due
+  2026-10-22 06:17 UTC.
+
+### Next
+
+- **Release 0.2.1** following `RELEASING.md`. There is no migration this time.
+  It ships the late-upload sync fix (#53) and the clearer muted text and named
+  progress bar (#55). Before tagging, run `npm run e2e:desktop` and walk
+  `docs/qa-desktop-checklist.md` with the real app.
+- **Check keep-alive case 9** after 2026-10-22: `gh run list --workflow
+  keep-alive.yml` should show a green `schedule` run. Record it here.
+- `cargo install cargo-audit` once, so qa-lead's Rust audit stops reading "not
+  run".
+- Carried over: tell friends about the release, set up the other machine,
+  renew the Vercel token. No next milestone has been chosen.
+
+### Things worth not rediscovering (this session)
+
+- A `claude` started from inside a desktop-app session inherits that session's
+  `CLAUDE_*` and `ANTHROPIC_*` variables and can't sign in. Strip them, and give
+  the CLI its own `claude auth login`.
+- Every other session finding is in the entries below and in `CLAUDE.md`'s
+  Environment section:
+  - the production fence
+  - the test clock starting in the past, and the midnight trap with shifted clocks
+  - Realtime "subscribed" coming before "listening"
+  - Playwright masking WebView2 visibility
+  - Git Bash mangling `reg /v`
+  - Lighthouse needing an installed Chrome
+
+---
+
 ## 2026-10-21 — QA PR F: the qa-lead agent
 
 **Status: PR F open, not merged, stacked on PR E (#56). All acceptance cases
@@ -20,6 +76,8 @@ the Agent tool in sessions started after it was added). Plan: end of
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
 
 ### Next
+
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
 
 - Merge #56, then this one (retarget it to `master` if GitHub doesn't).
 - **Install `cargo-audit` once** (`cargo install cargo-audit`) so qa-lead's Rust
@@ -95,6 +153,8 @@ building, with the safety findings) is at the end of
 server.
 
 ### Next
+
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
 
 - Merge (say "merge PR #N"), then **PR F**: the `qa-lead` agent (Opus).
 - Before a release that touches the tray, notifications, startup or updates, run
@@ -176,6 +236,8 @@ the colour.
 
 ### Next
 
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
+
 - Merge (say "merge PR #N"), then **PR E on Opus** (desktop over WebView2, local
   only) and **PR F** (`qa-lead` agent).
 - Still open from the scan, moderate and not blocking: the stats, Stardust and
@@ -225,6 +287,8 @@ scripts only; no app code changed. Plan:
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
 
 ### Next
+
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
 
 - **Decide what to do with the 2 accessibility problems, then flip `ENFORCE`.**
   The scan is report-only (`ENFORCE = false` in `e2e/support/a11y.ts`) until you
@@ -320,6 +384,8 @@ un-marks lives there; merge #52 first, then this (GitHub retargets it to
 
 ### Next
 
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
+
 - Merge #52, then this PR (say "merge PR #N").
 - PR D (accessibility + report-only performance), then E and F, as in the QA plan.
 
@@ -365,6 +431,8 @@ specs (19 in the suite, 3 runs in a row all green, ~30 s). Plan:
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
 
 ### Next
+
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
 
 - **Decide about the defect below** (its own PR; a fix is small). Today its test
   is marked expected-to-fail, so the day it is fixed that test goes red and
@@ -455,6 +523,8 @@ between the devices; a Pomodoro run completing and breaking across devices.
 
 ### Next
 
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
+
 - **PR C on Sonnet:** sync conflicts between two devices, the timer with a
   fast-forwarded clock, and offline. The offline spec must wait for
   `navigator.serviceWorker.controller` before going offline.
@@ -530,6 +600,8 @@ runs. No app or migration change.
 
 ### Next
 
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
+
 - **PR B on Opus** (now merged as #50; see the entry above): the e2e foundation
   (production fence, fresh test users, Mailpit codes, auth specs,
   realtime-isolation spec, the `e2e` CI job, raised local auth rate limits).
@@ -584,6 +656,8 @@ doesn't pause it after 7 quiet days. Plan:
 `~/.claude/plans/please-proceed-with-planning-wise-llama.md`.
 
 ### Next
+
+*(Superseded: done or carried into the 2026-10-21 wrap-up above.)*
 
 - **Merge the PR when ready ("merge PR #N"), then run acceptance cases 8 and 9:**
   `gh workflow run "Keep server awake"` and watch it go green; a few days later
