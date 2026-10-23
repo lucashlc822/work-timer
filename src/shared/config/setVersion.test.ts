@@ -84,11 +84,13 @@ describe('set-version', () => {
 
   it('names the files that disagree with a tag', () => {
     const root = scratchCopy();
-    setVersion(root, '0.3.0');
+    // A version the repository itself is never at, so the file copied back
+    // below always disagrees (a real version here broke once the repo reached it).
+    setVersion(root, '99.0.0');
     // One file left behind: exactly what a half-done bump looks like.
     cpSync(resolve(REPO, 'src-tauri/Cargo.toml'), join(root, 'src-tauri/Cargo.toml'));
 
-    const bad = checkVersion(root, '0.3.0');
+    const bad = checkVersion(root, '99.0.0');
 
     expect(bad.map((b) => b.path)).toEqual(['src-tauri/Cargo.toml']);
   });
