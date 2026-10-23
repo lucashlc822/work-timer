@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(50);
+select plan(56);
 
 -- --- catalogue guards ----------------------------------------------------------
 
@@ -28,14 +28,15 @@ select is_empty(
   'every table in public has row-level security on');
 
 -- Tables that aren't owned per user are a deliberate, short list. A new one
--- must be added here on purpose.
+-- must be added here on purpose. friendships (M7) has two owners, no grants
+-- and no policies: only its security definer functions touch it.
 select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'p')
        and not exists (select 1 from pg_attribute a
                        where a.attrelid = c.oid and a.attname = 'user_id' and not a.attisdropped) $$,
-  array['app_config', 'invites'],
-  'the only public tables without a user_id are app_config and invites');
+  array['app_config', 'invites', 'friendships'],
+  'the only public tables without a user_id are app_config, invites and friendships');
 
 select set_eq(
   $$ select c.relname || ':' || p.priv
@@ -57,7 +58,8 @@ select set_eq(
         'constellations:SELECT', 'constellations:INSERT',
         'sessions:SELECT', 'sessions:INSERT',
         'user_settings:SELECT', 'user_settings:INSERT', 'user_settings:UPDATE',
-        'ledger:SELECT', 'ledger:INSERT'],
+        'ledger:SELECT', 'ledger:INSERT',
+        'profiles:SELECT'],
   'signed-in users have exactly the expected grants: no delete anywhere, update only on tags and settings');
 
 -- Every policy on a per-user table is for signed-in users only and compares
@@ -74,11 +76,15 @@ select is_empty(
                 and coalesce(p.with_check, '') not in ('(( SELECT auth.uid() AS uid) = user_id)', '(auth.uid() = user_id)'))) $$,
   'every policy on a per-user table is for signed-in users and matches the owner to auth.uid()');
 
+-- M7 added the friends functions: each checks the caller and, for anything
+-- about another person, an accepted friendship (supabase/tests/m7_friends.test.sql).
 select set_eq(
   $$ select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.prosecdef $$,
-  array['delete_my_account', 'enforce_invite'],
-  'the only security definer functions in public are delete_my_account and enforce_invite');
+  array['delete_my_account', 'enforce_invite',
+        'create_profile', 'set_display_name', 'request_friend', 'respond_friend',
+        'remove_friend', 'my_friends', 'friend_sky'],
+  'the only security definer functions in public are the account and friends functions');
 
 select is_empty(
   $$ select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -87,6 +93,10 @@ select is_empty(
 
 select ok(not has_function_privilege('authenticated', 'public.enforce_invite()', 'execute'),
   'signed-in users cannot run enforce_invite directly');
+select ok(not has_function_privilege('authenticated', 'public.create_profile()', 'execute'),
+  'signed-in users cannot run create_profile directly');
+select ok(not has_function_privilege('authenticated', 'public.new_friend_code()', 'execute'),
+  'signed-in users cannot generate friend codes');
 
 select set_eq(
   $$ select schemaname || '.' || tablename from pg_publication_tables where pubname = 'supabase_realtime' $$,
@@ -159,7 +169,9 @@ create function pg_temp.a_rows() returns table (tbl text, h text) language sql a
   union all
   select 'user_settings', md5(u::text) from public.user_settings u where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
   union all
-  select 'ledger', md5(l::text) from public.ledger l where user_id = 'aaaaaaaa-1111-4000-8000-000000000001';
+  select 'ledger', md5(l::text) from public.ledger l where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
+  union all
+  select 'profiles', md5(p::text) from public.profiles p where user_id = 'aaaaaaaa-1111-4000-8000-000000000001';
 $$;
 
 create temp table a_before as select * from pg_temp.a_rows();
@@ -178,6 +190,8 @@ select is((select count(*)::int from public.sessions where user_id = 'aaaaaaaa-1
            or id = 'a0000000-0000-4000-8000-0000000000a3'), 0, 'B cannot read A''s sessions');
 select is((select count(*)::int from public.user_settings where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'),
   0, 'B cannot read A''s settings');
+select is((select count(*)::int from public.profiles where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'),
+  0, 'B cannot read A''s profile');
 select is((select count(*)::int from public.ledger where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
            or id = 'a0000000-0000-4000-8000-0000000000a5'), 0, 'B cannot read A''s ledger');
 
@@ -225,7 +239,13 @@ select throws_ok(
   $$ update public.ledger set delta = 100000 where id = 'a0000000-0000-4000-8000-0000000000a5' $$,
   '42501', null, 'B cannot update A''s ledger row');
 
+select throws_ok(
+  $$ update public.profiles set display_name = 'Hijacked' where user_id = 'aaaaaaaa-1111-4000-8000-000000000001' $$,
+  '42501', null, 'B cannot update A''s profile');
+
 -- Delete A's row
+select throws_ok($$ delete from public.profiles where user_id = 'aaaaaaaa-1111-4000-8000-000000000001' $$,
+  '42501', null, 'B cannot delete A''s profile');
 select throws_ok($$ delete from public.tags where id = 'a0000000-0000-4000-8000-0000000000a1' $$,
   '42501', null, 'B cannot delete A''s tag');
 select throws_ok($$ delete from public.constellations where id = 'a0000000-0000-4000-8000-0000000000a2' $$,
@@ -317,6 +337,7 @@ select throws_ok($$ select * from public.sessions $$, '42501', null, 'a signed-o
 select throws_ok($$ select * from public.user_settings $$, '42501', null,
   'a signed-out visitor cannot read settings');
 select throws_ok($$ select * from public.ledger $$, '42501', null, 'a signed-out visitor cannot read the ledger');
+select throws_ok($$ select * from public.profiles $$, '42501', null, 'a signed-out visitor cannot read profiles');
 reset role;
 
 -- --- B deletes their account ----------------------------------------------------------
@@ -334,7 +355,8 @@ select is(
         + (select count(*) from public.constellations where user_id = 'bbbbbbbb-1111-4000-8000-000000000002')
         + (select count(*) from public.sessions where user_id = 'bbbbbbbb-1111-4000-8000-000000000002')
         + (select count(*) from public.user_settings where user_id = 'bbbbbbbb-1111-4000-8000-000000000002')
-        + (select count(*) from public.ledger where user_id = 'bbbbbbbb-1111-4000-8000-000000000002'))::int,
+        + (select count(*) from public.ledger where user_id = 'bbbbbbbb-1111-4000-8000-000000000002')
+        + (select count(*) from public.profiles where user_id = 'bbbbbbbb-1111-4000-8000-000000000002'))::int,
   0, 'and takes all of B''s own rows with it');
 
 select * from finish();
