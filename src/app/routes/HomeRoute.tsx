@@ -14,6 +14,13 @@ import {
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
 import {
+  FriendSkyView,
+  FriendsPanel,
+  FriendsPill,
+  useFriends,
+  type FriendRow,
+} from '@/features/friends';
+import {
   ProgressLine,
   RewardNote,
   StardustPanel,
@@ -29,6 +36,7 @@ import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
+import { renderFriendSky, summarizeFriend } from '../friendSlots';
 
 /**
  * Sky and Stardust content for the timer's slots. The features never import
@@ -70,7 +78,12 @@ const renderPackPreview = (packKey: string) => <PackPreview pack={packKey} />;
  * hold it.
  */
 export const HomeRoute = () => {
-  const [view, setView] = useState<'timer' | 'sky' | 'stats' | 'stardust' | 'account'>('timer');
+  const [view, setView] = useState<
+    'timer' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend'
+  >('timer');
+  // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
+  const [friend, setFriend] = useState<FriendRow | null>(null);
+  const friends = useFriends();
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
   const boughtTiers = useBoughtTiers() ?? NO_TIERS;
@@ -83,7 +96,8 @@ export const HomeRoute = () => {
   useEffect(() => {
     if (view === 'timer') return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setView('timer');
+      // A friend's sky goes back to the friend list; everything else to the timer.
+      if (e.key === 'Escape') setView(view === 'friend' ? 'friends' : 'timer');
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -126,6 +140,7 @@ export const HomeRoute = () => {
             >
               Stats
             </button>
+            <FriendsPill waiting={friends.incoming.length} onOpen={() => setView('friends')} />
             <button
               type="button"
               onClick={() => setView('account')}
@@ -168,14 +183,44 @@ export const HomeRoute = () => {
         </div>
       )}
 
+      {view === 'friends' && (
+        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+          <FriendsPanel
+            friends={friends}
+            now={Date.now()}
+            onOpenFriend={(f) => {
+              setFriend(f);
+              setView('friend');
+            }}
+          />
+        </div>
+      )}
+
+      {view === 'friend' && friend !== null && (
+        <div className="fixed inset-0 z-10">
+          <FriendSkyView
+            key={friend.friendId}
+            friendId={friend.friendId}
+            name={friend.displayName}
+            renderSky={renderFriendSky}
+            summarize={(sky) => summarizeFriend(sky, Date.now())}
+          />
+        </div>
+      )}
+
       {away && (
         <button
+          // Re-mounted per view, so autoFocus lands on it each time.
+          key={view}
           type="button"
           autoFocus
-          onClick={() => setView('timer')}
+          onClick={() => {
+            if (view === 'friend') void friends.refresh();
+            setView(view === 'friend' ? 'friends' : 'timer');
+          }}
           className="rounded-pill bg-night-800/80 border-night-600 text-ink-secondary hover:text-ink-primary fixed bottom-6 left-1/2 z-20 -translate-x-1/2 border px-5 py-2 text-xs backdrop-blur transition-colors"
         >
-          Back to timer
+          {view === 'friend' ? 'Back to friends' : 'Back to timer'}
         </button>
       )}
     </>

@@ -1,5 +1,5 @@
 import type { SessionRow } from '@/shared/db';
-import { isEnded, overlapMs } from '@/shared/lib';
+import { isEnded, overlapMs, type FocusInterval } from '@/shared/lib';
 
 import { bucketsFor, type Bucket, type Period } from './period';
 
@@ -23,7 +23,7 @@ import { bucketsFor, type Bucket, type Period } from './period';
 export { isEnded };
 
 /** Whether the session began inside the period (ended sessions only). */
-export const startedIn = (s: SessionRow, period: Period): boolean =>
+export const startedIn = (s: FocusInterval, period: Period): boolean =>
   isEnded(s) && s.startedAt >= period.start && s.startedAt < period.end;
 
 export interface FocusBucket extends Bucket {
@@ -68,7 +68,13 @@ export interface Totals {
   awayMs: number;
 }
 
-export const totals = (sessions: readonly SessionRow[], period: Period): Totals => {
+/**
+ * What `totals` reads from a session. Your own rows always carry `awayMs`; a
+ * friend's (M7) don't, and count as never away.
+ */
+export type TotalsSession = FocusInterval & { awayMs?: number };
+
+export const totals = (sessions: readonly TotalsSession[], period: Period): Totals => {
   const members = sessions.filter((s) => startedIn(s, period));
   const completed = members.filter((s) => s.outcome === 'completed').length;
   const memberFocusS = members.reduce((sum, s) => sum + Math.max(0, s.actualFocusS), 0);
@@ -79,7 +85,7 @@ export const totals = (sessions: readonly SessionRow[], period: Period): Totals 
     completed,
     endedEarly: members.length - completed,
     avgSessionS: members.length === 0 ? 0 : memberFocusS / members.length,
-    awayMs: members.reduce((sum, s) => sum + s.awayMs, 0),
+    awayMs: members.reduce((sum, s) => sum + (s.awayMs ?? 0), 0),
   };
 };
 

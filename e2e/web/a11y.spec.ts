@@ -1,8 +1,16 @@
 import { test } from '@playwright/test';
 
-import { backToTimer, expectSignedIn, openTagPicker, openView, signIn } from '../support/app';
+import {
+  backToTimer,
+  expectSignedIn,
+  openFriends,
+  openTagPicker,
+  openView,
+  signIn,
+} from '../support/app';
 import { report, scan, settleTransitions, type Finding } from '../support/a11y';
 import { startClockInThePast } from '../support/clock';
+import { addCompletedSession, befriend, requestFriend, setName } from '../support/friends';
 import { createUser } from '../support/users';
 
 /**
@@ -89,6 +97,28 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await openView(page, 'Account');
   await settleTransitions(page);
   findings.push(...(await scan(page, 'account')));
+  await backToTimer(page);
+
+  // Friends (M7): a friend with a session, and a request waiting.
+  const friend = await createUser('a11y-friend');
+  const asker = await createUser('a11y-asker');
+  await setName(user, 'Ada');
+  await setName(friend, 'Bea');
+  await setName(asker, 'Cy');
+  await befriend(user, friend);
+  await requestFriend(asker, user);
+  await addCompletedSession(friend, 25);
+  await page.reload();
+  await expectSignedIn(page);
+  await openFriends(page);
+  await page.getByText('Cy wants to be friends').waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'friends')));
+
+  await page.getByRole('button', { name: /^Bea/ }).click();
+  await page.getByRole('definition').first().waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, "a friend's sky")));
 
   await report(testInfo, findings);
 });
