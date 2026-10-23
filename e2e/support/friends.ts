@@ -67,3 +67,13 @@ export const addCompletedSession = async (
     });
   expect(error).toBeNull();
 };
+
+/** Shares a focus block of `minutes` from now, as the app does when a session starts. */
+export const shareFocus = async (user: TestUser, minutes: number): Promise<void> => {
+  const now = Date.now();
+  await rpc(user, 'set_focus_status', {
+    kind: 'focus',
+    started_at: new Date(now).toISOString(),
+    until: new Date(now + minutes * 60_000).toISOString(),
+  });
+};

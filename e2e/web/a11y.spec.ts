@@ -10,7 +10,13 @@ import {
 } from '../support/app';
 import { report, scan, settleTransitions, type Finding } from '../support/a11y';
 import { startClockInThePast } from '../support/clock';
-import { addCompletedSession, befriend, requestFriend, setName } from '../support/friends';
+import {
+  addCompletedSession,
+  befriend,
+  requestFriend,
+  setName,
+  shareFocus,
+} from '../support/friends';
 import { createUser } from '../support/users';
 
 /**
@@ -108,10 +114,12 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await befriend(user, friend);
   await requestFriend(asker, user);
   await addCompletedSession(friend, 25);
+  await shareFocus(friend, 20);
   await page.reload();
   await expectSignedIn(page);
   await openFriends(page);
   await page.getByText('Cy wants to be friends').waitFor();
+  await page.getByText(/Focusing now/).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'friends')));
 

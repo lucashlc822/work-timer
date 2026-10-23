@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { backToTimer, openFriends, sessionsOnDevice } from '../support/app';
+import { backToTimer, expectSignedIn, openFriends, sessionsOnDevice, signIn } from '../support/app';
 import { closeDevices, openDevice } from '../support/devices';
 import {
   addCompletedSession,
@@ -199,5 +199,68 @@ test('a friend’s sky, its numbers, and what happens when the friendship ends',
     await expect(b.page.getByText('Connect to see your friends.')).toBeHidden();
   } finally {
     await closeDevices(b);
+  }
+});
+
+test('a friend sees you focusing, then on a break, within about 15 seconds', async ({
+  browser,
+}) => {
+  const ada = await createUser('fr-ada4');
+  const bea = await createUser('fr-bea4');
+  await setName(ada, 'Ada');
+  await setName(bea, 'Bea');
+  await befriend(ada, bea);
+
+  const a = await openDevice(browser, BASE, ada);
+  const b = await openDevice(browser, BASE, bea);
+  try {
+    await openFriends(b.page);
+    const adaRow = b.page
+      .getByRole('region', { name: 'Friends' })
+      .getByRole('button', { name: /^Ada/ });
+    await expect(adaRow).toContainText('Not focused yet');
+
+    // 3.1: Ada starts; Bea's open panel shows it on its next check.
+    await a.page.getByRole('button', { name: 'Start 25 min' }).click();
+    await expect(a.page.getByRole('timer')).toBeVisible();
+    await expect(adaRow).toContainText(/Focusing now · 2[45] min left/, { timeout: 20_000 });
+
+    // 3.4: the same line on her sky.
+    await adaRow.click();
+    await expect(b.page.getByText(/Focusing now · 2[45] min left/)).toBeVisible();
+    await b.page.getByRole('button', { name: 'Back to friends' }).click();
+
+    // 3.2: Ada ends early; Bea's row goes back to how it was.
+    await a.page.getByRole('button', { name: 'End early' }).click();
+    await a.page.getByRole('button', { name: 'End session' }).click();
+    await a.page.getByRole('button', { name: 'Done' }).click();
+    await expect(adaRow).toContainText('Not focused yet', { timeout: 20_000 });
+  } finally {
+    await closeDevices(a, b);
+  }
+
+  // 3.3: a Pomodoro break. Ada's clock starts at real time so the block can be
+  // fast-forwarded; her break then lies ahead of the server's "now", as a
+  // real one would.
+  const pomodoro = await browser.newContext({ baseURL: BASE });
+  const page = await pomodoro.newPage();
+  await page.clock.install({ time: new Date() });
+  await page.goto('/');
+  await signIn(page, ada);
+  await expectSignedIn(page);
+  const b2 = await openDevice(browser, BASE, bea);
+  try {
+    await page.getByRole('radio', { name: 'Pomodoro' }).click();
+    await page.getByRole('button', { name: 'Start Pomodoro' }).click();
+    await expect(page.getByText('Block 1 · Pomodoro')).toBeVisible();
+    await page.clock.fastForward('25:01');
+
+    await openFriends(b2.page);
+    await expect(
+      b2.page.getByRole('region', { name: 'Friends' }).getByRole('button', { name: /^Ada/ }),
+    ).toContainText(/On a break · \d+ min left/, { timeout: 20_000 });
+  } finally {
+    await pomodoro.close();
+    await closeDevices(b2);
   }
 });

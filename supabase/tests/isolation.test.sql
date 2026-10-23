@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(56);
+select plan(60);
 
 -- --- catalogue guards ----------------------------------------------------------
 
@@ -83,7 +83,8 @@ select set_eq(
      where n.nspname = 'public' and p.prosecdef $$,
   array['delete_my_account', 'enforce_invite',
         'create_profile', 'set_display_name', 'request_friend', 'respond_friend',
-        'remove_friend', 'my_friends', 'friend_sky'],
+        'remove_friend', 'my_friends', 'friend_sky',
+        'set_focus_status', 'clear_focus_status', 'friends_focus'],
   'the only security definer functions in public are the account and friends functions');
 
 select is_empty(
@@ -171,8 +172,14 @@ create function pg_temp.a_rows() returns table (tbl text, h text) language sql a
   union all
   select 'ledger', md5(l::text) from public.ledger l where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
   union all
-  select 'profiles', md5(p::text) from public.profiles p where user_id = 'aaaaaaaa-1111-4000-8000-000000000001';
+  select 'profiles', md5(p::text) from public.profiles p where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
+  union all
+  select 'focus_status', md5(f::text) from public.focus_status f where user_id = 'aaaaaaaa-1111-4000-8000-000000000001';
 $$;
+
+-- A is focusing (phase 3); B's attempts below must not change or see it.
+insert into public.focus_status (user_id, kind, started_at, until) values
+  ('aaaaaaaa-1111-4000-8000-000000000001', 'focus', now(), now() + interval '25 minutes');
 
 create temp table a_before as select * from pg_temp.a_rows();
 
@@ -192,6 +199,13 @@ select is((select count(*)::int from public.user_settings where user_id = 'aaaaa
   0, 'B cannot read A''s settings');
 select is((select count(*)::int from public.profiles where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'),
   0, 'B cannot read A''s profile');
+select throws_ok($$ select * from public.focus_status $$, '42501', null,
+  'B cannot read anyone''s focus status directly');
+select throws_ok(
+  $$ update public.focus_status set until = now() where user_id = 'aaaaaaaa-1111-4000-8000-000000000001' $$,
+  '42501', null, 'B cannot change A''s focus status');
+select throws_ok($$ delete from public.focus_status where user_id = 'aaaaaaaa-1111-4000-8000-000000000001' $$,
+  '42501', null, 'B cannot delete A''s focus status');
 select is((select count(*)::int from public.ledger where user_id = 'aaaaaaaa-1111-4000-8000-000000000001'
            or id = 'a0000000-0000-4000-8000-0000000000a5'), 0, 'B cannot read A''s ledger');
 
@@ -338,6 +352,8 @@ select throws_ok($$ select * from public.user_settings $$, '42501', null,
   'a signed-out visitor cannot read settings');
 select throws_ok($$ select * from public.ledger $$, '42501', null, 'a signed-out visitor cannot read the ledger');
 select throws_ok($$ select * from public.profiles $$, '42501', null, 'a signed-out visitor cannot read profiles');
+select throws_ok($$ select * from public.focus_status $$, '42501', null,
+  'a signed-out visitor cannot read focus status');
 reset role;
 
 -- --- B deletes their account ----------------------------------------------------------

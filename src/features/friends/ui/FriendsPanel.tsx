@@ -3,6 +3,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { FriendsFailure, type FriendRow } from '../data/friendsRepository';
 import { formatCode, normalizeCode } from '../domain/code';
 import { FRIENDS_MESSAGES } from '../domain/errors';
+import { statusLine } from '../domain/focusStatus';
 import { lastFocusLabel } from '../domain/lastFocus';
 import type { Friends } from '../hooks/useFriends';
 
@@ -386,7 +387,8 @@ const FriendList = ({
                 >
                   <span className="text-ink-primary">{nameOf(f)}</span>
                   <span className="text-ink-muted text-xs">
-                    {lastFocusLabel(f.lastFocusAt, now)}
+                    {statusLine(friends.focus.get(f.friendId) ?? null, now) ??
+                      lastFocusLabel(f.lastFocusAt, now)}
                   </span>
                 </button>
                 <button
