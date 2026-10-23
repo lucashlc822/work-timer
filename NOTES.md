@@ -12,6 +12,65 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-23 — Released 0.4.0: Focusing now
+
+**Status: 0.4.0 is published (tag `v0.4.0`, Latest; web deployed from the same
+commit, `82bf36a`). The focus-status migration is on the hosted project.**
+Lucas's desktop app runs 0.4.0 and shares his status. Nothing in flight.
+`min_client_version` is still null.
+
+### Next
+
+- **Phase 4: focus together**, per `docs/plans/2026-10-22-m7-friends.md`. It
+  changes the CLAUDE.md rule "leaving never forfeits a session" (a friend's
+  cancel ends yours), so plan it on Opus and record the decision then.
+- **Tell friends 0.4.0 is out.** R12 (a friend on 0.4.0 seeing Lucas "Focusing
+  now") and R12 from 0.3.0 (two real people befriending) are still unrun.
+- Still open: keep-alive case 9, `cargo install cargo-audit`, the other
+  machine.
+
+### What was done, in order
+
+1. **Hosted state read first:** `migration list --linked` showed the focus
+   migration not applied; `focus_status` and `rpc/friends_focus` 404;
+   `profiles` 401 (the control). `db push --dry-run` listed only
+   `20261023045510_m7_focus_status.sql`.
+2. **Pushed** (Lucas said "push"): history matched local;
+   `focus_status`/`friends_focus` turned 404 → 401.
+3. **Installed 0.3.0 after the push:** a session ended, "Backed up", Friends
+   unchanged (Lucas).
+4. **Bump PR #71**, merged as `82bf36a`. This time the version tests were run
+   on their own and checked by exit code (0; 26/26), not piped into `grep`.
+5. `e2e:desktop` 4/4 → tag `v0.4.0` → `Release` green.
+   - The draft had 4 assets (installers 2,321,995 bytes).
+   - `latest.json` said 0.4.0 at `/download/v0.4.0/`, signed with key
+     `8E3AF18012526DA8`.
+   - A "What's new" line was added while it was a draft.
+6. **Published by id with `tag_name` in the same call:** Latest `v0.4.0`, no
+   `untagged-` tag. `Deploy web` ran green on `82bf36a`.
+7. **Live checks:**
+   - The web bundle reports 0.4.0 and contains `friends_focus`.
+   - `Starkeep-setup.exe` returns 200.
+   - `min_client_version` is null.
+   - **R10:** Lucas's updated desktop app, during a session, wrote exactly one
+     `focus_status` row (focus, 06:24:42 → 06:49:42 UTC: the planned 25
+     minutes, 0.16 s after the start). After he ended the session, the table
+     was empty. Both read once, read-only, with the `.env.admin.local` key.
+
+### Acceptance results
+
+R1–R11 pass. R12 (a friend on 0.4.0 seeing Lucas focusing) not run.
+
+### Things worth not rediscovering
+
+- **The installed app restarts itself after updating**, so it's usually
+  running again by the time `e2e:desktop` is due. Check `tasklist` first, as
+  the tests refuse to start otherwise.
+- **Checking a test run by its exit code works** (`vitest ...; echo $?`).
+  Piping it into `grep` inside an `&&` chain is what hid the 0.3.0 failure.
+
+---
+
 ## 2026-10-23 — M7 phase 3 merged: "Focusing now" and "On a break"
 
 **Status: phase 3 is on `master` (#69). Not released, and
