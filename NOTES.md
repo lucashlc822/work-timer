@@ -12,6 +12,72 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-23 — Session wrap-up: Friends (M7) shipped in three releases
+
+**Status: everything from this session is merged to `master` (#60–#72) and CI is
+green; no PR is open. 0.4.0 is live on the web and desktop.** Local `master`
+matches `origin/master`, with nothing uncommitted. This is the entry to read
+first; the per-release entries below have the detail.
+
+### Where things stand
+
+- **M7 Friends, phases 1–3, is released** (design: `docs/plans/2026-10-22-m7-friends.md`):
+  - 0.3.0: display name, friend code, requests, a friend's sky and weekly numbers.
+  - 0.4.0: "Focusing now" / "On a break" on the Friends list.
+- **The hosted project has all four migrations** (m5, m6, m7_friends,
+  m7_focus_status). `min_client_version` is null: no one is forced to update.
+- **Rule that holds for every later phase:** no existing table gets a new
+  policy. A friend's data leaves the server only through security definer
+  functions that check an accepted friendship (sync pulls with RLS alone, so a
+  friend-read policy would copy friends' rows into your own store).
+- **Releases now go:** read hosted state → dry run → push (Lucas says "push") →
+  confirm the installed app still works → bump PR → desktop tests → tag →
+  review draft → publish by id with `tag_name` (Lucas says "publish") →
+  verify live. Both migrations went through this with no surprises.
+
+### Next
+
+- **Phase 4: focus together** (rooms, lobby, same end time, a member's cancel
+  ends everyone's session). **Plan it on Opus**, and record the amendment to
+  "Leaving the app never forfeits a session" in CLAUDE.md as part of it: only a
+  deliberate cancel fails a session, and now a friend's counts too.
+- **Phase 5: shared constellations** after that.
+- **Still unrun: R12 twice.** A friend on 0.4.0 seeing Lucas "Focusing now",
+  and two real people befriending each other. Both need a friend on the new
+  version.
+- **Tell friends** 0.3.0 and 0.4.0 are out (they need a name before Friends
+  does anything).
+- `cargo install cargo-audit` once, so qa-lead's Rust audit stops reading "not
+  run". It was started once and interrupted.
+- Carried over: set up the other machine.
+- **`NOTES.md` is ~2,500 lines, over the ~1,000 guideline.** Archive the
+  older entries to `docs/notes-archive/YYYY-QN.md` in a PR of their own.
+
+### Closed this session
+
+- **Keep-alive case 9 is confirmed:** a green `schedule` run on 2026-10-22
+  (11:59 UTC) after the manual one on 10-20.
+
+### Things worth not rediscovering
+
+- **Don't pipe a test run into `grep` inside an `&&` chain.** The chain goes
+  on when `grep` succeeds, which hid a failing version test in the 0.3.0 bump
+  PR (the PR text had to be corrected). Run the tests alone and check the exit
+  code.
+- **A new test that hard-codes "a different version" breaks when the repo
+  reaches it.** `setVersion.test.ts` now uses `99.0.0`.
+- **The installed app relaunches itself after updating**, so it is usually
+  running again when `e2e:desktop` is due, and the tests refuse to start then.
+  Check `tasklist`, and ask Lucas to quit it from the tray.
+- **A `db reset` wipes the hand-seeded `a@`/`b@`/`c@test.local` accounts**,
+  and the browser pane then still holds a session for a deleted user.
+- **The local database collects the e2e runs' rows**, so a pgTAP test must
+  count only its own fixture users' rows, never a whole table.
+- **The Docker Desktop daemon must be running** for any local Supabase command.
+- Phase-by-phase details: see the entries below, newest first.
+
+---
+
 ## 2026-10-23 — Released 0.4.0: Focusing now
 
 **Status: 0.4.0 is published (tag `v0.4.0`, Latest; web deployed from the same
@@ -78,6 +144,8 @@ R1–R11 pass. R12 (a friend on 0.4.0 seeing Lucas focusing) not run.
 `master` matches `origin/master`.
 
 ### Next
+
+*(Superseded 2026-10-23: 0.4.0 is released, see "Released 0.4.0" above. What is still open is in the 2026-10-23 wrap-up above.)*
 
 - **Release as 0.4.0**, the same way as 0.3.0: `db push` the focus-status
   migration first (dry run, then push), then bump, tag, review, publish. It's
@@ -156,6 +224,8 @@ web and desktop apps both run 0.3.0 with a name set. Nothing in flight.
 
 ### Next
 
+*(Superseded 2026-10-23: phase 3 is released in 0.4.0. What is still open is in the 2026-10-23 wrap-up above.)*
+
 - **Tell friends 0.3.0 is out.** Friends needs a name before it does anything.
   R12 (two real people adding each other) hasn't been run; the first friend to
   try it is that test.
@@ -211,6 +281,8 @@ migration is still not on the hosted project.** Friends see nothing until both
 happen. Local `master` matches `origin/master`.
 
 ### Next
+
+*(Superseded 2026-10-23: 0.3.0 is released, see "Released 0.3.0" above. What is still open is in the 2026-10-23 wrap-up above.)*
 
 - **Release the friends feature as 0.3.0** (a new feature, not a fix). Order
   matters:
@@ -282,6 +354,8 @@ the Friends panel and a friend's sky, 174 pgTAP. CI green.
 migration is **not** on the hosted project. Local `master` matches `origin/master`.
 
 ### Next
+
+*(Superseded 2026-10-23: phases 2 and 3 are released and the hosted `db push` is done. What is still open is in the 2026-10-23 wrap-up above.)*
 
 - **Phase 2, the Friends panel** (Sonnet is fine): display name + code,
   add/accept/decline/remove, friend list, a friend's sky and summary stats. Plan
@@ -355,6 +429,8 @@ update check. It ships the late-upload sync fix (#53) and the accessibility
 fixes (#55). No migration, no `min_client_version` change. Nothing in flight.
 
 ### Next
+
+*(Superseded 2026-10-23: keep-alive case 9 passed on 2026-10-22; the rest is carried into the 2026-10-23 wrap-up above.)*
 
 - **Keep-alive case 9:** after 2026-10-22 06:17 UTC, `gh run list --workflow
   keep-alive.yml` should show a green `schedule` run. Record it here.
