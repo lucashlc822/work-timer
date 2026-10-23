@@ -12,6 +12,81 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-23 — M7 phase 3 merged: "Focusing now" and "On a break"
+
+**Status: phase 3 is on `master` (#69). Not released, and
+`20261023045510_m7_focus_status.sql` is not on the hosted project.** Local
+`master` matches `origin/master`.
+
+### Next
+
+- **Release as 0.4.0**, the same way as 0.3.0: `db push` the focus-status
+  migration first (dry run, then push), then bump, tag, review, publish. It's
+  additive; 0.2.x and 0.3.0 apps never touch it. Note that a 0.3.0 friend
+  never *shares* a status, so they never show as focusing until they update.
+- Then phase 4 (focus together) per `docs/plans/2026-10-22-m7-friends.md`. It
+  will change the "leaving never forfeits" decision in CLAUDE.md, so plan it
+  on Opus.
+- Still open: keep-alive case 9, `cargo install cargo-audit`, the other
+  machine, R12 from 0.3.0 (two real people).
+
+### Decisions (with Lucas)
+
+- **Within ~15 s is fresh enough.** No Realtime channel: the app sets a server
+  status on each change, and an open Friends panel (or a friend's sky)
+  re-reads every 15 s. That replaces the design doc's "presence" idea, and the
+  doc now says so.
+- **Pomodoro breaks show "On a break · N min left"** until the break ends;
+  after that, nothing until the next block starts.
+
+### What was built (#69)
+
+- `focus_status` table: one row per person, focus/break, `started_at`,
+  `until`. No grants, no policies. Three security definer functions:
+  - `set_focus_status` (refuses an unknown kind, an end before the start, a
+    status already over, or one more than 25 h ahead)
+  - `clear_focus_status`
+  - `friends_focus()`: accepted friends only, and only while `until` is in
+    the future
+- **A quit or crashed app stops showing as focusing at its session's planned
+  end**, because expiry is by `until`. That matches wall-clock sessions.
+- `useShareFocusStatus` (`src/features/friends/hooks/`) watches `shared/db`
+  with a flat live query and sends only real changes.
+  - It's silent and best effort, retried on `online` and when the window is
+    visible again.
+  - An idle start sends nothing, so opening one device can't wipe what
+    another device is sharing.
+  - A session past its planned end counts as idle.
+- `useFriends({ watching })` polls every 15 s while a Friends screen is open.
+  If `friends_focus` alone fails, the list still shows.
+
+### Acceptance results
+
+All cases pass:
+- pgTAP: 200 checks across 5 files, 22 of them new
+- unit: 524
+- e2e: 27, including a two-device test (focusing → ended → on a break, each
+  within 20 s) and the a11y scan with a focusing friend
+- `e2e:desktop`: 4/4
+- CI green
+
+4.4 (friend status kept in memory only) and 4.5 (sharing errors stay silent)
+are true by how the code is built, not separately exercised.
+
+### Things worth not rediscovering
+
+- **The e2e run leaves rows in the local database** (its users' statuses,
+  profiles, friendships), and nothing cleans them up. A pgTAP test must count
+  only its own fixture users' rows, never a whole table. The new suite failed
+  once on exactly this.
+- **A `db reset` wipes the hand-seeded `a@`/`b@`/`c@test.local` accounts.** The
+  browser pane then still holds a session for the deleted user: sign out (a
+  403 in the console is that) and back in after re-seeding.
+- **`e2e:desktop` refuses to start while the installed Starkeep runs.** It
+  restarts itself after an update, so check `tasklist` before a desktop run.
+
+---
+
 ## 2026-10-23 — Released 0.3.0: Friends
 
 **Status: 0.3.0 is published (tag `v0.3.0`, Latest; web deployed from the same
