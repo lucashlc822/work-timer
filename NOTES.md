@@ -12,6 +12,79 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-22 — M7 Friends: design agreed, phase 1 (server) merged
+
+**Status: M7 is the next milestone. Its design is `docs/plans/2026-10-22-m7-friends.md`
+(#62) and phase 1 is merged (#63): profiles, friend codes, friend requests and
+`friend_sky`, server only.** Nothing reaches anyone yet: no app screen, and the
+migration is **not** on the hosted project. Local `master` matches `origin/master`.
+
+### Next
+
+- **Phase 2, the Friends panel** (Sonnet is fine): display name + code,
+  add/accept/decline/remove, friend list, a friend's sky and summary stats. Plan
+  it first, in plan mode, from the design doc's phase 2 and outcomes 2–3.
+- **Before releasing phase 2:** `npx supabase db push` to the hosted project
+  (`RELEASING.md` step 1). The app will call functions that only exist after
+  `20261023030027_m7_friends.sql` is applied there. Older apps are unaffected
+  by the migration, so it can go up any time before.
+- Still open from the 0.2.1 entry below: keep-alive case 9, `cargo install
+  cargo-audit` (started, interrupted, never run), tell friends 0.2.1 is out,
+  the other machine.
+
+### Decisions (with Lucas)
+
+| Question | Choice |
+|---|---|
+| A together session, someone cancels | **Everyone's session fails** (Forest-style). Amends "leaving never forfeits": only deliberate cancels fail, now a friend's too. Record in CLAUDE.md in phase 4, when built. |
+| Shared constellation stars | Either friend's completed session, any time |
+| What a friend sees | Sky + summary stats; no tag names, no session list |
+| Adding friends | Friend code + display name; request → accept |
+
+Phase 1 defaults (in the PR, unchallenged): a crossing request accepts both;
+decline and remove delete the row; 20 outgoing pending requests at most;
+`friend_sky` includes ended-early sessions (with outcome) so a friend's "focus
+this week" matches their own Stats; nothing new in Realtime yet.
+
+### What was built (#63)
+
+- `profiles` (6-character code from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`, display
+  name ≤24) made by a trigger after sign-up, backfilled. Owner reads; no direct
+  writes.
+- `friendships`: no grants, no policies. Seven security definer functions are
+  the only way in: `set_display_name`, `request_friend`, `respond_friend`,
+  `remove_friend`, `my_friends`, `friend_sky`, plus the `create_profile`
+  trigger. Errors are P0001 with stable codes (`friend_code_not_found`,
+  `not_friends`, ...), for the app to match on the message.
+- **No existing table got a new policy.** Sync pulls with RLS alone and no
+  `user_id` filter, so a friend-read policy would copy friends' rows into your
+  own store. Keep it that way in later phases.
+
+### Acceptance results
+
+All plan cases pass: `m7_friends.test.sql` 53/53; isolation 56 (guard sets
+updated on purpose: `friendships` without `user_id`, `profiles:SELECT`, the new
+security definer functions; `profiles` added to the attack matrix); M5, M6
+unchanged; 174 checks total. `e2e:web` 23/23 (incl. sign-up through the new
+trigger, uninvited refusal, and `e2e/api/friends.spec.ts`). CI green. Case 7.3
+checks the queries sync makes, not the sync engine itself.
+
+### Things worth not rediscovering
+
+- **The isolation guards fail on any new table, grant or security definer
+  function, by design.** A new phase updates the expected sets in
+  `isolation.test.sql` in the same PR and says why.
+- **Supabase grants new tables and functions to `anon` and `authenticated` by
+  default.** Every new table needs `revoke all ... from anon, authenticated`,
+  and every function `revoke execute ... from public, anon`, or the guards fail.
+- pgTAP can't hand values from a superuser step to an `authenticated` step
+  through a temp table (no access); `set_config('t.x', ..., true)` and
+  `current_setting('t.x')` work.
+- `npx supabase start` failing with a pipe error means Docker Desktop is down;
+  it had to be started this session.
+
+---
+
 ## 2026-10-22 — Released 0.2.1
 
 **Status: 0.2.1 is published (tag `v0.2.1`, Latest) and the web version is
