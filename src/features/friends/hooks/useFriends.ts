@@ -4,6 +4,7 @@ import { getSupabase } from '@/shared/backend';
 
 import {
   FriendsFailure,
+  friendsFocus,
   getMyProfile,
   listFriends,
   removeFriend,
@@ -13,6 +14,10 @@ import {
   type FriendRow,
   type MyProfile,
 } from '../data/friendsRepository';
+import type { FocusStatus } from '../domain/focusStatus';
+
+/** How often an open Friends panel re-checks who is focusing. */
+export const FOCUS_POLL_MS = 15_000;
 
 export type FriendsLoad = 'loading' | 'ready' | 'offline' | 'error';
 
@@ -23,6 +28,8 @@ export interface Friends {
   friends: FriendRow[];
   incoming: FriendRow[];
   outgoing: FriendRow[];
+  /** Friends focusing or on a break right now, by friend id (M7 phase 3). */
+  focus: ReadonlyMap<string, FocusStatus>;
   refresh: () => Promise<void>;
   saveName: (name: string) => Promise<void>;
   /** The friend's name, and whether you're friends already (they had asked you). */
@@ -48,20 +55,30 @@ const client = () => {
  * request someone sent you shows on the Friends pill without any live
  * connection. Every action re-reads afterwards. Actions reject with
  * `FriendsFailure`, for the screen to explain.
+ *
+ * While `watching` (a Friends screen is open) it also re-reads every
+ * `FOCUS_POLL_MS`, so "Focusing now" appears within about 15 seconds.
  */
-export const useFriends = (): Friends => {
+export const useFriends = ({ watching = false }: { watching?: boolean } = {}): Friends => {
   const [load, setLoad] = useState<FriendsLoad>('loading');
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [rows, setRows] = useState<FriendRow[]>([]);
+  const [focus, setFocus] = useState<ReadonlyMap<string, FocusStatus>>(new Map());
   const alive = useRef(true);
 
   const refresh = useCallback(async () => {
     try {
       const c = client();
-      const [p, list] = await Promise.all([getMyProfile(c), listFriends(c)]);
+      const [p, list, focusing] = await Promise.all([
+        getMyProfile(c),
+        listFriends(c),
+        // Who is focusing is extra: if only that fails, the list still shows.
+        friendsFocus(c).catch(() => new Map<string, FocusStatus>()),
+      ]);
       if (!alive.current) return;
       setProfile(p);
       setRows(list);
+      setFocus(focusing);
       setLoad('ready');
     } catch (e) {
       if (!alive.current) return;
@@ -83,6 +100,12 @@ export const useFriends = (): Friends => {
       window.removeEventListener('online', onVisible);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!watching) return;
+    const timer = window.setInterval(() => void refresh(), FOCUS_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [watching, refresh]);
 
   // Re-read after an action whether it worked or not: a "not found" means the
   // list on screen was already out of date.
@@ -137,12 +160,13 @@ export const useFriends = (): Friends => {
       friends: rows.filter((r) => r.status === 'accepted').sort(byName),
       incoming: rows.filter((r) => r.direction === 'incoming'),
       outgoing: rows.filter((r) => r.direction === 'outgoing'),
+      focus,
       refresh,
       saveName,
       sendRequest,
       respond,
       remove,
     }),
-    [load, profile, rows, refresh, saveName, sendRequest, respond, remove],
+    [load, profile, rows, focus, refresh, saveName, sendRequest, respond, remove],
   );
 };

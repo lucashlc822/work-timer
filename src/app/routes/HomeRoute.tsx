@@ -18,6 +18,7 @@ import {
   FriendsPanel,
   FriendsPill,
   useFriends,
+  useShareFocusStatus,
   type FriendRow,
 } from '@/features/friends';
 import {
@@ -83,7 +84,8 @@ export const HomeRoute = () => {
   >('timer');
   // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
   const [friend, setFriend] = useState<FriendRow | null>(null);
-  const friends = useFriends();
+  const friends = useFriends({ watching: view === 'friends' || view === 'friend' });
+  useShareFocusStatus();
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
   const boughtTiers = useBoughtTiers() ?? NO_TIERS;
@@ -204,6 +206,8 @@ export const HomeRoute = () => {
             name={friend.displayName}
             renderSky={renderFriendSky}
             summarize={(sky) => summarizeFriend(sky, Date.now())}
+            status={friends.focus.get(friend.friendId) ?? null}
+            now={Date.now()}
           />
         </div>
       )}

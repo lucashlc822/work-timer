@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { classifyFriendsError, type FriendsErrorKind } from '../domain/errors';
+import type { FocusStatus } from '../domain/focusStatus';
 import { decodeFriendSky, type FriendSky } from '../domain/friendSky';
 
 /**
@@ -132,4 +133,42 @@ export const getFriendSky = async (
   const sky = decodeFriendSky(payload);
   if (sky === null) throw new FriendsFailure('unknown');
   return sky;
+};
+
+/** Tells friends what you're doing now (M7 phase 3). */
+export const setFocusStatus = async (
+  client: SupabaseClient,
+  status: FocusStatus,
+): Promise<void> => {
+  await call(() =>
+    client.rpc('set_focus_status', {
+      kind: status.kind,
+      started_at: new Date(status.startedAt).toISOString(),
+      until: new Date(status.until).toISOString(),
+    }),
+  );
+};
+
+export const clearFocusStatus = async (client: SupabaseClient): Promise<void> => {
+  await call(() => client.rpc('clear_focus_status'));
+};
+
+/** Your friends who are focusing or on a break right now, by friend id. */
+export const friendsFocus = async (client: SupabaseClient): Promise<Map<string, FocusStatus>> => {
+  const rows = await call<Record<string, unknown>[]>(() => client.rpc('friends_focus'));
+  const byFriend = new Map<string, FocusStatus>();
+  for (const r of rows ?? []) {
+    const startedAt = ms(r.started_at);
+    const until = ms(r.until);
+    if (
+      typeof r.friend_id !== 'string' ||
+      (r.kind !== 'focus' && r.kind !== 'break') ||
+      startedAt === null ||
+      until === null
+    ) {
+      continue;
+    }
+    byFriend.set(r.friend_id, { kind: r.kind, startedAt, until });
+  }
+  return byFriend;
 };

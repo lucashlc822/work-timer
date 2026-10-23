@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { FRIENDS_MESSAGES } from '../domain/errors';
+import { statusLine, type FocusStatus } from '../domain/focusStatus';
 import type { FriendSky } from '../domain/friendSky';
 import { useFriendSky } from '../hooks/useFriendSky';
 
@@ -25,12 +26,17 @@ export const FriendSkyView = ({
   name,
   renderSky,
   summarize,
+  status,
+  now,
 }: {
   friendId: string;
   /** From the friend list, shown while the sky loads. */
   name: string | null;
   renderSky: (sky: FriendSky) => ReactNode;
   summarize: (sky: FriendSky) => FriendSummary;
+  /** What they're doing right now, if anything (M7 phase 3). */
+  status: FocusStatus | null;
+  now: number;
 }) => {
   const { state, retry } = useFriendSky(friendId);
   const shownName =
@@ -42,6 +48,9 @@ export const FriendSkyView = ({
 
       <header className="bg-night-900/70 border-night-600 fixed inset-x-0 top-0 z-20 flex flex-col items-center gap-3 border-b px-6 py-4 backdrop-blur">
         <h2 className="text-ink-primary text-base">{possessive(shownName)} sky</h2>
+        {statusLine(status, now) !== null && (
+          <p className="text-lavender-200 text-xs">{statusLine(status, now)}</p>
+        )}
         {state.kind === 'loading' && <p className="text-ink-secondary text-xs">Loading…</p>}
         {state.kind === 'failed' && (
           <div className="flex flex-col items-center gap-2">

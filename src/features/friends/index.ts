@@ -8,6 +8,7 @@ export { FriendsPill } from './ui/FriendsPill';
 export { FriendSkyView } from './ui/FriendSkyView';
 export type { FriendSummary } from './ui/FriendSkyView';
 export { useFriends } from './hooks/useFriends';
+export { useShareFocusStatus } from './hooks/useShareFocusStatus';
 export type { Friends } from './hooks/useFriends';
 export type { FriendRow } from './data/friendsRepository';
 export type { FriendChoice, FriendSession, FriendSky } from './domain/friendSky';
