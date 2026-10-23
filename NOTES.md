@@ -12,6 +12,64 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-23 — Released 0.3.0: Friends
+
+**Status: 0.3.0 is published (tag `v0.3.0`, Latest; web deployed from the same
+commit, `7c0cca7`). The friends migration is on the hosted project.** Lucas's
+web and desktop apps both run 0.3.0 with a name set. Nothing in flight.
+`min_client_version` is still null. Plan:
+`~/.claude/plans/please-proceed-with-planning-smooth-clarke.md`.
+
+### Next
+
+- **Tell friends 0.3.0 is out.** Friends needs a name before it does anything.
+  R12 (two real people adding each other) hasn't been run; the first friend to
+  try it is that test.
+- M7 phase 3 ("focusing now", presence) per `docs/plans/2026-10-22-m7-friends.md`.
+- Still open: keep-alive case 9, `cargo install cargo-audit`, the other machine.
+
+### What was done, in order
+
+1. **Hosted state read first.**
+   - `migration list --linked` showed m7 not applied.
+   - Publishable-key probes: `profiles` 404, `rpc/friend_sky` 404, `sessions`
+     401 (the control).
+   - `db push --dry-run` listed only `20261023030027_m7_friends.sql`.
+2. **Pushed** (Lucas said "push"). No database password needed, as for 0.2.0.
+   - The history then matched local.
+   - `profiles`, `friendships` and `rpc/friend_sky` turned 404 → 401.
+   - 2 users and 2 profiles (backfill), none named yet; read once with the
+     `.env.admin.local` key.
+3. **Installed 0.2.1 after the push:** a session ended, "Backed up" (Lucas).
+4. **Bump PR #67**, merged as `7c0cca7`. It also fixed `setVersion.test.ts`
+   (see below).
+5. `e2e:desktop` 4/4 → tag `v0.3.0` → `Release` green.
+   - The draft had 4 assets (installers 2,321,149 bytes).
+   - `latest.json` said 0.3.0 at `/download/v0.3.0/`, signed with key
+     `8E3AF18012526DA8`, which matches `tauri.conf.json`.
+   - A "What's new: Friends" line was added while it was still a draft.
+6. **Published by id with `tag_name` in the same call:** Latest `v0.3.0`, no
+   `untagged-` tag. `Deploy web` ran green on `7c0cca7`.
+7. **Live checks:**
+   - The web bundle reports 0.3.0 and contains `friend_sky`.
+   - `Starkeep-setup.exe` returns 200.
+   - Lucas set a name on the web; the updated desktop app shows the same name
+     and code.
+
+### Acceptance results
+
+R1–R11 pass. R12 (optional; two real accounts befriending) not run.
+
+### Found along the way
+
+- **`setVersion.test.ts` hard-coded `0.3.0` as "a different version"**, so it
+  failed the moment the repo reached 0.3.0. It now uses `99.0.0`. The bump PR
+  first claimed the version tests passed because my command piped vitest into
+  `grep`, which hid the failure. The PR text was corrected. **Don't pipe a test
+  run into `grep` inside an `&&` chain:** the chain continues on grep's success.
+
+---
+
 ## 2026-10-23 — M7 phase 2 merged: the Friends panel and a friend's sky
 
 **Status: phase 2 is on `master` (#65). Nothing is released, and the phase 1
