@@ -5,7 +5,6 @@ import { prefersReducedMotion, rngFromSeed } from '@/shared/lib';
 import { ambientField, LAYER_DRIFT } from '../domain/ambient';
 import { skyThemeFor } from '../domain/skyThemes';
 import { useElementSize } from '../hooks/useElementSize';
-import { useEquippedTheme } from '../hooks/useEquippedTheme';
 import { useFrameLoop } from '../hooks/useFrameLoop';
 
 /** Device pixel ratio, capped at 2: beyond that the cost rises and nobody can see it. */
@@ -43,11 +42,10 @@ const dither = (ctx: CanvasRenderingContext2D, width: number, height: number) =>
  * The nebula never changes, so it is painted once per resize into an
  * offscreen canvas and blitted each frame. Only the stars are drawn per frame.
  */
-export const AmbientCanvas = () => {
+export const AmbientCanvas = ({ themeKey }: { themeKey: string | undefined }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nebulaRef = useRef<HTMLCanvasElement | null>(null);
   const { width, height } = useElementSize(canvasRef);
-  const themeKey = useEquippedTheme();
   const field = useMemo(() => ambientField(themeKey), [themeKey]);
   const theme = skyThemeFor(themeKey);
 

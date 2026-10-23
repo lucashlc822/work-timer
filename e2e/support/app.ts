@@ -69,6 +69,12 @@ export const openView = async (page: Page, name: 'View sky' | 'Stats' | 'Account
   await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
 };
 
+/** Opens the Friends panel. The pill's name carries the waiting-request count, if any. */
+export const openFriends = async (page: Page): Promise<void> => {
+  await page.getByRole('button', { name: /^Friends(,|$)/ }).click();
+  await expect(page.getByRole('heading', { name: 'Friends', level: 2 })).toBeVisible();
+};
+
 export const backToTimer = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: 'Back to timer' }).click();
   await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();

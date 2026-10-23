@@ -8,3 +8,4 @@ export { ProgressLine } from './ui/ProgressLine';
 export { RewardNote } from './ui/RewardNote';
 export { StardustPanel } from './ui/StardustPanel';
 export { StardustPill } from './ui/StardustPill';
+export { streakAt } from './domain/streak';
