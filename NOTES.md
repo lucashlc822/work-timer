@@ -12,6 +12,76 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-23 — M7 phase 2 merged: the Friends panel and a friend's sky
+
+**Status: phase 2 is on `master` (#65). Nothing is released, and the phase 1
+migration is still not on the hosted project.** Friends see nothing until both
+happen. Local `master` matches `origin/master`.
+
+### Next
+
+- **Release the friends feature as 0.3.0** (a new feature, not a fix). Order
+  matters:
+  1. `npx supabase db push` to the hosted project (`RELEASING.md` step 1). The
+     migration is additive, so 0.2.1 apps keep working against it.
+  2. Then bump, tag, review the draft, publish, as usual.
+
+  Plan it first. It's the first release with a migration since M6.
+- Then phase 3 ("focusing now", presence) per `docs/plans/2026-10-22-m7-friends.md`.
+- Still open from earlier entries: keep-alive case 9, `cargo install
+  cargo-audit`, tell friends about releases, the other machine.
+
+### Decisions (with Lucas)
+
+- A friend's sky is shown **full screen** in their theme, with four numbers on
+  a strip: focus this week, stars this week, streak, finished constellations.
+- A waiting request shows as **"Friends · N" on the pill**, with no
+  notifications. It refreshes on start, on window refocus, on coming back
+  online, and after every action.
+
+### What was built (#65)
+
+- `src/features/friends` (new slice, imports no other feature):
+  - panel (name, code with Copy and a select-and-Ctrl+C fallback, add by
+    code, requests, friends with a confirmed Remove)
+  - `FriendSkyView`, `FriendsPill`
+  - its own `friend_sky` decoder: `shared/sync/wire.ts` refuses rows without
+    tag, device or away time
+  - friend data is **in memory only**, never Dexie
+- `src/app/friendSlots.tsx` draws the friend's sky and computes the numbers
+  from the sky, stats and progression features, the same way `timerSlots` does.
+- Pure changes elsewhere:
+  - `SkyBackdrop` = pure `SkyView` + the Dexie wrapper; `AmbientCanvas` takes
+    the theme as a prop
+  - `deriveOtherSky` always uses the released tier rules, never the dev ones
+  - `totals` accepts rows without `awayMs`
+- Local accounts `a@`, `b@`, `c@test.local` (Ada, Bea friends; Cy with a
+  pending request to Ada) were seeded by hand for the browser and desktop
+  checks. A `db reset` removes them.
+
+### Acceptance results
+
+All cases pass:
+- 1.1–5.3: unit and e2e
+- 6.1: `e2e:desktop` 4/4
+- 6.2: by hand in `tauri:dev` (Lucas)
+
+Totals: 516 unit (sky golden tests unchanged), 26 e2e incl. the a11y scan of
+the Friends panel and a friend's sky, 174 pgTAP. CI green.
+
+### Things worth not rediscovering
+
+- **Node's `navigator` has no `onLine`**, so `!navigator.onLine` is true under
+  Vitest. Check `navigator.onLine === false` (a unit test caught it).
+- **PostgREST errors arrive with no HTTP status on the error object.** Read
+  `status` from the response and pass it along. A failed fetch comes back as
+  `TypeError: Failed to fetch` with status 0, which counts as "offline".
+- **The e2e friend-sky test's session ends 5 minutes before "now"**, so a run
+  in roughly the first half hour after midnight on a Monday could see 0 focus
+  this week. Accepted; the midnight trap below applies.
+
+---
+
 ## 2026-10-22 — M7 Friends: design agreed, phase 1 (server) merged
 
 **Status: M7 is the next milestone. Its design is `docs/plans/2026-10-22-m7-friends.md`
