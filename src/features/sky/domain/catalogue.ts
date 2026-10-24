@@ -459,7 +459,7 @@ export const catalogueEntry = (key: string): CatalogueEntry | undefined =>
 
 /**
  * The shapes offered for a tier: the ones everyone has, plus those of any pack
- * in `ownedPacks`. This only decides what the picker *shows* � a choice already
+ * in `ownedPacks`. This only decides what the picker *shows* — a choice already
  * made stays valid whatever is owned, since `resolveDef` doesn't ask.
  */
 export const catalogueKeysForTier = (

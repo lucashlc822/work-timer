@@ -127,7 +127,7 @@ export const readEquippedStyle = async (db: WorkTimerDb): Promise<string> => {
 /**
  * Equip an owned star style: it applies to stars born from now on, and syncs to
  * the account's other devices (newest edit wins). Resolves to false, changing
- * nothing, for a style that isn't owned � owning is checked here, not only in
+ * nothing, for a style that isn't owned — owning is checked here, not only in
  * the UI.
  */
 export const setEquippedStyle = (

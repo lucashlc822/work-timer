@@ -31,13 +31,13 @@ import { lastEndByDay, streakRuns } from './streak';
  * same goes for the bonus namespaces below.
  *
  * Bonuses (goal, streak, constellation) follow the same rule, each paid once:
- * - `goal:<day>` � the day's focus reached the goal. Only today and yesterday
+ * - `goal:<day>` — the day's focus reached the goal. Only today and yesterday
  *   are evaluated, so lowering the goal later never pays out old days.
- * - `streak:<run start>:<days>` � a run of consecutive days first reached a
+ * - `streak:<run start>:<days>` — a run of consecutive days first reached a
  *   milestone. Past runs pay too. (A very late-arriving session that extends a
  *   run backwards moves its start day, which would pay its milestones again;
  *   that needs a session to sync in days late, and is accepted.)
- * - `constellation:<choice id>` � a constellation was finished, by tier.
+ * - `constellation:<choice id>` — a constellation was finished, by tier.
  */
 
 export const sessionKey = (userId: string, sessionId: string): string =>
@@ -45,7 +45,7 @@ export const sessionKey = (userId: string, sessionId: string): string =>
 
 /**
  * A purchase's id. Unlike the earnings it is written by the shop, not the
- * reconciler � but it follows the same rule: derived from what it is for, so
+ * reconciler — but it follows the same rule: derived from what it is for, so
  * the same item bought on two offline devices is one row, and one deduction.
  */
 export const purchaseKey = (userId: string, itemKey: string): string =>
