@@ -16,6 +16,12 @@ export type FriendsErrorKind =
   | 'tooManyPending'
   | 'notFound'
   | 'notFriends'
+  | 'invalidRoom'
+  | 'tooManyInvited'
+  | 'alreadyInRoom'
+  | 'roomNotFound'
+  | 'roomClosed'
+  | 'nobodyJoined'
   | 'offline'
   | 'unknown';
 
@@ -29,6 +35,12 @@ export const FRIENDS_MESSAGES: Record<FriendsErrorKind, string> = {
   tooManyPending: 'You have 20 requests waiting. Cancel some before sending more.',
   notFound: 'That request or friend is gone. The list has been refreshed.',
   notFriends: "You're no longer friends.",
+  invalidRoom: 'Pick at least one friend and a length.',
+  tooManyInvited: 'You can focus with up to three friends at once.',
+  alreadyInRoom: "You're already in a session with friends.",
+  roomNotFound: 'That session is gone.',
+  roomClosed: 'That session has already started, ended or lapsed.',
+  nobodyJoined: 'Wait until a friend has joined, then start.',
   offline: 'Connect to see your friends.',
   unknown: 'Something went wrong. Try again in a moment.',
 };
@@ -44,6 +56,12 @@ const SERVER_CODES: Record<string, FriendsErrorKind> = {
   request_not_found: 'notFound',
   friendship_not_found: 'notFound',
   not_friends: 'notFriends',
+  invalid_room: 'invalidRoom',
+  too_many: 'tooManyInvited',
+  already_in_room: 'alreadyInRoom',
+  room_not_found: 'roomNotFound',
+  room_closed: 'roomClosed',
+  nobody_joined: 'nobodyJoined',
 };
 
 /** What classification needs from a supabase-js error and its response. */

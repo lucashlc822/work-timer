@@ -14,6 +14,7 @@ import {
   addCompletedSession,
   befriend,
   requestFriend,
+  rpc,
   setName,
   shareFocus,
 } from '../support/friends';
@@ -127,6 +128,26 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await page.getByRole('definition').first().waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, "a friend's sky")));
+
+  // Focus together (M7 phase 4): the panel, an invitation, and a lobby.
+  await page.keyboard.press('Escape'); // a friend's sky -> friends
+  await page.keyboard.press('Escape'); // friends -> timer
+  await page.getByRole('button', { name: 'Focus with friends' }).click();
+  await page.getByRole('heading', { name: 'Focus together' }).waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'focus together')));
+  await page.keyboard.press('Escape');
+
+  await rpc(friend, 'create_room', { friends: [user.id], planned_duration_s: 1500 });
+  const banner = page.getByRole('region', { name: 'Invitation' });
+  await banner.waitFor({ timeout: 15_000 });
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'invitation banner')));
+  await banner.getByRole('button', { name: 'Join' }).click();
+  await page.getByRole('button', { name: 'Back to your friends session' }).click();
+  await page.getByRole('heading', { name: '25 min together' }).waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'together lobby')));
 
   await report(testInfo, findings);
 });

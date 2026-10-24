@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   ConstellationStatus,
@@ -17,9 +17,16 @@ import {
   FriendSkyView,
   FriendsPanel,
   FriendsPill,
+  InviteBanner,
+  TogetherCancelNote,
+  TogetherLine,
+  TogetherPanel,
+  TogetherResultNote,
   useFriends,
   useShareFocusStatus,
+  useTogether,
   type FriendRow,
+  type Together,
 } from '@/features/friends';
 import {
   ProgressLine,
@@ -31,13 +38,20 @@ import {
 } from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
-import { TimerProvider, TimerScreen, type TimerSlots } from '@/features/timer';
+import {
+  TimerProvider,
+  TimerScreen,
+  useTimer,
+  type FinishedResult,
+  type TimerSlots,
+} from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
+import { useTogetherTimer } from '../useTogetherTimer';
 
 /**
  * Sky and Stardust content for the timer's slots. The features never import
@@ -79,8 +93,32 @@ const renderPackPreview = (packKey: string) => <PackPreview pack={packKey} />;
  * hold it.
  */
 export const HomeRoute = () => {
+  const { account } = useAccount();
+  const together = useTogether(account.userId);
+  const { cancel } = together;
+
+  // Your own end-early in a focus-together session ends it for everyone (M7).
+  const onEnded = useCallback(
+    (result: FinishedResult) => {
+      const roomId = result.session.togetherId;
+      if (roomId !== null && result.ending.outcome === 'cancelled' && result.endedBy === null) {
+        cancel(roomId);
+      }
+    },
+    [cancel],
+  );
+
+  return (
+    // The timer lives above the screen so the app can drive it too (M7).
+    <TimerProvider onEnded={onEnded}>
+      <HomeScreen together={together} />
+    </TimerProvider>
+  );
+};
+
+const HomeScreen = ({ together }: { together: Together }) => {
   const [view, setView] = useState<
-    'timer' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend'
+    'timer' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend' | 'together'
   >('timer');
   // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
   const [friend, setFriend] = useState<FriendRow | null>(null);
@@ -92,8 +130,64 @@ export const HomeRoute = () => {
   const ownedPacks = useOwnedPacks() ?? NO_PACKS;
   const earnedTiers = useEarnedTiers();
 
+  const timer = useTimer();
+  const me = account.userId;
+  useTogetherTimer(together, timer, me);
+
   useEffect(installDevTools, []);
   useEffect(installStatsDevTools, []);
+
+  // Once your friends session starts, the timer is where it is.
+  const roomRunning = together.room?.status === 'running';
+  useEffect(() => {
+    if (view === 'together' && roomRunning) setView('timer');
+  }, [view, roomRunning]);
+
+  const hasFriends = friends.friends.length > 0;
+  const inRoom = together.room !== null;
+  const { rooms } = together;
+  const slots = useMemo<TimerSlots>(() => {
+    const roomOf = (id: string | null) =>
+      id === null ? null : (rooms.find((r) => r.id === id) ?? null);
+    return {
+      ...timerSlots,
+      startHint: (plannedS) => (
+        <>
+          <StartHint plannedS={plannedS} />
+          {hasFriends && (
+            <button
+              type="button"
+              onClick={() => setView('together')}
+              className="text-lavender-200 hover:text-ink-primary text-xs underline-offset-4 transition-colors hover:underline"
+            >
+              {inRoom ? 'Back to your friends session' : 'Focus with friends'}
+            </button>
+          )}
+        </>
+      ),
+      running: (session) => {
+        const room = roomOf(session.togetherId);
+        return room === null ? null : <TogetherLine room={room} me={me} />;
+      },
+      cancelNote: (session) => {
+        const room = roomOf(session.togetherId);
+        return room === null ? null : <TogetherCancelNote room={room} me={me} />;
+      },
+      resultNote: (result) => (
+        <>
+          {timerSlots.resultNote?.(result)}
+          {result.togetherId !== null && (
+            <TogetherResultNote
+              room={roomOf(result.togetherId)}
+              me={me}
+              outcome={result.outcome}
+              endedBy={result.endedBy}
+            />
+          )}
+        </>
+      ),
+    };
+  }, [rooms, hasFriends, inRoom, me]);
 
   useEffect(() => {
     if (view === 'timer') return;
@@ -106,8 +200,7 @@ export const HomeRoute = () => {
   }, [view]);
 
   return (
-    // The timer lives above the screen so the app can drive it too (M7).
-    <TimerProvider>
+    <>
       <SkyBackdrop mode={view === 'sky' ? 'full' : 'hero'} />
 
       <main
@@ -121,8 +214,16 @@ export const HomeRoute = () => {
           <h1 className="text-ink-secondary text-sm tracking-widest uppercase">{APP_NAME}</h1>
         </header>
 
+        {together.invite !== null && (
+          <InviteBanner
+            invite={together.invite}
+            busy={timer.status !== 'idle'}
+            onAnswer={together.respond}
+          />
+        )}
+
         <section className="flex w-full flex-1 flex-col items-center justify-center pt-24">
-          <TimerScreen slots={timerSlots} />
+          <TimerScreen slots={slots} />
         </section>
 
         <footer className="flex flex-col items-center gap-3">
@@ -199,6 +300,17 @@ export const HomeRoute = () => {
         </div>
       )}
 
+      {view === 'together' && (
+        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+          <TogetherPanel
+            together={together}
+            friends={friends.friends}
+            me={me}
+            busy={timer.status !== 'idle'}
+          />
+        </div>
+      )}
+
       {view === 'friend' && friend !== null && (
         <div className="fixed inset-0 z-10">
           <FriendSkyView
@@ -228,7 +340,7 @@ export const HomeRoute = () => {
           {view === 'friend' ? 'Back to friends' : 'Back to timer'}
         </button>
       )}
-    </TimerProvider>
+    </>
   );
 };
 

@@ -49,7 +49,15 @@ const desktopNotifications: NotificationPort = {
 
   async notify({ title, body }) {
     try {
-      if (!(await isPermissionGranted())) return;
+      // The plugin's page-side `Notification` starts out reporting "denied"
+      // until permission is requested in this run, even when the app is
+      // allowed (seen with a fresh WebView2 profile: the page said "denied",
+      // the plugin's own check said granted). Asking settles it; Windows shows
+      // a desktop app no prompt. Until M7 every desktop notice came from Rust
+      // (the session deadline), so nothing on the page hit this.
+      if (!(await isPermissionGranted()) && (await requestNotificationPermission()) !== 'granted') {
+        return;
+      }
       sendNotification({ title, body });
     } catch {
       /* never break the timer over a notification */

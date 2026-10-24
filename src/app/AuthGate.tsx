@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { AuthScreens, deleteAccount, signOut, type SignedInAccount } from '@/features/account';
+import { useTogetherWins } from '@/features/friends';
 import { useStardustReconciler } from '@/features/progression';
 import { useConstellationCompletions } from '@/features/sky';
 import { clearLastUserId, getSupabase, readStoredAccount, writeLastUserId } from '@/shared/backend';
@@ -148,7 +149,9 @@ const SignedIn = ({
 }) => {
   const { syncNow, ...sync } = useSync(account.userId);
   const completions = useConstellationCompletions();
-  useStardustReconciler(account.userId, completions);
+  // Rooms everyone completed (M7): only the server can see every member's session.
+  const togetherWins = useTogetherWins();
+  useStardustReconciler(account.userId, completions, togetherWins);
   return (
     <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
       {children}

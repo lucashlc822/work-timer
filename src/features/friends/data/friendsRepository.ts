@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { classifyFriendsError, type FriendsErrorKind } from '../domain/errors';
 import type { FocusStatus } from '../domain/focusStatus';
 import { decodeFriendSky, type FriendSky } from '../domain/friendSky';
+import { decodeRooms, type Room } from '../domain/room';
 
 /**
  * Every friends action, over the server's friends functions (M7).
@@ -171,4 +172,55 @@ export const friendsFocus = async (client: SupabaseClient): Promise<Map<string, 
     byFriend.set(r.friend_id, { kind: r.kind, startedAt, until });
   }
   return byFriend;
+};
+
+// --- Focus together (M7 phase 4) ----------------------------------------------
+
+/** Opens a room with 1–3 friends; you are the host, already in. Returns its id. */
+export const createRoom = async (
+  client: SupabaseClient,
+  friendIds: readonly string[],
+  plannedDurationS: number,
+): Promise<string> => {
+  const id = await call<string>(() =>
+    client.rpc('create_room', { friends: friendIds, planned_duration_s: plannedDurationS }),
+  );
+  if (typeof id !== 'string') throw new FriendsFailure('unknown');
+  return id;
+};
+
+export const respondRoom = async (
+  client: SupabaseClient,
+  roomId: string,
+  join: boolean,
+): Promise<void> => {
+  await call(() => client.rpc('respond_room', { room: roomId, join_room: join }));
+};
+
+export const startRoom = async (client: SupabaseClient, roomId: string): Promise<void> => {
+  await call(() => client.rpc('start_room', { room: roomId }));
+};
+
+/** Before the start: leave an invitation, or (as host) give the room up. */
+export const leaveRoom = async (client: SupabaseClient, roomId: string): Promise<void> => {
+  await call(() => client.rpc('leave_room', { room: roomId }));
+};
+
+/** While it runs: end it for everyone. Safe to retry. */
+export const cancelRoom = async (client: SupabaseClient, roomId: string): Promise<void> => {
+  await call(() => client.rpc('cancel_room', { room: roomId }));
+};
+
+export const myRooms = async (client: SupabaseClient): Promise<Room[]> =>
+  decodeRooms(await call<unknown>(() => client.rpc('my_rooms')));
+
+/** Rooms you finished together with everyone, for the +10 bonus. */
+export const togetherWins = async (
+  client: SupabaseClient,
+): Promise<{ roomId: string; endsAt: number }[]> => {
+  const rows = await call<Record<string, unknown>[]>(() => client.rpc('together_wins'));
+  return (rows ?? []).flatMap((r) => {
+    const endsAt = ms(r.ends_at);
+    return typeof r.room_id === 'string' && endsAt !== null ? [{ roomId: r.room_id, endsAt }] : [];
+  });
 };
