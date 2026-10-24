@@ -7,7 +7,7 @@ import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { cancelledEnding, plannedEndAt, progress, remainingMs } from '../domain/session';
 import { useTick } from '../hooks/useTick';
 import { pomodoroLimits, useTimerPrefs } from '../hooks/useTimerPrefs';
-import { useTimerSession } from '../hooks/useTimerSession';
+import { useTimer } from './timerContext';
 import { BreakScreen } from './BreakScreen';
 import { CancelDialog } from './CancelDialog';
 import { CountdownDisplay } from './CountdownDisplay';
@@ -30,7 +30,7 @@ import type { TimerSlots } from './slots';
  * timer importing them — features stay opaque to each other.
  */
 export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
-  const timer = useTimerSession();
+  const timer = useTimer();
   const prefs = useTimerPrefs();
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
   const [confirming, setConfirming] = useState(false);
@@ -90,6 +90,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
   if (inFlight && timer.session !== null) {
     const session = timer.session;
     const block = session.runIndex;
+    const running = { sessionId: session.id, togetherId: session.togetherId };
     return (
       <div className="flex w-full flex-col items-center gap-6">
         {block !== null && (
@@ -105,6 +106,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
           {formatDuration(session.plannedDurationS)} · ends at{' '}
           {formatTimeOfDay(plannedEndAt(session))}
         </p>
+        {slots.running?.(running)}
 
         {slots.tagPicker?.({
           value: session.tagId,
@@ -130,6 +132,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
           <CancelDialog
             focusedSoFar={formatDuration(cancelledEnding(session, now).actualFocusS)}
             runStarsKept={block !== null ? (timer.run?.blocksDone ?? 0) : null}
+            note={slots.cancelNote?.(running)}
             onKeepGoing={keepGoing}
             onConfirm={() => {
               setConfirming(false);

@@ -97,6 +97,7 @@ export const sessionToWire = (row: SessionRow) => ({
   run_id: row.runId ?? null,
   run_index: row.runIndex ?? null,
   star_style: row.starStyle ?? null,
+  together_id: row.togetherId ?? null,
 });
 
 /** One ledger row; insert-only on the server, like sessions. */
@@ -205,6 +206,8 @@ export const sessionFromWire = (w: WireRow, syncedAt: number): SessionRow | null
   // Absent from older apps' rows (and on cancelled sessions): the default look.
   // A style key this version doesn't know is kept as-is and drawn as the default.
   if (str(w.star_style)) row.starStyle = w.star_style;
+  // A focus-together session (M7); absent on solo sessions and older apps' rows.
+  if (str(w.together_id)) row.togetherId = w.together_id;
   return row;
 };
 

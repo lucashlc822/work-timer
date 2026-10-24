@@ -13,6 +13,16 @@ export interface ResultInfo {
   seed: string;
   outcome: 'completed' | 'cancelled';
   actualFocusS: number;
+  /** The focus-together room it ran in (M7); null for a solo session. */
+  togetherId: string | null;
+  /** Who ended a focus-together session early, when it wasn't you; null otherwise. */
+  endedBy: string | null;
+}
+
+/** The session on screen while it runs, for the app's lines about it. */
+export interface RunningInfo {
+  sessionId: string;
+  togetherId: string | null;
 }
 
 export interface TagPickerProps {
@@ -32,4 +42,8 @@ export interface TimerSlots {
   resultStar?: (result: ResultInfo) => ReactNode;
   /** Under the result text, for both outcomes. */
   resultNote?: (result: ResultInfo) => ReactNode;
+  /** Under the "ends at" line while a session runs (M7: who you focus with). */
+  running?: (session: RunningInfo) => ReactNode;
+  /** Added to the end-early dialog (M7: that it ends the session for friends too). */
+  cancelNote?: (session: RunningInfo) => ReactNode;
 }

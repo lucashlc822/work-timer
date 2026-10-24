@@ -35,6 +35,7 @@ import type {
   ActiveSession,
   PomodoroRun,
   RunBreak,
+  CancelRequest,
   RunSummary,
   SessionDraft,
   StartedSession,
@@ -62,8 +63,13 @@ export interface TimerSession {
   error: string | null;
   /** True while a write between blocks is in flight; buttons should disable. */
   busy: boolean;
+  /** Starts a session; a countdown draft with `together` starts at the room's shared start (M7). */
   start: (draft: SessionDraft) => void;
-  confirmCancel: () => void;
+  /**
+   * End the running session early. The screen passes nothing; the app passes
+   * when and by whom for a friend's cancel in a focus-together session (M7).
+   */
+  confirmCancel: (request?: CancelRequest) => void;
   dismiss: () => void;
   startNext: () => void;
   skipBreak: () => void;
@@ -340,7 +346,10 @@ export const useTimerSession = (): TimerSession => {
     [running, betweenBlocks, sessionId, runId, send],
   );
 
-  const confirmCancel = useCallback(() => send({ type: 'CANCEL_CONFIRMED' }), [send]);
+  const confirmCancel = useCallback(
+    (request: CancelRequest = {}) => send({ type: 'CANCEL_CONFIRMED', ...request }),
+    [send],
+  );
   const dismiss = useCallback(() => send({ type: 'DISMISS' }), [send]);
   const skip = useCallback(() => send({ type: 'SKIP_BREAK' }), [send]);
   const end = useCallback(() => send({ type: 'END_RUN' }), [send]);

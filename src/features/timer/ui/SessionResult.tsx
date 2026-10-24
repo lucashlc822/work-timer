@@ -26,6 +26,8 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
     seed: result.session.seed,
     outcome: ending.outcome,
     actualFocusS: ending.actualFocusS,
+    togetherId: result.session.togetherId,
+    endedBy: result.endedBy,
   };
   const customStar = completed ? slots.resultStar?.(info) : undefined;
 

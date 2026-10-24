@@ -24,6 +24,8 @@ export interface ActiveSession {
   device: string;
   /** Informational only. Never affects whether the session succeeds. */
   awayMs: number;
+  /** The focus-together room it runs in (M7); null for a solo session. */
+  togetherId: string | null;
 }
 
 export type PomodoroSettings = PomodoroSettingsRow;
@@ -35,8 +37,32 @@ export type PomodoroRun = PomodoroRunRow;
  * run; its first block's length comes from `settings.focusS`.
  */
 export type SessionDraft =
-  | { mode: 'countdown'; plannedDurationS: number; tagId: string | null }
+  | {
+      mode: 'countdown';
+      plannedDurationS: number;
+      tagId: string | null;
+      /**
+       * A focus-together session (M7): it starts at the room's shared start
+       * (server time) rather than now, so every member counts down to the
+       * same end.
+       */
+      together?: TogetherStart;
+    }
   | { mode: 'pomodoro'; settings: PomodoroSettings; tagId: string | null };
+
+export interface TogetherStart {
+  roomId: string;
+  /** Epoch ms: the room's start, the same for every member. */
+  startsAt: number;
+}
+
+/** How a session is being ended from outside the screen (M7: a friend's cancel). */
+export interface CancelRequest {
+  /** Epoch ms the cancel happened; the session's focus counts up to it. */
+  at?: number;
+  /** Who ended it, for the result ("Bea ended the session"); absent when it was you. */
+  endedBy?: string;
+}
 
 /** A freshly started session, with the run it belongs to (null for a countdown). */
 export interface StartedSession {

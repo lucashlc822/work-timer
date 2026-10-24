@@ -27,6 +27,7 @@ const aSession = (overrides: Partial<ActiveSession> = {}): ActiveSession => ({
   tagId: null,
   device: 'desktop/app',
   awayMs: 0,
+  togetherId: null,
   ...overrides,
 });
 
@@ -600,5 +601,69 @@ describe('timerMachine: tags', () => {
     h.actor.send({ type: 'TAG_CHANGED', tagId: 'reading' });
 
     expect(h.actor.getSnapshot().context.session?.tagId).toBeNull();
+  });
+});
+
+describe('timerMachine: ended from outside (M7, focus together)', () => {
+  // M7 4b, case 2.2 — a friend's cancel ends the session when it happened.
+  it('a cancel carrying `at` ends the session then, and says who ended it', async () => {
+    const { actor, clock, finished, disarmed } = harness();
+    actor.send({ type: 'START', draft: countdown(1500) });
+    await waitFor(actor, (s) => s.matches('running'));
+
+    clock.advance(10 * MIN); // the cancel reaches this device a few seconds late
+    actor.send({ type: 'CANCEL_CONFIRMED', at: START + 9 * MIN + 55_000, endedBy: 'Bea' });
+    await waitFor(actor, (s) => s.matches('finished'));
+
+    expect(finished).toEqual([
+      {
+        id: 'session-1',
+        ending: { outcome: 'cancelled', endedAt: START + 9 * MIN + 55_000, actualFocusS: 595 },
+      },
+    ]);
+    expect(disarmed).toEqual(['session-1']);
+    expect(actor.getSnapshot().context.result?.endedBy).toBe('Bea');
+  });
+
+  it('a cancel time in this device’s future is clamped to now', async () => {
+    const { actor, clock, finished } = harness();
+    actor.send({ type: 'START', draft: countdown(1500) });
+    await waitFor(actor, (s) => s.matches('running'));
+
+    clock.advance(5 * MIN);
+    actor.send({ type: 'CANCEL_CONFIRMED', at: START + 7 * MIN });
+    await waitFor(actor, (s) => s.matches('finished'));
+
+    expect(finished[0]?.ending.endedAt).toBe(START + 5 * MIN);
+  });
+
+  it('a plain cancel says nobody else ended it, and the next session starts clean', async () => {
+    const { actor, clock } = harness();
+    actor.send({ type: 'START', draft: countdown() });
+    await waitFor(actor, (s) => s.matches('running'));
+    clock.advance(10_000);
+    actor.send({ type: 'CANCEL_CONFIRMED', at: START + 5_000, endedBy: 'Bea' });
+    await waitFor(actor, (s) => s.matches('finished'));
+    actor.send({ type: 'DISMISS' });
+
+    actor.send({ type: 'START', draft: countdown() });
+    await waitFor(actor, (s) => s.matches('running'));
+    clock.advance(20_000);
+    actor.send({ type: 'CANCEL_CONFIRMED' });
+    await waitFor(actor, (s) => s.matches('finished'));
+
+    expect(actor.getSnapshot().context.result?.endedBy).toBeNull();
+    expect(actor.getSnapshot().context.result?.ending.endedAt).toBe(START + 30_000);
+  });
+
+  it('a completed session has no `endedBy`', async () => {
+    const { actor, clock } = harness();
+    actor.send({ type: 'START', draft: countdown() });
+    await waitFor(actor, (s) => s.matches('running'));
+    clock.advance(60_000);
+    actor.send({ type: 'TICK_DUE' });
+    await waitFor(actor, (s) => s.matches('finished'));
+
+    expect(actor.getSnapshot().context.result?.endedBy).toBeNull();
   });
 });

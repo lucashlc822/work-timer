@@ -31,7 +31,7 @@ import {
 } from '@/features/progression';
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
-import { TimerScreen, type TimerSlots } from '@/features/timer';
+import { TimerProvider, TimerScreen, type TimerSlots } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
@@ -106,7 +106,8 @@ export const HomeRoute = () => {
   }, [view]);
 
   return (
-    <>
+    // The timer lives above the screen so the app can drive it too (M7).
+    <TimerProvider>
       <SkyBackdrop mode={view === 'sky' ? 'full' : 'hero'} />
 
       <main
@@ -227,7 +228,7 @@ export const HomeRoute = () => {
           {view === 'friend' ? 'Back to friends' : 'Back to timer'}
         </button>
       )}
-    </>
+    </TimerProvider>
   );
 };
 

@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface Props {
   /** e.g. "12 minutes" — what will be credited if the user confirms. */
   focusedSoFar: string;
   /** For a Pomodoro block: stars the run has already earned, which it keeps. Null otherwise. */
   runStarsKept?: number | null;
+  /** Extra words from the app (M7: "This ends it for Ada and Bea too."). */
+  note?: ReactNode;
   onKeepGoing: () => void;
   onConfirm: () => void;
 }
@@ -19,6 +21,7 @@ interface Props {
 export const CancelDialog = ({
   focusedSoFar,
   runStarsKept = null,
+  note,
   onKeepGoing,
   onConfirm,
 }: Props) => {
@@ -51,6 +54,7 @@ export const CancelDialog = ({
           {runStarsKept !== null &&
             ` This also ends the Pomodoro run; its ${runStarsKept} ${runStarsKept === 1 ? 'star stays' : 'stars stay'}.`}
         </p>
+        {note}
         <div className="flex flex-col gap-2">
           <button
             ref={keepGoingRef}
