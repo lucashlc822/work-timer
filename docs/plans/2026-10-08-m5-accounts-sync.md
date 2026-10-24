@@ -195,7 +195,7 @@ stack; codes are read from its fake inbox.
 
 - `npx supabase start`, `npx supabase test db` for the server.
 - `npm test` for the engine and merge rules (fake remote).
-- Browser pane on `npm run dev` + the desktop app driven over WebView2 remote debugging (NOTES.md, 2026-10-08) as two devices on the local stack; the fake inbox's API on `127.0.0.1:54324` for codes.
+- Browser pane on `npm run dev` + the desktop app driven over WebView2 remote debugging (`docs/notes-archive/2026-Q4.md`, 2026-10-08) as two devices on the local stack; the fake inbox's API on `127.0.0.1:54324` for codes.
 
 ## Model recommendation
 
