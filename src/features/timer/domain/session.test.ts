@@ -29,6 +29,7 @@ const aSession = (overrides: Partial<ActiveSession> = {}): ActiveSession => ({
   tagId: null,
   device: 'desktop/app',
   awayMs: 0,
+  togetherId: null,
   ...overrides,
 });
 

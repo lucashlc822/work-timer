@@ -194,3 +194,38 @@ describe('setInFlightTag', () => {
     expect(await db.sessions.get(session.id)).toEqual(before);
   });
 });
+
+describe('startSession: focus together (M7)', () => {
+  // M7 4b, case 2.1 — every member counts down to the room's shared end.
+  it('starts at the room’s shared start and records the room', async () => {
+    const db = withDb();
+    const startsAt = START - 4_000; // the room started a few seconds ago, on the server
+
+    const { session } = await startSession(
+      db,
+      { ...draft, together: { roomId: 'room-1', startsAt } },
+      ctx(),
+    );
+
+    expect(session.startedAt).toBe(startsAt);
+    expect(session.togetherId).toBe('room-1');
+    const row = await db.sessions.get(session.id);
+    expect(row).toMatchObject({
+      startedAt: startsAt,
+      togetherId: 'room-1',
+      clientCreatedAt: START,
+    });
+    expect(await loadActiveSession(db)).toMatchObject({
+      togetherId: 'room-1',
+      startedAt: startsAt,
+    });
+  });
+
+  it('a solo session records no room at all', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, draft, ctx());
+
+    expect(session.togetherId).toBeNull();
+    expect(await db.sessions.get(session.id)).not.toHaveProperty('togetherId');
+  });
+});

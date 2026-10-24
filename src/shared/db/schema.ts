@@ -81,6 +81,12 @@ export interface SessionRow {
    * and unindexed, so no schema version and no rewrite of any finished row.
    */
   starStyle?: string;
+  /**
+   * The focus-together room this session ran in (M7 phase 4). Absent on solo
+   * sessions and on rows from older apps. Optional and unindexed, like
+   * `runId`: no schema version, no rewrite of any finished row.
+   */
+  togetherId?: string;
 }
 
 /**

@@ -9,6 +9,7 @@ import type {
   ActiveSession,
   PomodoroRun,
   RunSummary,
+  CancelRequest,
   SessionDraft,
   SessionEnding,
   StartedSession,
@@ -39,6 +40,8 @@ export interface FinishedResult {
   ending: SessionEnding;
   /** Stars the run kept when this cancelled block ended it; null otherwise. */
   runBlocksKept: number | null;
+  /** Who ended a focus-together session early, when it wasn't you (M7). */
+  endedBy: string | null;
 }
 
 export interface TimerContext {
@@ -52,6 +55,8 @@ export interface TimerContext {
   result: FinishedResult | null;
   summary: RunSummary | null;
   error: string | null;
+  /** How the running session is being ended early, between the request and the write. */
+  cancel: CancelRequest | null;
 }
 
 export type TimerEvent =
@@ -59,7 +64,11 @@ export type TimerEvent =
   | { type: 'RESUME'; session?: ActiveSession | undefined; run?: PomodoroRun | undefined }
   /** "It might be over now" — sent by repaints, deadlines, and visibility. Guarded, so spurious ones are harmless. */
   | { type: 'TICK_DUE' }
-  | { type: 'CANCEL_CONFIRMED' }
+  /**
+   * End the running session early. From the screen it carries nothing; a
+   * friend's cancel (M7) carries when it happened and who did it.
+   */
+  | ({ type: 'CANCEL_CONFIRMED' } & CancelRequest)
   | { type: 'DISMISS' }
   | { type: 'SKIP_BREAK' }
   | { type: 'START_NEXT' }
@@ -170,6 +179,7 @@ export const timerMachine = setup({
     result: null,
     summary: null,
     error: null,
+    cancel: null,
   }),
   initial: 'idle',
   states: {
@@ -250,10 +260,18 @@ export const timerMachine = setup({
         TICK_DUE: { guard: 'sessionComplete', target: 'completing' },
         CANCEL_CONFIRMED: {
           target: 'cancelling',
-          actions: {
-            type: 'disarmCompletion',
-            params: ({ context }) => ({ sessionId: context.session!.id }),
-          },
+          actions: [
+            assign({
+              cancel: ({ event }) => ({
+                ...(event.at !== undefined && { at: event.at }),
+                ...(event.endedBy !== undefined && { endedBy: event.endedBy }),
+              }),
+            }),
+            {
+              type: 'disarmCompletion',
+              params: ({ context }) => ({ sessionId: context.session!.id }),
+            },
+          ],
         },
       },
     },
@@ -275,6 +293,7 @@ export const timerMachine = setup({
                   session: context.session!,
                   ending: context.ending!,
                   runBlocksKept: null,
+                  endedBy: null,
                 }),
               }),
               { type: 'armBreak', params: ({ event }) => ({ run: event.output! }) },
@@ -290,6 +309,7 @@ export const timerMachine = setup({
                 session: context.session!,
                 ending: context.ending!,
                 runBlocksKept: null,
+                endedBy: null,
               }),
             }),
           },
@@ -305,8 +325,14 @@ export const timerMachine = setup({
     },
 
     cancelling: {
+      // A friend's cancel ends the session when it happened, never later than
+      // now (a cancel can't be in this device's future).
       entry: assign({
-        ending: ({ context }) => cancelledEnding(context.session!, context.clock.now()),
+        ending: ({ context }) => {
+          const now = context.clock.now();
+          const at = context.cancel?.at;
+          return cancelledEnding(context.session!, at === undefined ? now : Math.min(now, at));
+        },
       }),
       invoke: {
         src: 'finishSession',
@@ -328,8 +354,10 @@ export const timerMachine = setup({
             context.session!.runId !== null && context.ending!.outcome === 'cancelled'
               ? (context.run?.blocksDone ?? 0)
               : null,
+          endedBy: context.cancel?.endedBy ?? null,
         }),
         run: null,
+        cancel: null,
       }),
       on: {
         DISMISS: {

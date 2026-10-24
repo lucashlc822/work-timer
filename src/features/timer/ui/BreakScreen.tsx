@@ -55,6 +55,8 @@ export const BreakScreen = ({
           seed: result.session.seed,
           outcome: result.ending.outcome,
           actualFocusS: result.ending.actualFocusS,
+          togetherId: result.session.togetherId,
+          endedBy: result.endedBy,
         };
   const star = info !== null ? slots.resultStar?.(info) : undefined;
   // The run's tag, so a change here is what the next block will carry.

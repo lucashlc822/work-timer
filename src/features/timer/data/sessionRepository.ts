@@ -9,6 +9,7 @@ import type {
   SessionDraft,
   SessionEnding,
   StartedSession,
+  TogetherStart,
 } from '../domain/types';
 
 /**
@@ -62,6 +63,7 @@ const toActive = (row: SessionRow): ActiveSession => ({
   tagId: row.tagId,
   device: row.device,
   awayMs: row.awayMs,
+  togetherId: row.togetherId ?? null,
 });
 
 export const isInFlight = (row: SessionRow | undefined): row is SessionRow =>
@@ -85,12 +87,15 @@ export const addInFlightSession = async (
   fields: Pick<SessionRow, 'plannedDurationS' | 'tagId'> &
     ({ mode: 'countdown' } | { mode: 'pomodoro'; runId: string; runIndex: number }),
   ctx: StartContext,
+  together?: TogetherStart,
 ): Promise<ActiveSession> => {
   const now = ctx.clock.now();
   const row: SessionRow = {
     id: newId(),
     actualFocusS: 0,
-    startedAt: now,
+    // A focus-together session starts at the room's shared start, so every
+    // member's countdown reaches the same end.
+    startedAt: together?.startsAt ?? now,
     endedAt: null,
     outcome: null,
     awayMs: 0,
@@ -99,6 +104,7 @@ export const addInFlightSession = async (
     clientCreatedAt: now,
     syncedAt: null,
     ...fields,
+    ...(together !== undefined && { togetherId: together.roomId }),
   };
   await db.sessions.add(row);
   await writeMeta(db, META_KEYS.activeSessionId, row.id);
@@ -128,6 +134,7 @@ export const startSession = (
         db,
         { mode: 'countdown', plannedDurationS: draft.plannedDurationS, tagId: draft.tagId },
         ctx,
+        draft.together,
       );
       return { session, run: null };
     }
