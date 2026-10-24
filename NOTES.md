@@ -12,6 +12,93 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-24 — M7 phase 4 merged: focus together
+
+**Status: phase 4 is on `master` in five PRs; nothing is released.** The
+hosted project does **not** have `20261024044635_m7_together.sql` yet. Local
+`master` matches `origin/master`, with nothing uncommitted. Plan:
+`~/.claude/plans/please-proceed-with-planning-smooth-clarke.md` (phase 4
+section; the file was reused for later plans).
+
+### Next
+
+- **Release as 0.5.0**, the same routine as 0.4.0 (`RELEASING.md`):
+  1. Push `20261024044635_m7_together.sql` first. 0.5.0 sends `together_id`
+     with every session, and a server without that column refuses the upload.
+  2. Probe `together_members` and `rpc/my_rooms` before and after (401 = there).
+  3. Then bump, tag, review, publish.
+- **Phase 5: shared constellations**, per the design doc.
+- Still open from the 2026-10-23 wrap-up below: R12 twice (needs a real
+  friend on the new version), tell friends, `cargo install cargo-audit`, the
+  other machine.
+
+### Decisions (with Lucas)
+
+| Question | Answer |
+|---|---|
+| Who cancels for everyone | Any member's deliberate end-early ends everyone's session (Forest-style) |
+| Group size | Up to 4 (host + 3 friends) |
+| Invitations | Banner on the timer + desktop notification; a lobby lapses after 10 min |
+| Bonus | +10 Stardust each, only when every member completed |
+| Who is in | Host starts once ≥1 friend joined; un-joined are dropped; nobody joins after |
+
+Recorded in CLAUDE.md ("Focus together: anyone's deliberate cancel ends it for
+everyone", cross-referenced from "Leaving the app never forfeits a session"),
+along with "Live updates for friends go through each person's own rows".
+
+### What was built
+
+| PR | What |
+|---|---|
+| #77 | Six em dashes in comments restored. `reconcile.ts` wasn't valid UTF-8, so editing tools refused it. |
+| #78 (4a) | `together_rooms` (no grants), `together_members` (owner-only select, in Realtime), `sessions.together_id`, and seven definer functions |
+| #79 (4b) | `TimerProvider` with `onEnded`; a together draft (`startedAt` = the room's start); `confirmCancel({ at, endedBy })`; `running`/`cancelNote` slots; `together_id` in `wire.ts` |
+| #80 (4c) | The together panel, invitation banner and notes; `useTogether` (live) and `useTogetherWins`; app glue `useTogetherTimer`; the +10 bonus (`together:<roomId>`); the desktop notification fix |
+
+- **How a cancel reaches everyone:** every room change touches every member's
+  row, and each device listens on its own filtered channel. There are 15 s
+  polls and visibility/online re-reads behind it.
+- **A device back after the end** never starts the room's countdown, and earns
+  nothing for time it didn't run.
+- **Your own end-early** is sent to the room from `onEnded`, and retried until
+  it lands.
+
+### Acceptance results
+
+All plan cases pass:
+- pgTAP: 247 checks (`m7_together` 46)
+- unit: 545
+- e2e: 34, including five together tests: invite → live banner → join → start
+  → same "ends at"; a friend's cancel ending the other session; a full
+  1-minute room paying +10 once each; an offline device ending at the
+  cancel's moment (within 2 s); lapse; dropping un-joined; and the a11y scan
+  of the panel, banner and lobby
+- `e2e:desktop`: 5/5, including the invite notification
+- CI green on every PR
+- Not run: 4.3 against a real 0.4.0 build (additive by design); web
+  notifications (need prior permission).
+
+### Things worth not rediscovering
+
+- **The Tauri notification plugin's page-side `Notification` reports "denied"
+  until permission is requested in that run**, even when Rust says it's
+  granted. Before M7, every desktop notice came from Rust (the session
+  deadline), so nothing hit it. `desktop.ts` `notify` now asks first. The new
+  desktop test failed on exactly this.
+- **`debug_native_log` doesn't see page-side notifications** (only Rust's). The
+  invite test watches `window.Notification` being constructed instead.
+- **Playwright's `context.setOffline(true)` leaves an already-open WebSocket
+  working**, so a "device offline" test can still get Realtime events. Route
+  the socket to nothing first (`page.routeWebSocket(/\/realtime\//, () => {})`,
+  then reload), then go offline.
+- **`getByRole('button', { name: 'Start' })` also matches "Start 25 min"**, and
+  the timer's radios sit behind overlay panels: use `exact: true`, or scope to
+  the panel's group.
+- **Long heredocs still break the Bash tool here.** Write a script file and run
+  it (as CLAUDE.md now says for a nested `claude` too).
+
+---
+
 ## 2026-10-23 — Session wrap-up: Friends (M7) shipped in three releases
 
 **Status: everything from this session is merged to `master` (#60–#72) and CI is
@@ -36,6 +123,9 @@ first; the per-release entries below have the detail.
   verify live. Both migrations went through this with no surprises.
 
 ### Next
+
+*(Superseded 2026-10-24: phase 4 is merged (#77–#80), not yet released; see
+the entry above.)*
 
 - **Phase 4: focus together** (rooms, lobby, same end time, a member's cancel
   ends everyone's session). **Plan it on Opus**, and record the amendment to
