@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { expectSignedIn, signIn, signOut } from '../support/app';
 import { settle } from '../support/devices';
+import { befriend, createRoom, setName } from '../support/friends';
 import { adminClient, createUser } from '../support/users';
 import { launchDesktop, type Desktop } from './launch';
 import {
@@ -88,6 +89,45 @@ test('a session keeps running hidden in the tray: tooltip counts down, the notic
     .toEqual([{ outcome: 'completed' }]);
 
   await signOut(desktop.page);
+});
+
+test('an invitation to focus together raises a Windows notification (M7)', async () => {
+  test.setTimeout(120_000);
+  const page = desktop.page;
+  const bea = await createUser('desktop-invitee');
+  const ada = await createUser('desktop-host');
+  await setName(bea, 'Bea');
+  await setName(ada, 'Ada');
+  await befriend(ada, bea);
+  await signIn(page, bea);
+  await expectSignedIn(page);
+  await settle(page);
+
+  // The notification plugin shows a notification by constructing
+  // `window.Notification` (its own polyfill, which hands it to Windows), and
+  // `debug_native_log` only sees the ones Rust raises. So watch the page ask:
+  // the same standard as the other checks here (asked for, not seen drawn).
+  await page.evaluate(() => {
+    const shown: { title: string; body: string | undefined }[] = [];
+    (window as unknown as { __shown: typeof shown }).__shown = shown;
+    const Original = window.Notification;
+    window.Notification = new Proxy(Original, {
+      construct(target, args: [string, NotificationOptions?]) {
+        shown.push({ title: args[0], body: args[1]?.body });
+        return Reflect.construct(target, args);
+      },
+    });
+  });
+
+  await createRoom(ada, [bea], 1500);
+  await expect(page.getByRole('region', { name: 'Invitation' })).toBeVisible({ timeout: 15_000 });
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __shown: unknown[] }).__shown), {
+      timeout: 15_000,
+    })
+    .toEqual([{ title: 'Starkeep', body: 'Ada invites you to focus 25 min together.' }]);
+
+  await signOut(page);
 });
 
 test('"Launch at startup" adds and removes the per-user startup entry', async () => {

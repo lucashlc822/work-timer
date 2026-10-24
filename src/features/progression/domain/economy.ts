@@ -52,6 +52,12 @@ export const streakMilestones = (length: number): number[] => {
   return reached;
 };
 
+/**
+ * Paid once to each member of a focus-together room (M7) when every member
+ * completed it. A 25-minute session earns 25, so this is a small extra.
+ */
+export const TOGETHER_BONUS = 10;
+
 /** Paid once for each finished constellation, by the tier it was built at. */
 export const CONSTELLATION_BONUS = { easy: 25, medium: 75, hard: 200 } as const;
 export type BonusTier = keyof typeof CONSTELLATION_BONUS;

@@ -8,7 +8,8 @@ import { adminClient, newId, signedInClient, type TestUser } from './users';
  * driven through the page in `web/friends.spec.ts`.
  */
 
-const rpc = async (user: TestUser, fn: string, args?: Record<string, unknown>) => {
+/** Calls a server function as `user`, expecting it to succeed. */
+export const rpc = async (user: TestUser, fn: string, args?: Record<string, unknown>) => {
   const client = await signedInClient(user);
   const { data, error } = (await client.rpc(fn, args)) as { data: unknown; error: unknown };
   expect(error, fn).toBeNull();
@@ -77,3 +78,14 @@ export const shareFocus = async (user: TestUser, minutes: number): Promise<void>
     until: new Date(now + minutes * 60_000).toISOString(),
   });
 };
+
+/** Opens a focus-together room as `host` with `friends`; returns its id. */
+export const createRoom = async (
+  host: TestUser,
+  friends: readonly TestUser[],
+  plannedDurationS: number,
+): Promise<string> =>
+  (await rpc(host, 'create_room', {
+    friends: friends.map((f) => f.id),
+    planned_duration_s: plannedDurationS,
+  })) as string;

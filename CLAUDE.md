@@ -345,7 +345,8 @@ rejected). Don't pre-populate this with guesses.
   window, or locking the machine does not stop or fail a session — the timer
   runs on wall-clock time regardless. **The only way to fail is to cancel
   deliberately.** There is therefore no `abandoned` outcome, no grace period,
-  and no abandonment policy; don't reintroduce them.
+  and no abandonment policy; don't reintroduce them. In a focus-together session a
+  friend's deliberate cancel counts too (see the M7 bullet below).
 - **Time spent away is still recorded, but only as a stat.** `SessionRow.awayMs`
   is informational and must never affect whether a session succeeds.
 - **Pomodoro focus blocks are ordinary sessions** (M3, 2026-10-07). One
@@ -474,6 +475,22 @@ rejected). Don't pre-populate this with guesses.
   so nothing breaks if ownership changes. Pack shape keys are permanent like the
   rest. An older app doesn't know them and draws a generated shape of the same
   tier (`resolveDef`'s fallback).
+- **Focus together: anyone's deliberate cancel ends it for everyone** (M7
+  phase 4, 2026-10-24). Up to four accepted friends share one countdown: the
+  same start (the server's), the same end. If any member deliberately ends
+  early, every member's session ends early at that moment, with no star, and
+  the result says who. Leaving, closing, sleeping or going offline still never
+  forfeits. A cancel that reaches a device after its session already
+  completed changes nothing, including on a device that was quit or offline
+  through the end: completed sessions stay immutable. Nobody joins after the
+  start, and a lobby lapses after 10 minutes. +10 Stardust each
+  (`together:<roomId>`) only when the server sees every member's completed
+  session for the room (`together_wins()`).
+- **Live updates for friends go through each person's own rows** (M7). A
+  table that must reach several people (`together_members`) gives each person
+  a row readable only by them, and every change touches every member's row;
+  each device listens on its own filtered channel. No policy ever lets one
+  person read another's row, so the isolation guard's rule stands.
 - **Star style, sky theme and daily goal are their own `user_settings`
   columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
   wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A

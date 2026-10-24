@@ -8,6 +8,7 @@ import {
   GOAL_BONUS,
   sessionEarning,
   streakBonus,
+  TOGETHER_BONUS,
   type BonusTier,
 } from './economy';
 import { lastEndByDay, streakRuns } from './streak';
@@ -58,11 +59,22 @@ export interface ConstellationCompletion {
   completedAt: number;
 }
 
+/**
+ * A focus-together room everyone completed (M7), as the server reports it:
+ * only the server can see every member's session.
+ */
+export interface TogetherWin {
+  roomId: string;
+  /** Epoch ms: the room's shared end, the same on every device. */
+  endsAt: number;
+}
+
 export interface ReconcileInput {
   userId: string;
   /** Every session; only the facts each rule needs are used. */
   sessions: readonly SessionRow[];
   completions?: readonly ConstellationCompletion[];
+  togetherWins?: readonly TogetherWin[];
   goalMin?: number;
   /** Decides which days the goal bonus looks at. */
   now?: number;
@@ -70,7 +82,7 @@ export interface ReconcileInput {
 
 const bonusRow = (
   userId: string,
-  kind: 'goal' | 'streak' | 'constellation',
+  kind: 'goal' | 'streak' | 'constellation' | 'together',
   ref: string,
   delta: number,
   createdAt: number,
@@ -87,6 +99,7 @@ export const expectedRows = ({
   userId,
   sessions,
   completions = [],
+  togetherWins = [],
   goalMin = DEFAULT_DAILY_GOAL_MIN,
   now = Date.now(),
 }: ReconcileInput): LedgerRow[] => {
@@ -131,6 +144,11 @@ export const expectedRows = ({
     rows.push(
       bonusRow(userId, 'constellation', c.choiceId, CONSTELLATION_BONUS[c.tier], c.completedAt),
     );
+  }
+
+  // Dated at the room's shared end, so every member's devices mint the same row.
+  for (const win of togetherWins) {
+    rows.push(bonusRow(userId, 'together', win.roomId, TOGETHER_BONUS, win.endsAt));
   }
 
   return rows;

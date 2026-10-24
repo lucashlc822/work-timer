@@ -78,3 +78,34 @@ describe('expectedRows', () => {
     expect(mine?.id).not.toBe(theirs?.id);
   });
 });
+
+describe('the focus-together bonus (M7)', () => {
+  const END = Date.parse('2026-10-24T10:25:00Z');
+  const win = { roomId: 'room-1', endsAt: END };
+
+  it('pays +10 once per room everyone completed, dated at the shared end', () => {
+    const rows = expectedRows({ userId: USER, sessions: [], togetherWins: [win] });
+    expect(rows).toEqual([
+      {
+        id: stableId(`${USER}:together:room-1`),
+        reason: 'together',
+        delta: 10,
+        ref: 'room-1',
+        createdAt: END,
+        syncedAt: null,
+      },
+    ]);
+  });
+
+  it('is the same row on every device and every run, and per person', () => {
+    const once = expectedRows({ userId: USER, sessions: [], togetherWins: [win] });
+    const again = expectedRows({ userId: USER, sessions: [], togetherWins: [win, win] });
+    expect(new Set(again.map((r) => r.id))).toEqual(new Set(once.map((r) => r.id)));
+    const friend = expectedRows({ userId: 'other-user', sessions: [], togetherWins: [win] });
+    expect(friend[0]!.id).not.toBe(once[0]!.id);
+  });
+
+  it('pays nothing without a win', () => {
+    expect(expectedRows({ userId: USER, sessions: [] })).toEqual([]);
+  });
+});
