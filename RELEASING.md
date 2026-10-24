@@ -46,6 +46,28 @@ missing. `.env.example` lists every name.
    send `supabase/config.toml`, whose auth rate limits are raised far above
    safe levels for the local end-to-end tests. The hosted project's auth settings
    are set in the dashboard.
+
+   Check before and after. `npx supabase migration list --linked` shows which
+   migrations the hosted project has, and `npx supabase db push --dry-run` lists
+   exactly what a push would send. Neither needs a database password. To see
+   whether a new table or function is live, ask the hosted API with the
+   publishable key from `.env.production.local`:
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}' -H "apikey: $KEY" "$URL/rest/v1/<table>?select=<column>&limit=1"
+   curl -s -o /dev/null -w '%{http_code}' -X POST -H "apikey: $KEY" -H 'Content-Type: application/json' -d '<args>' "$URL/rest/v1/rpc/<function>"
+   ```
+   For a function, `<args>` must name its arguments (any values of the right
+   type, e.g. `{"friend":"00000000-0000-0000-0000-000000000000"}`; `{}` for none).
+   PostgREST finds a function by its argument names, so the wrong ones answer
+   404 even when it exists.
+   - **401** (42501): it exists, and anonymous callers are refused. This is the
+     healthy answer for every table and app function.
+   - **400** (42703): the table exists, but that column doesn't.
+   - **404** (PGRST205 / PGRST202): no such table or function. This is the
+     expected answer *before* the push.
+
+   Probe one existing table (e.g. `sessions`, 401) alongside the new ones, so
+   the probe itself is shown to work.
 2. **Bump the version.** On a branch: `npm run version:set -- X.Y.Z`. It rewrites the
    five files that state the version, one line each. Open a PR, let CI pass, merge.
 3. **Tag `master`.**
@@ -60,6 +82,15 @@ missing. `.env.example` lists every name.
 4. **Review the draft** (Releases page). It should hold: `Starkeep_X.Y.Z_x64-setup.exe`,
    its `.sig`, `latest.json`, and `Starkeep-setup.exe`. The description is already
    written for friends (how to install); add a line about what changed above it.
+
+   Check that `latest.json` names `X.Y.Z` and points at `/download/vX.Y.Z/…`,
+   and that the update was signed with **the** key: installed apps reject any
+   other. A signature's key id is bytes 2–10, little-endian, of the
+   base64-decoded second line of the base64-decoded `signature`. It must match
+   the public key in `src-tauri/tauri.conf.json` (`8E3AF18012526DA8`):
+   ```bash
+   python -c "import json,base64,sys; d=json.load(open(sys.argv[1])); [print(k, v['url'], base64.b64decode(base64.b64decode(v['signature']).decode().splitlines()[1])[2:10][::-1].hex().upper()) for k,v in d['platforms'].items()]" latest.json
+   ```
 5. **Publish.** This is the "go": installed apps will find it on their next check
    (within hours, and never mid-session), and the `Deploy web` workflow publishes the
    web version. From the Releases page, check the tag box still says `vX.Y.Z`
