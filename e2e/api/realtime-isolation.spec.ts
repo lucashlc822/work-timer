@@ -1,10 +1,6 @@
 import { expect, test } from '@playwright/test';
-import {
-  REALTIME_SUBSCRIBE_STATES,
-  type RealtimeChannel,
-  type SupabaseClient,
-} from '@supabase/supabase-js';
 
+import { listen } from '../support/realtime';
 import { createUser, newId, signedInClient } from '../support/users';
 
 /**
@@ -20,56 +16,6 @@ import { createUser, newId, signedInClient } from '../support/users';
 
 const TABLES = ['tags', 'sessions', 'ledger'] as const;
 
-const listen = async (
-  client: SupabaseClient,
-  name: string,
-  filter: string | undefined,
-  events: string[],
-): Promise<RealtimeChannel> => {
-  const channel = client.channel(name);
-  for (const table of TABLES) {
-    channel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table, ...(filter !== undefined ? { filter } : {}) },
-      (payload) => events.push(`${payload.table}:${payload.eventType}`),
-    );
-  }
-  // Ready means both "subscribed" and the server's own confirmation that it is
-  // now listening to Postgres for this channel, which can arrive later. A
-  // change made in between is never delivered, which would make the control
-  // fail and B's silence meaningless.
-  await new Promise<void>((resolve, reject) => {
-    let subscribed = false;
-    let listening = false;
-    const settle = () => {
-      if (subscribed && listening) resolve();
-    };
-    channel.on(
-      'system',
-      {},
-      (payload: { extension?: string; status?: string; message?: string }) => {
-        if (payload.extension !== 'postgres_changes') return;
-        if (payload.status === 'ok') {
-          listening = true;
-          settle();
-        } else reject(new Error(`${name}: ${payload.message ?? 'postgres_changes failed'}`));
-      },
-    );
-    channel.subscribe((status, error) => {
-      if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
-        subscribed = true;
-        settle();
-      } else if (
-        status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR ||
-        status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT
-      ) {
-        reject(new Error(`${name}: ${status} ${error?.message ?? ''}`));
-      }
-    });
-  });
-  return channel;
-};
-
 test('B never receives A’s changes over live updates', async () => {
   const a = await createUser('rt-a');
   const b = await createUser('rt-b');
@@ -79,9 +25,9 @@ test('B never receives A’s changes over live updates', async () => {
   const heardByA: string[] = [];
   const heardByB: string[] = [];
   const channels = [
-    await listen(aClient, `control:${a.id}`, `user_id=eq.${a.id}`, heardByA),
-    await listen(bClient, `filtered:${b.id}`, `user_id=eq.${a.id}`, heardByB),
-    await listen(bClient, `unfiltered:${b.id}`, undefined, heardByB),
+    await listen(aClient, `control:${a.id}`, TABLES, `user_id=eq.${a.id}`, heardByA),
+    await listen(bClient, `filtered:${b.id}`, TABLES, `user_id=eq.${a.id}`, heardByB),
+    await listen(bClient, `unfiltered:${b.id}`, TABLES, undefined, heardByB),
   ];
 
   try {

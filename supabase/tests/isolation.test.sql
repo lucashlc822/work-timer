@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(60);
+select plan(61);
 
 -- --- catalogue guards ----------------------------------------------------------
 
@@ -35,8 +35,8 @@ select set_eq(
      where n.nspname = 'public' and c.relkind in ('r', 'p')
        and not exists (select 1 from pg_attribute a
                        where a.attrelid = c.oid and a.attname = 'user_id' and not a.attisdropped) $$,
-  array['app_config', 'invites', 'friendships'],
-  'the only public tables without a user_id are app_config, invites and friendships');
+  array['app_config', 'invites', 'friendships', 'together_rooms'],
+  'the only public tables without a user_id are app_config, invites, friendships and together_rooms');
 
 select set_eq(
   $$ select c.relname || ':' || p.priv
@@ -59,7 +59,8 @@ select set_eq(
         'sessions:SELECT', 'sessions:INSERT',
         'user_settings:SELECT', 'user_settings:INSERT', 'user_settings:UPDATE',
         'ledger:SELECT', 'ledger:INSERT',
-        'profiles:SELECT'],
+        'profiles:SELECT',
+        'together_members:SELECT'],
   'signed-in users have exactly the expected grants: no delete anywhere, update only on tags and settings');
 
 -- Every policy on a per-user table is for signed-in users only and compares
@@ -84,7 +85,9 @@ select set_eq(
   array['delete_my_account', 'enforce_invite',
         'create_profile', 'set_display_name', 'request_friend', 'respond_friend',
         'remove_friend', 'my_friends', 'friend_sky',
-        'set_focus_status', 'clear_focus_status', 'friends_focus'],
+        'set_focus_status', 'clear_focus_status', 'friends_focus',
+        'create_room', 'respond_room', 'start_room', 'leave_room', 'cancel_room',
+        'my_rooms', 'together_wins'],
   'the only security definer functions in public are the account and friends functions');
 
 select is_empty(
@@ -98,11 +101,14 @@ select ok(not has_function_privilege('authenticated', 'public.create_profile()',
   'signed-in users cannot run create_profile directly');
 select ok(not has_function_privilege('authenticated', 'public.new_friend_code()', 'execute'),
   'signed-in users cannot generate friend codes');
+select ok(not has_function_privilege('authenticated', 'public.together_touch(uuid)', 'execute'),
+  'signed-in users cannot touch room memberships directly');
 
 select set_eq(
   $$ select schemaname || '.' || tablename from pg_publication_tables where pubname = 'supabase_realtime' $$,
-  array['public.tags', 'public.constellations', 'public.sessions', 'public.user_settings', 'public.ledger'],
-  'live updates publish exactly the five per-user tables');
+  array['public.tags', 'public.constellations', 'public.sessions', 'public.user_settings', 'public.ledger',
+        'public.together_members'],
+  'live updates publish exactly the five synced tables and together_members (M7: each member hears its own row)');
 
 select is_empty(
   $$ select pt.schemaname || '.' || pt.tablename from pg_publication_tables pt
