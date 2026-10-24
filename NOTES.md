@@ -12,6 +12,68 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-24 — Released 0.5.0: Focus together
+
+**Status: 0.5.0 is published (tag `v0.5.0`, Latest; web deployed from the same
+commit, `6536c8a`). The together migration is on the hosted project.**
+Lucas's desktop app runs 0.5.0. Nothing in flight. `min_client_version` is
+still null. Plan: `~/.claude/plans/let-s-proceed-with-planning-compiled-barto.md`.
+
+### Next
+
+- **Phase 5: shared constellations**, per `docs/plans/2026-10-22-m7-friends.md`.
+- **Tell friends 0.5.0 is out.** Focus together only reaches a friend who has
+  updated: a 0.4.0 friend never sees the invitation banner, so the lobby lapses
+  after 10 minutes.
+- **R14 and both older R12s are still unrun** (a real focus-together session
+  with a friend; a friend seeing Lucas "Focusing now"; two real people
+  befriending). All need a friend on 0.5.0.
+- Still open: `cargo install cargo-audit`, the other machine.
+
+### What was done, in order
+
+1. **Hosted state read first:** `migration list --linked` showed the together
+   migration local only; `db push --dry-run` listed only
+   `20261024044635_m7_together.sql`. Probes: `sessions` 401 (control),
+   `sessions?select=together_id` 400, `together_members`, `rpc/my_rooms` and
+   `rpc/together_wins` 404.
+2. **Pushed** (Lucas said "push"): histories matched; all five probes 401.
+3. **Installed 0.4.0 after the push:** a session ended, "Backed up", Friends
+   listed (Lucas).
+4. **Bump PR #83**, merged as `6536c8a`. Version tests run on their own, 22/22,
+   exit code 0; CI green (db, desktop, web, e2e).
+5. `e2e:desktop` 5/5 (installed app quit first) -> tag `v0.5.0` -> `Release`
+   green.
+   - The draft had 4 assets (installers 2,326,019 bytes).
+   - `latest.json` said 0.5.0 at `/download/v0.5.0/`, signed with key
+     `8E3AF18012526DA8`.
+   - A "What's new" line was added while it was a draft.
+6. **Published by id with `tag_name` in the same call:** Latest `v0.5.0`, no
+   `untagged-` tag. `Deploy web` ran green on `6536c8a`.
+7. **Live checks:**
+   - The web bundle reports 0.5.0 and contains `my_rooms`.
+   - `Starkeep-setup.exe` returns 200.
+   - `min_client_version` is null.
+   - **R11/R12:** Lucas's desktop app updated to 0.5.0; a solo session ended
+     and showed "Backed up". The newest hosted `sessions` row (started 17:03
+     UTC, after the publish) has `together_id` null, so the new column path
+     works against the real server.
+
+### Acceptance results
+
+R1-R13 pass. R14 (a real focus-together session with a friend) not run.
+
+### Things worth not rediscovering
+
+- **A draft release shows an `untagged-...` tag after its description is
+  edited**, though the git tag `v0.5.0` was fine all along. Publishing by id
+  with `tag_name` in the same call fixed it, as RELEASING.md says.
+- **Plan mode can still be on after "Plan accepted".** Approval has to go
+  through the plan-approval prompt itself; this session bumped the version on a
+  branch before noticing, and stopped to ask. Nothing had been committed.
+
+---
+
 ## 2026-10-24 — Session wrap-up: archive, standing facts, and focus together built
 
 **Status: everything is merged to `master` (#74–#81) and CI is green; no PR is
