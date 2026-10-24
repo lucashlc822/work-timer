@@ -253,6 +253,58 @@ in `NOTES.md`.
   if they don't resolve. `shared/ui/StarMark` relies on them working; if a
   gradient ever renders black, check that the token is defined on an ancestor
   rather than suspecting the path data.
+- **Realtime "SUBSCRIBED" isn't "listening."** A change made before the
+  channel's `system` message `{extension: 'postgres_changes', status: 'ok'}`
+  arrives is never delivered. A test must wait for both
+  (`e2e/api/realtime-isolation.spec.ts` does); the app copes because a
+  re-subscribe triggers a full sync.
+- **Apply a new migration locally with `npx supabase migration up`, not
+  `db reset`.** A reset re-runs everything and wipes the hand-seeded
+  `a@`/`b@`/`c@test.local` accounts (the browser pane then still holds a
+  session for a deleted user: sign out and back in after re-seeding).
+- **pgTAP fixtures:** dated in the past (the `sessions` table refuses an end in
+  its future, `session_not_from_the_future`), with each suite's own users
+  (`fr-*`, `fs-*`, …), and counting only those users' rows, never a whole
+  table: the e2e runs leave their own rows in the local database.
+- **A paused Docker container makes requests hang, not fail.** To simulate
+  "server unreachable", `docker stop supabase_kong_work-timer` (then
+  `docker start`), not `docker pause`, or sync sits on "Syncing…".
+- **Vite hot-swaps non-component modules without reloading**, so after editing
+  a hook or the sync engine the running app can be a mix of old and new code.
+  Reload (`location.reload()`) before re-testing. Likewise, raw IndexedDB
+  writes (from DevTools or a script) don't notify Dexie live queries: reload.
+- **Harmless noise, not bugs:**
+  - `Failed to unregister class Chrome_WidgetWin_0. Error = 1412` on a tray
+    Quit (routine WebView2 shutdown).
+  - Tauri IPC to `http://ipc.localhost` violating the CSP and falling back to
+    `postMessage` (console noise on every IPC call; it works).
+  - `indexedDB.open` reporting Dexie's version times ten (`30` for schema v3).
+  - `sb_secret_` and `*.supabase.co` strings in the web bundle: supabase-js
+    itself checking key types and hosts, not a leaked key.
+- **The desktop app checks for updates 10 s after launch, then every 6 hours**
+  (`DesktopUpdatePrompt.tsx`). To re-test an update, quit fully from the tray
+  and relaunch.
+- **Docker Desktop on a fresh Windows machine needs WSL first:**
+  `wsl --install --no-distribution` in an admin PowerShell, then a reboot.
+- **A `claude` CLI started from inside a desktop-app session inherits that
+  session's `CLAUDE_*` and `ANTHROPIC_*` variables** and can't sign in (this
+  matters for headless `qa-lead` runs). Run it with those removed, after its
+  own `claude auth login`.
+- **Starkeep is single-instance.** A launch that exits with code 0 at once
+  means another instance is already running and was handed the focus. Look for
+  `starkeep*`: a renamed copy (`starkeep-master.exe`) escapes
+  `Get-Process starkeep`.
+- **Dev builds have test helpers on `window.__starkeep`:** `seed(n, minutes)`
+  (completed sessions), `seedHistory(days)` and `clearSeeded()` (weeks of
+  history, removed exactly), and `frames()` (the sky's frame counter). The
+  object appears a moment after load; wait for it. None of it ships.
+- **Running an older release locally (compatibility checks):**
+  `git worktree add --detach <dir> vX.Y.Z`, copy `.env.development.local`,
+  `npm ci`, `npm run dev`. It needs port 5173 and shares the browser store
+  with the current version; an older Dexie can't open a store a newer one has
+  upgraded, so clear that account's `work-timer-account-<id>` database first.
+  Removing the worktree fails with "Filename too long": delete it with
+  `cmd /c 'rd /s /q "\\?\<full path>"'`, then `git worktree prune`.
 
 ## Decisions already made — don't re-open these
 
