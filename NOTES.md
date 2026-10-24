@@ -12,6 +12,71 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-24 — Session wrap-up: archive, standing facts, and focus together built
+
+**Status: everything is merged to `master` (#74–#81) and CI is green; no PR is
+open.** Nothing from this stretch is released: 0.4.0 is still the latest, and
+the hosted project does **not** have `20261024044635_m7_together.sql`. Local
+`master` matches `origin/master`, with nothing uncommitted. This is the entry
+to read first; the 2026-10-24 phase 4 entry below has the detail.
+
+### Where things stand
+
+- **Phase 4 (focus together) is built, not released.** Up to four friends share
+  one countdown; anyone's deliberate end-early ends it for everyone; +10
+  Stardust each when the server sees every member completed. PRs #77–#80.
+- **The released version is 0.4.0** (Friends, Focusing now). The hosted
+  project has four migrations (m5, m6, m7_friends, m7_focus_status).
+  `min_client_version` is null.
+- **`NOTES.md` is ~570 lines.** Entries from 2026-10-03 to 2026-10-21 are in
+  `docs/notes-archive/2026-Q4.md` (#74).
+- **CLAUDE.md now holds twelve standing tooling facts** promoted from the
+  archive (#75), and **`RELEASING.md` explains how to probe the hosted API
+  (401 / 400 / 404) and read a release's signing key id** (#76).
+
+### Next
+
+- **Release 0.5.0**, the same routine as 0.4.0:
+  1. `db push --dry-run`, then push the together migration when Lucas says
+     "push". 0.5.0 sends `together_id` with every session, and a server without
+     the column refuses the upload.
+  2. Check that the installed 0.4.0 app still syncs and lists friends.
+  3. Bump PR, then `e2e:desktop` (quit the installed app first), then tag,
+     review the draft, and publish when Lucas says "publish".
+- **Phase 5: shared constellations**, per `docs/plans/2026-10-22-m7-friends.md`.
+- **R12, still unrun, three times now:** a friend on 0.4.0 seeing Lucas
+  "Focusing now", two real people befriending, and (after 0.5.0) a real
+  focus-together session with a friend. All need a friend on the new
+  version.
+- **Tell friends** about 0.3.0 and 0.4.0 (and 0.5.0 later). Friends needs a
+  name before it does anything.
+- `cargo install cargo-audit` once (started and interrupted, never run), and
+  set up the other machine.
+
+### Closed since the 2026-10-23 wrap-up
+
+- The `NOTES.md` archive (#74), the CLAUDE.md promotion (#75), the RELEASING
+  additions (#76), and phase 4 (#77–#80), with its log (#81).
+
+### State of this machine
+
+- Docker Desktop and the local Supabase stack are running (started by me; they
+  don't survive a restart).
+- The hand-made `a@`/`b@`/`c@test.local` accounts exist on the local stack
+  (Ada, Bea, Cy) and will disappear on a `db reset`.
+
+### Things worth not rediscovering
+
+- **Editing tools refuse a file that isn't valid UTF-8.** `reconcile.ts` held a
+  Windows-1252 dash, and three files had U+FFFD where an em dash was meant (all
+  from the M6 PRs). Fixed in #77. Decoding a mixed file wholesale garbles the
+  good bytes: replace only the damaged ones.
+- Everything else from phase 4 (the desktop notification permission gap,
+  Playwright's offline switch leaving WebSockets open, ambiguous button names)
+  is in the entry below.
+
+---
+
 ## 2026-10-24 — M7 phase 4 merged: focus together
 
 **Status: phase 4 is on `master` in five PRs; nothing is released.** The
@@ -123,6 +188,8 @@ first; the per-release entries below have the detail.
   verify live. Both migrations went through this with no surprises.
 
 ### Next
+
+*(Superseded 2026-10-24: the archive, the CLAUDE.md promotion and phase 4 are done; see the 2026-10-24 wrap-up above.)*
 
 *(Superseded 2026-10-24: phase 4 is merged (#77–#80), not yet released; see
 the entry above.)*
