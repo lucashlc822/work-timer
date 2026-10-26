@@ -28,6 +28,7 @@ export const FriendSkyView = ({
   summarize,
   status,
   now,
+  shared,
 }: {
   friendId: string;
   /** From the friend list, shown while the sky loads. */
@@ -37,6 +38,8 @@ export const FriendSkyView = ({
   /** What they're doing right now, if anything (M7 phase 3). */
   status: FocusStatus | null;
   now: number;
+  /** The shared constellation line (M7 phase 5), shown once their sky has loaded. */
+  shared?: ReactNode;
 }) => {
   const { state, retry } = useFriendSky(friendId);
   const shownName =
@@ -69,6 +72,7 @@ export const FriendSkyView = ({
           </div>
         )}
         {state.kind === 'ready' && <Numbers summary={summarize(state.sky)} />}
+        {state.kind === 'ready' && shared}
       </header>
     </>
   );

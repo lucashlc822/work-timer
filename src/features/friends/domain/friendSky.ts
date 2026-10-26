@@ -16,6 +16,8 @@ export interface FriendSession {
   actualFocusS: number;
   outcome: 'completed' | 'cancelled';
   starStyle?: string;
+  /** Run for a shared constellation (M7 phase 5): it belongs there, not on their own sky. */
+  sharedId?: string;
 }
 
 export interface FriendChoice {
@@ -66,6 +68,7 @@ const session = (v: unknown): FriendSession | null => {
     return null;
   }
   const starStyle = text(v.star_style);
+  const sharedId = text(v.shared_id);
   return {
     id,
     seed,
@@ -74,6 +77,7 @@ const session = (v: unknown): FriendSession | null => {
     actualFocusS,
     outcome,
     ...(starStyle !== null && { starStyle }),
+    ...(sharedId !== null && { sharedId }),
   };
 };
 

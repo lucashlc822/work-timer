@@ -14,6 +14,7 @@ import {
   expectedRows,
   purchaseKey,
   type ConstellationCompletion,
+  type SharedCompletion,
   type TogetherWin,
 } from '../domain/reconcile';
 
@@ -30,13 +31,22 @@ export const reconcile = (
   completions: readonly ConstellationCompletion[] = [],
   now: number = Date.now(),
   togetherWins: readonly TogetherWin[] = [],
+  sharedCompletions: readonly SharedCompletion[] = [],
 ): Promise<number> =>
   db.transaction('rw', db.sessions, db.ledger, db.meta, async () => {
     // Every ended session, not just completed ones: an early ending's focus
     // still counts toward the day's goal.
     const sessions = await db.sessions.filter((s) => s.outcome !== null).toArray();
     const goalMin = await readDailyGoal(db);
-    const expected = expectedRows({ userId, sessions, completions, togetherWins, goalMin, now });
+    const expected = expectedRows({
+      userId,
+      sessions,
+      completions,
+      togetherWins,
+      sharedCompletions,
+      goalMin,
+      now,
+    });
     if (expected.length === 0) return 0;
     const existing = await db.ledger.bulkGet(expected.map((r) => r.id));
     const missing = expected.filter((_, i) => existing[i] === undefined);

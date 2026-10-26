@@ -28,8 +28,18 @@ import type { TimerSlots } from './slots';
  *
  * `slots` lets the app add content from other features (the sky) without the
  * timer importing them — features stay opaque to each other.
+ *
+ * `sharedId` is the shared constellation the next session is for (M7 phase 5),
+ * chosen through `slots.targetPicker`; null for your own sky. It goes into the
+ * draft as it is when Start is pressed, and the session keeps it.
  */
-export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
+export const TimerScreen = ({
+  slots = {},
+  sharedId = null,
+}: {
+  slots?: TimerSlots;
+  sharedId?: string | null;
+}) => {
   const timer = useTimer();
   const prefs = useTimerPrefs();
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
@@ -151,6 +161,7 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
     <div className="flex w-full flex-col items-center gap-6">
       <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
       {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
+      {slots.targetPicker?.({ disabled: starting })}
       {pomodoro ? (
         <PomodoroSettingsPanel
           settings={prefs.settings}
@@ -167,8 +178,8 @@ export const TimerScreen = ({ slots = {} }: { slots?: TimerSlots }) => {
         onClick={() =>
           timer.start(
             pomodoro
-              ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId }
-              : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId },
+              ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId }
+              : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
           )
         }
         className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-10 py-3 text-base transition-colors disabled:opacity-60"

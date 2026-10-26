@@ -10,10 +10,11 @@ import {
   wanderingPosition,
   type Placement,
 } from '../domain/layout';
+import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
 import { TIERS } from '../domain/tiers';
 import type { ConstellationState, SkyState } from '../domain/types';
-import { progressLabel, starLabel } from './describe';
+import { figureCaption, progressLabel, starLabel } from './describe';
 
 export type SkyMode = 'hero' | 'full';
 
@@ -22,7 +23,13 @@ interface Props {
   mode: SkyMode;
   width: number;
   height: number;
+  /** Shared constellations (M7 phase 5), drawn after your own; proposals are not drawn. */
+  shared?: readonly SharedState[];
+  /** In hero mode, the shared constellation the next session is for, if any. */
+  focusId?: string | null;
 }
+
+const NO_SHARED: readonly SharedState[] = [];
 
 /**
  * The earned sky, in SVG: constellations and wandering stars.
@@ -39,16 +46,29 @@ interface Props {
  * Colours are concrete hex values from the token mirror, never `var(...)`: an
  * unresolved custom property in a gradient stop renders black silently.
  */
-export const ConstellationLayer = ({ sky, mode, width, height }: Props) => {
+export const ConstellationLayer = ({
+  sky,
+  mode,
+  width,
+  height,
+  shared = NO_SHARED,
+  focusId = null,
+}: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const full = mode === 'full';
 
   // An abandoned constellation with no stars is an empty outline: not worth showing.
-  const visible = sky.constellations.filter((c) => !(c.abandoned && c.stars.length === 0));
+  const visible: ConstellationState[] = [
+    ...sky.constellations.filter((c) => !(c.abandoned && c.stars.length === 0)),
+    ...shared.filter((s) => s.status !== 'proposed'),
+  ];
+  const focused = shared.find((s) => s.choice.id === focusId && s.status === 'active');
   const shown: { state: ConstellationState; box: Placement }[] = full
     ? gridPlacements(visible.length, width, height).map((box, i) => ({ state: visible[i]!, box }))
-    : heroShown(sky, width, height);
+    : focused !== undefined
+      ? [{ state: focused, box: heroPlacement(width, height) }]
+      : heroShown(sky, width, height);
 
   return (
     <svg
@@ -119,7 +139,9 @@ const Figure = ({
   full: boolean;
   glowId: string;
 }) => {
-  const { def, stars, complete, abandoned } = state;
+  const { def, stars, complete } = state;
+  // A stopped shared constellation fades like an abandoned one of your own.
+  const faded = state.abandoned || (isShared(state) && state.status === 'stopped');
   const style = TIERS[def.tier].style;
   const points = def.shape.points.map((p) => toPixels(p, box));
   const filled = (i: number) => i < stars.length;
@@ -129,7 +151,7 @@ const Figure = ({
 
   return (
     <g
-      opacity={abandoned ? 0.45 : 1}
+      opacity={faded ? 0.45 : 1}
       role={full ? 'group' : undefined}
       aria-label={full ? progressLabel(state) : undefined}
     >
@@ -261,8 +283,7 @@ const Figure = ({
           letterSpacing={style === 'nebula' ? '0.18em' : '0.06em'}
           fontStyle={style === 'nebula' ? 'italic' : undefined}
         >
-          {def.name}
-          {!complete && ` · ${stars.length}/${points.length}`}
+          {figureCaption(state)}
         </text>
       )}
     </g>

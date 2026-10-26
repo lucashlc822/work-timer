@@ -4,8 +4,11 @@
 export { SkyBackdrop, SkyView } from './ui/SkyBackdrop';
 export { completedConstellations, deriveOtherSky } from './domain/otherSky';
 export type { OtherSession } from './domain/otherSky';
-export { deriveShared } from './domain/shared';
+export { activeShared, deriveShared, sharedTitle } from './domain/shared';
 export type { SharedInput, SharedState, SharedStatus } from './domain/shared';
+export { SharedPicker, SharedStartHint, TargetPicker } from './ui/SharedSky';
+export type { SharedPick } from './ui/ConstellationPicker';
+export type { CompletedSession } from './domain/types';
 export type { ConstellationChoice, SkyState } from './domain/types';
 export type { SkyMode } from './ui/ConstellationLayer';
 export { StarGlyph } from './ui/StarGlyph';

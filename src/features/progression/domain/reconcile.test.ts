@@ -109,3 +109,61 @@ describe('the focus-together bonus (M7)', () => {
     expect(expectedRows({ userId: USER, sessions: [] })).toEqual([]);
   });
 });
+
+// S5.1 (M7 phase 5)
+describe('the shared constellation bonus', () => {
+  const DONE = Date.parse('2026-10-26T10:00:00Z');
+
+  it('pays the solo amount for its tier, once per shared constellation, dated at its last star', () => {
+    const rows = expectedRows({
+      userId: USER,
+      sessions: [],
+      sharedCompletions: [
+        { sharedId: 'sh-easy', tier: 'easy', completedAt: DONE },
+        { sharedId: 'sh-hard', tier: 'hard', completedAt: DONE + 1 },
+      ],
+    });
+    expect(rows).toEqual([
+      {
+        id: stableId(`${USER}:shared:sh-easy`),
+        reason: 'shared',
+        delta: 25,
+        ref: 'sh-easy',
+        createdAt: DONE,
+        syncedAt: null,
+      },
+      {
+        id: stableId(`${USER}:shared:sh-hard`),
+        reason: 'shared',
+        delta: 200,
+        ref: 'sh-hard',
+        createdAt: DONE + 1,
+        syncedAt: null,
+      },
+    ]);
+  });
+
+  it('is the same row on every device and every run, and its own row for each member', () => {
+    const done = { sharedId: 'sh-1', tier: 'medium' as const, completedAt: DONE };
+    const once = expectedRows({ userId: USER, sessions: [], sharedCompletions: [done] });
+    const again = expectedRows({ userId: USER, sessions: [], sharedCompletions: [done, done] });
+    expect(new Set(again.map((r) => r.id))).toEqual(new Set(once.map((r) => r.id)));
+    const partner = expectedRows({ userId: 'other-user', sessions: [], sharedCompletions: [done] });
+    expect(partner[0]!.id).not.toBe(once[0]!.id);
+    expect(partner[0]!.delta).toBe(75);
+  });
+
+  it('never shares an id with a personal constellation of the same id', () => {
+    const shared = expectedRows({
+      userId: USER,
+      sessions: [],
+      sharedCompletions: [{ sharedId: 'x', tier: 'easy', completedAt: DONE }],
+    });
+    const personal = expectedRows({
+      userId: USER,
+      sessions: [],
+      completions: [{ choiceId: 'x', tier: 'easy', completedAt: DONE }],
+    });
+    expect(shared[0]!.id).not.toBe(personal[0]!.id);
+  });
+});

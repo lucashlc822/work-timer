@@ -34,6 +34,12 @@ export interface TagPickerProps {
 export interface TimerSlots {
   /** Where a session's tag is chosen: idle, running, and between blocks. */
   tagPicker?: (props: TagPickerProps) => ReactNode;
+  /**
+   * Idle only: what the next session is for (M7 phase 5: your own sky or a
+   * shared constellation). The app owns the choice and passes it to the
+   * screen as `sharedId`.
+   */
+  targetPicker?: (props: { disabled: boolean }) => ReactNode;
   /** Under the Start button. Receives the chosen length, in seconds. */
   startHint?: (plannedS: number) => ReactNode;
   /** Under the start hint on the idle screen: today's progress and streak. */

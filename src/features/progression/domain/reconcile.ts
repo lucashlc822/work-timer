@@ -39,6 +39,9 @@ import { lastEndByDay, streakRuns } from './streak';
  *   run backwards moves its start day, which would pay its milestones again;
  *   that needs a session to sync in days late, and is accepted.)
  * - `constellation:<choice id>` — a constellation was finished, by tier.
+ * - `together:<room id>` — a focus-together room everyone completed (M7).
+ * - `shared:<shared id>` — a shared constellation was finished (M7 phase 5),
+ *   paid to each member at the solo amount for its tier.
  */
 
 export const sessionKey = (userId: string, sessionId: string): string =>
@@ -69,12 +72,24 @@ export interface TogetherWin {
   endsAt: number;
 }
 
+/**
+ * A finished shared constellation (M7 phase 5), judged from the sessions the
+ * server holds for it, so a device never pays for a star the server hasn't got.
+ */
+export interface SharedCompletion {
+  sharedId: string;
+  tier: BonusTier;
+  /** Epoch ms: the last star's end, the same on both members' devices. */
+  completedAt: number;
+}
+
 export interface ReconcileInput {
   userId: string;
   /** Every session; only the facts each rule needs are used. */
   sessions: readonly SessionRow[];
   completions?: readonly ConstellationCompletion[];
   togetherWins?: readonly TogetherWin[];
+  sharedCompletions?: readonly SharedCompletion[];
   goalMin?: number;
   /** Decides which days the goal bonus looks at. */
   now?: number;
@@ -82,7 +97,7 @@ export interface ReconcileInput {
 
 const bonusRow = (
   userId: string,
-  kind: 'goal' | 'streak' | 'constellation' | 'together',
+  kind: 'goal' | 'streak' | 'constellation' | 'together' | 'shared',
   ref: string,
   delta: number,
   createdAt: number,
@@ -100,6 +115,7 @@ export const expectedRows = ({
   sessions,
   completions = [],
   togetherWins = [],
+  sharedCompletions = [],
   goalMin = DEFAULT_DAILY_GOAL_MIN,
   now = Date.now(),
 }: ReconcileInput): LedgerRow[] => {
@@ -149,6 +165,11 @@ export const expectedRows = ({
   // Dated at the room's shared end, so every member's devices mint the same row.
   for (const win of togetherWins) {
     rows.push(bonusRow(userId, 'together', win.roomId, TOGETHER_BONUS, win.endsAt));
+  }
+
+  // Dated at the last star's end, so both members' devices mint the same row.
+  for (const c of sharedCompletions) {
+    rows.push(bonusRow(userId, 'shared', c.sharedId, CONSTELLATION_BONUS[c.tier], c.completedAt));
   }
 
   return rows;

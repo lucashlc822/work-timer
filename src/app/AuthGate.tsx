@@ -9,6 +9,8 @@ import { APP_NAME } from '@/shared/config';
 import { bindAccountDb, db, deleteAccountDb } from '@/shared/db';
 
 import { AccountContext } from './accountContext';
+import { SharedSkyProvider } from './sharedSky';
+import { useSharedSky } from './sharedSkyContext';
 import { useSync } from './useSync';
 
 /**
@@ -148,13 +150,23 @@ const SignedIn = ({
   children: ReactNode;
 }) => {
   const { syncNow, ...sync } = useSync(account.userId);
+  return (
+    <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
+      <SharedSkyProvider>
+        <Stardust userId={account.userId} />
+        {children}
+      </SharedSkyProvider>
+    </AccountContext.Provider>
+  );
+};
+
+/** Keeps the Stardust ledger in step; inside the shared sky, so it sees those bonuses too. */
+const Stardust = ({ userId }: { userId: string }) => {
   const completions = useConstellationCompletions();
   // Rooms everyone completed (M7): only the server can see every member's session.
   const togetherWins = useTogetherWins();
-  useStardustReconciler(account.userId, completions, togetherWins);
-  return (
-    <AccountContext.Provider value={{ account, signOut, deleteAccount, sync, syncNow }}>
-      {children}
-    </AccountContext.Provider>
-  );
+  // Shared constellations finished by the server's count (M7 phase 5).
+  const { completions: shared } = useSharedSky();
+  useStardustReconciler(userId, completions, togetherWins, shared);
+  return null;
 };
