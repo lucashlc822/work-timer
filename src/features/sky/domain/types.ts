@@ -57,6 +57,11 @@ export interface CompletedSession {
   actualFocusS: number;
   /** The star style equipped when it completed (M6); absent for older sessions. */
   starStyle?: string;
+  /**
+   * The shared constellation it was run for (M7 phase 5). Such a session
+   * belongs to that constellation only: one's own sky leaves it out.
+   */
+  sharedId?: string;
 }
 
 export interface ConstellationState {

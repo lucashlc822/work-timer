@@ -98,6 +98,7 @@ export const sessionToWire = (row: SessionRow) => ({
   run_index: row.runIndex ?? null,
   star_style: row.starStyle ?? null,
   together_id: row.togetherId ?? null,
+  shared_id: row.sharedId ?? null,
 });
 
 /** One ledger row; insert-only on the server, like sessions. */
@@ -208,6 +209,8 @@ export const sessionFromWire = (w: WireRow, syncedAt: number): SessionRow | null
   if (str(w.star_style)) row.starStyle = w.star_style;
   // A focus-together session (M7); absent on solo sessions and older apps' rows.
   if (str(w.together_id)) row.togetherId = w.together_id;
+  // Run for a shared constellation (M7 phase 5); absent otherwise and on older apps' rows.
+  if (str(w.shared_id)) row.sharedId = w.shared_id;
   return row;
 };
 

@@ -61,6 +61,9 @@ const byEndedAt = (a: CompletedSession, b: CompletedSession): number =>
  * - The Nth star completes the constellation, and `completedAt` is that star's
  *   `endedAt`. Later sessions in the window wander until a new choice.
  * - An unfinished constellation followed by another choice is `abandoned`.
+ * - A session run for a shared constellation (M7 phase 5) is left out
+ *   entirely: it neither fills a slot nor wanders. It belongs to the shared
+ *   one (`deriveShared`).
  *
  * Pure and order-independent: the inputs are sorted here, so the same rows
  * produce the same sky on every device, whatever order they were read in.
@@ -83,6 +86,7 @@ export const deriveSky = (
 
   let window = -1;
   for (const session of [...sessions].sort(byEndedAt)) {
+    if (session.sharedId !== undefined) continue;
     while (window + 1 < states.length && states[window + 1]!.choice.chosenAt <= session.endedAt) {
       window += 1;
     }

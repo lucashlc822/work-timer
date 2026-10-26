@@ -100,6 +100,30 @@ describe('finishing a block', () => {
     expect((await peekActiveRun(db))?.blocksDone).toBe(1);
   });
 
+  // M7 phase 5: a run is for one target, every block of it.
+  it('every block of a run is for the shared constellation the run was started for', async () => {
+    const db = withDb();
+    const { session: b1, run } = await startSession(db, { ...pomodoro, sharedId: 'sh-1' }, ctx());
+    expect(run?.sharedId).toBe('sh-1');
+    expect(b1.sharedId).toBe('sh-1');
+    await finishSession(db, b1.id, completed(START));
+
+    const { session: b2 } = await startNextBlock(db, run!.id, ctx(START + 2 * FOCUS_MS));
+
+    expect(b2.sharedId).toBe('sh-1');
+    expect((await db.sessions.get(b2.id))?.sharedId).toBe('sh-1');
+  });
+
+  it('a run for one’s own sky writes no shared constellation on its blocks', async () => {
+    const db = withDb();
+    const { session: b1, run } = await startSession(db, pomodoro, ctx());
+    await finishSession(db, b1.id, completed(START));
+    const { session: b2 } = await startNextBlock(db, run!.id, ctx(START + 2 * FOCUS_MS));
+
+    expect(b2.sharedId).toBeNull();
+    expect(await db.sessions.get(b2.id)).not.toHaveProperty('sharedId');
+  });
+
   // O4.11
   it('ending a block early keeps earlier blocks and ends the run', async () => {
     const db = withDb();

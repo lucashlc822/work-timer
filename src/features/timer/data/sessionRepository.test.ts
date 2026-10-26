@@ -168,6 +168,25 @@ describe('addAwayTime', () => {
   });
 });
 
+// M7 phase 5
+describe('a session for a shared constellation', () => {
+  it('stores the shared constellation it is for, and the active session says so', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, { ...draft, sharedId: 'sh-1' }, ctx());
+
+    expect(session.sharedId).toBe('sh-1');
+    expect((await db.sessions.get(session.id))?.sharedId).toBe('sh-1');
+  });
+
+  it('a session for one’s own sky has none at all', async () => {
+    const db = withDb();
+    const { session } = await startSession(db, { ...draft, sharedId: null }, ctx());
+
+    expect(session.sharedId).toBeNull();
+    expect(await db.sessions.get(session.id)).not.toHaveProperty('sharedId');
+  });
+});
+
 describe('setInFlightTag', () => {
   it('changes the tag of a session in flight', async () => {
     const db = withDb();
