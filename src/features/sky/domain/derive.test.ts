@@ -53,6 +53,22 @@ describe('deriveSky', () => {
     expect(sky.wandering.map((w) => w.session.id)).toEqual([before.id]);
   });
 
+  // S3.1 (M7 phase 5)
+  it('leaves out sessions run for a shared constellation: they neither fill nor wander', () => {
+    const mine = session(20);
+    const forShared = { ...session(30), sharedId: 'sh-1' };
+    const alsoShared = { ...session(5), sharedId: 'sh-1' };
+    const mine2 = session(40);
+    const sky = deriveSky(
+      [mine, forShared, alsoShared, mine2],
+      [choose(10, 'kite', 'easy')],
+      rules,
+    );
+
+    expect(sky.current?.stars.map((s) => s.id)).toEqual([mine.id, mine2.id]);
+    expect(sky.wandering).toEqual([]);
+  });
+
   // O2.6
   it('completes on the Nth star, dated to that star, and wanders the next one', () => {
     const stars = [session(20), session(40), session(60), session(80)]; // kite has 4

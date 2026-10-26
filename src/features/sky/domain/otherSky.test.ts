@@ -52,6 +52,21 @@ describe('deriveOtherSky', () => {
     expect(starIds).not.toContain('x');
   });
 
+  // S3.1 (M7 phase 5)
+  it('leaves a friend’s shared-constellation sessions out of their own sky', () => {
+    const shared: OtherSession = {
+      id: 'sh',
+      seed: 'seed-sh',
+      startedAt: at(5),
+      endedAt: at(10),
+      actualFocusS: 1500,
+      outcome: 'completed',
+      sharedId: 'sh-1',
+    };
+    const sky = deriveOtherSky([shared, ...sessions], choices);
+    expect(sky).toEqual(deriveOtherSky(sessions, choices));
+  });
+
   it('counts finished constellations', () => {
     expect(completedConstellations(deriveOtherSky(sessions, choices))).toBe(1);
     expect(completedConstellations(deriveOtherSky([], choices))).toBe(0);

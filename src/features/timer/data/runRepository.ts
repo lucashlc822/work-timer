@@ -77,6 +77,7 @@ export const startNextBlock = (
         mode: 'pomodoro',
         plannedDurationS: run.settings.focusS,
         tagId: run.tagId ?? null,
+        sharedId: run.sharedId ?? null,
         runId: run.id,
         runIndex: run.blocksDone + 1,
       },

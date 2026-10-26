@@ -26,6 +26,8 @@ export interface ActiveSession {
   awayMs: number;
   /** The focus-together room it runs in (M7); null for a solo session. */
   togetherId: string | null;
+  /** The shared constellation it is for (M7 phase 5); null for one's own sky. */
+  sharedId: string | null;
 }
 
 export type PomodoroSettings = PomodoroSettingsRow;
@@ -47,8 +49,19 @@ export type SessionDraft =
        * same end.
        */
       together?: TogetherStart;
+      /**
+       * The shared constellation this session is for (M7 phase 5). Fixed for
+       * the session: absent or null means one's own constellation.
+       */
+      sharedId?: string | null;
     }
-  | { mode: 'pomodoro'; settings: PomodoroSettings; tagId: string | null };
+  | {
+      mode: 'pomodoro';
+      settings: PomodoroSettings;
+      tagId: string | null;
+      /** As for a countdown; every block of the run carries it. */
+      sharedId?: string | null;
+    };
 
 export interface TogetherStart {
   roomId: string;

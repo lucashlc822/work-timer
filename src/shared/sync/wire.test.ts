@@ -51,3 +51,24 @@ describe('session wire mapping: the focus-together room (M7)', () => {
     expect(read).not.toHaveProperty('togetherId');
   });
 });
+
+describe('session wire mapping: the shared constellation (M7 phase 5)', () => {
+  it('uploads the shared constellation a session was run for, and reads it back', () => {
+    const row = finished({ sharedId: '33333333-0000-4000-8000-000000000003' });
+    expect(sessionToWire(row).shared_id).toBe('33333333-0000-4000-8000-000000000003');
+    expect(sessionFromWire(pulled(row), 1)?.sharedId).toBe('33333333-0000-4000-8000-000000000003');
+  });
+
+  it('a session for one’s own sky uploads null and reads back with none', () => {
+    const row = finished();
+    expect(sessionToWire(row).shared_id).toBeNull();
+    expect(sessionFromWire(pulled(row), 1)).not.toHaveProperty('sharedId');
+  });
+
+  it('a row from an older app, without the column, still reads', () => {
+    const { shared_id: _dropped, ...older } = pulled(finished());
+    const read = sessionFromWire(older, 1);
+    expect(read?.id).toBe('11111111-0000-4000-8000-000000000001');
+    expect(read).not.toHaveProperty('sharedId');
+  });
+});

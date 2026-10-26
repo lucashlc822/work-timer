@@ -64,6 +64,7 @@ const toActive = (row: SessionRow): ActiveSession => ({
   device: row.device,
   awayMs: row.awayMs,
   togetherId: row.togetherId ?? null,
+  sharedId: row.sharedId ?? null,
 });
 
 export const isInFlight = (row: SessionRow | undefined): row is SessionRow =>
@@ -84,8 +85,12 @@ export const readInFlight = async (db: WorkTimerDb): Promise<SessionRow | undefi
  */
 export const addInFlightSession = async (
   db: WorkTimerDb,
-  fields: Pick<SessionRow, 'plannedDurationS' | 'tagId'> &
-    ({ mode: 'countdown' } | { mode: 'pomodoro'; runId: string; runIndex: number }),
+  {
+    sharedId,
+    ...fields
+  }: Pick<SessionRow, 'plannedDurationS' | 'tagId'> & {
+    sharedId?: string | null | undefined;
+  } & ({ mode: 'countdown' } | { mode: 'pomodoro'; runId: string; runIndex: number }),
   ctx: StartContext,
   together?: TogetherStart,
 ): Promise<ActiveSession> => {
@@ -105,6 +110,8 @@ export const addInFlightSession = async (
     syncedAt: null,
     ...fields,
     ...(together !== undefined && { togetherId: together.roomId }),
+    // Absent rather than null for one's own sky, like `togetherId`.
+    ...(typeof sharedId === 'string' && { sharedId }),
   };
   await db.sessions.add(row);
   await writeMeta(db, META_KEYS.activeSessionId, row.id);
@@ -132,7 +139,12 @@ export const startSession = (
     if (draft.mode === 'countdown') {
       const session = await addInFlightSession(
         db,
-        { mode: 'countdown', plannedDurationS: draft.plannedDurationS, tagId: draft.tagId },
+        {
+          mode: 'countdown',
+          plannedDurationS: draft.plannedDurationS,
+          tagId: draft.tagId,
+          sharedId: draft.sharedId,
+        },
         ctx,
         draft.together,
       );
@@ -149,6 +161,7 @@ export const startSession = (
       blocksDone: 0,
       break: null,
       tagId: draft.tagId,
+      sharedId: draft.sharedId ?? null,
     };
     await writeMeta(db, META_KEYS.activeRun, run);
     const session = await addInFlightSession(
@@ -157,6 +170,7 @@ export const startSession = (
         mode: 'pomodoro',
         plannedDurationS: run.settings.focusS,
         tagId: draft.tagId,
+        sharedId: run.sharedId,
         runId: run.id,
         runIndex: 1,
       },

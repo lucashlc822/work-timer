@@ -4,6 +4,8 @@
 export { SkyBackdrop, SkyView } from './ui/SkyBackdrop';
 export { completedConstellations, deriveOtherSky } from './domain/otherSky';
 export type { OtherSession } from './domain/otherSky';
+export { deriveShared } from './domain/shared';
+export type { SharedInput, SharedState, SharedStatus } from './domain/shared';
 export type { ConstellationChoice, SkyState } from './domain/types';
 export type { SkyMode } from './ui/ConstellationLayer';
 export { StarGlyph } from './ui/StarGlyph';

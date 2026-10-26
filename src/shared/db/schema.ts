@@ -87,6 +87,13 @@ export interface SessionRow {
    * `runId`: no schema version, no rewrite of any finished row.
    */
   togetherId?: string;
+  /**
+   * The shared constellation this session was run for (M7 phase 5). Its star
+   * goes there and never to the person's own constellation. Absent on sessions
+   * for one's own sky and on rows from older apps. Optional and unindexed, like
+   * `togetherId`: no schema version, no rewrite of any finished row.
+   */
+  sharedId?: string;
 }
 
 /**
@@ -145,6 +152,11 @@ export interface PomodoroRunRow {
    * block, so the next block still knows it after a reload during a break.
    */
   tagId?: string | null;
+  /**
+   * The shared constellation every block of this run is for (M7 phase 5), held
+   * here for the same reason as `tagId`. Absent reads as one's own sky.
+   */
+  sharedId?: string | null;
 }
 
 /**
