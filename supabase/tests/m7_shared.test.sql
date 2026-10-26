@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(35);
+select plan(36);
 
 -- --- fixtures (as superuser) ------------------------------------------------
 
@@ -153,6 +153,13 @@ select ok((select not (m -> 0 -> 'sessions' -> 0 ? 'tag_id') and not (m -> 0 -> 
 select throws_ok(
   $$ select public.propose_shared('bbbbbbbb-5555-4000-8000-000000000002', 'generated', null, 'x', 'easy', 5, 0) $$,
   'P0001', 'shared_already_open', 'S2.1 still open while unfinished');
+reset role;
+
+select pg_temp.act_as('bbbbbbbb-5555-4000-8000-000000000002');
+set local role authenticated;
+select is((select count(*)::int from jsonb_array_elements(public.friend_sky('aaaaaaaa-5555-4000-8000-000000000001') -> 'sessions') s
+           where s ->> 'shared_id' = current_setting('t.s1')), 4,
+  'S3 a friend''s sky marks the sessions they ran for a shared constellation');
 reset role;
 
 select pg_temp.add_session('bbbbbbbb-5555-4000-8000-000000000002', current_setting('t.s1')::uuid, 120, interval '30 minutes');

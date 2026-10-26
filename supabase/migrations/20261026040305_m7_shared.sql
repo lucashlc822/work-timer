@@ -262,6 +262,55 @@ begin
 end;
 $$;
 
+-- A friend's sky now says which sessions were run for a shared constellation,
+-- so their app leaves those out of the friend's personal sky (they belong to
+-- the shared one). Same signature, checks and grants as phase 1.
+create or replace function public.friend_sky(friend uuid) returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  me uuid := (select auth.uid());
+begin
+  if friend is null or me is null or friend = me or not exists (
+    select 1 from public.friendships
+    where status = 'accepted'
+      and ((requester = me and addressee = friend) or (requester = friend and addressee = me))
+  ) then
+    raise exception 'not_friends' using errcode = 'P0001';
+  end if;
+
+  return jsonb_build_object(
+    'display_name', (select p.display_name from public.profiles p where p.user_id = friend),
+    'sky_theme', (select u.sky_theme from public.user_settings u where u.user_id = friend),
+    'sessions', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', s.id,
+        'seed', s.seed,
+        'started_at', s.started_at,
+        'ended_at', s.ended_at,
+        'actual_focus_s', s.actual_focus_s,
+        'outcome', s.outcome,
+        'star_style', s.star_style,
+        'shared_id', s.shared_id
+      ) order by s.ended_at, s.id)
+      from public.sessions s where s.user_id = friend), '[]'::jsonb),
+    'constellations', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', c.id,
+        'source', c.source,
+        'shape_id', c.shape_id,
+        'seed', c.seed,
+        'tier', c.tier,
+        'chosen_at', c.chosen_at
+      ) order by c.chosen_at, c.id)
+      from public.constellations c where c.user_id = friend), '[]'::jsonb)
+  );
+end;
+$$;
+
 revoke execute on function
   public.propose_shared(uuid, text, text, text, text, integer, integer),
   public.respond_shared(uuid, boolean),
