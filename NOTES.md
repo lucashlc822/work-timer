@@ -12,6 +12,93 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-26 — M7 phase 5 merged: shared constellations
+
+**Status: phase 5 is on `master` in three PRs (#86–#88); nothing is released.**
+The hosted project does **not** have `20261026040305_m7_shared.sql`. Local
+`master` matches `origin/master`, with nothing uncommitted. Plan:
+`~/.claude/plans/let-s-proceed-with-planning-compiled-barto.md` (reused again;
+it now holds the phase 5 plan).
+
+### Next
+
+- **Release as 0.6.0**, the same routine as 0.5.0 (`RELEASING.md`):
+  1. Push `20261026040305_m7_shared.sql` first. 0.6.0 sends `shared_id` with
+     every session, and a server without that column refuses the upload.
+  2. Probe `sessions?select=shared_id` (400 → 401), `rpc/my_shared` with `{}`
+     and `rpc/stop_shared` with `{"shared":"00000000-0000-0000-0000-000000000000"}`
+     (404 → 401), with `sessions` as the control.
+  3. Installed 0.5.0 after the push: a session backs up, Friends and focus
+     together still work (S7.2).
+  4. Bump, `e2e:desktop` (quit the installed app first), tag, review, publish.
+- **Small fix of its own:** the Stardust list shows the phase 4 bonus as the raw
+  word "together" (`REASONS` in `progression/ui/StardustPanel.tsx` has no
+  entry for it; `shared` got one in #88). Pre-existing, not part of phase 5.
+- Still open: tell friends (0.3.0–0.6.0), R12 ×2 and R14 plus a real shared
+  constellation (all need a friend on the new version), `cargo install
+  cargo-audit`, the other machine.
+
+### Decisions (with Lucas, 2026-10-25)
+
+| Question | Answer |
+|---|---|
+| Where a session's star goes | **Only to what it was run for**: your own constellation, or the shared one with a friend, picked before Start ("Working on"). Never both. |
+| How many per pair | One open per friendship (a proposal, or accepted and unfinished) |
+| Bonus | The solo tier bonus each (25 / 75 / 200), `shared:<id>` |
+| Unfriending | Freezes it in both skies; a proposal is withdrawn |
+
+This supersedes the design doc's "every session either of you completes adds
+a star". Recorded in CLAUDE.md ("A shared constellation fills only from
+sessions run for it") and in the design doc. Defaults chosen in the plan, not
+objected to: the target is fixed once a session starts; either member can
+Stop; tiers on offer are the proposer's unlocked ones; nothing is cached
+offline.
+
+### What was built
+
+| PR | What |
+|---|---|
+| #86 (5a) | `shared_constellations` (no grants), `sessions.shared_id`, `propose_shared` / `respond_shared` / `stop_shared` / `my_shared`, `shared_done` helper; `remove_friend` freezes; `friend_sky` returns `shared_id` |
+| #87 (5b) | `sharedId` on sessions and Pomodoro runs (wire `shared_id`); `deriveSky` skips those sessions; `deriveShared` |
+| #88 (5c) | Picker `onPick`, Requests, friend-page slot, "Working on", shared in both skies, the bonus, `SharedSkyProvider` in `app/`, docs |
+
+- **"Finished" is judged by `stars_needed` and `min_focus_s` stored with the
+  constellation**, on the server and on every device, so they agree.
+- **Two derivations in `app/sharedInputs.ts`:** what is drawn adds this
+  device's own sessions (a new star shows at once); what is paid uses only the
+  server's sessions (no payout for an unsynced star).
+- Fetched, never stored on the device: offline, shared constellations simply
+  aren't drawn.
+
+### Acceptance results
+
+All cases that can run locally pass:
+- pgTAP: 284 checks (`m7_shared` 36)
+- unit: 579
+- e2e: 37, including three shared tests (S2.2, S3.3, S4.1, S1.2; S5.2; S6.2,
+  S8.2) and the a11y scan of the new screens (S8.1)
+- CI green on every PR
+- Not run: S7.2 (installed 0.5.0 against the migration, at release),
+  `e2e:desktop` (at release), a real two-person shared constellation.
+
+### Things worth not rediscovering
+
+- **A Playwright page with a clock two hours back needs the acceptance
+  backdated too:** a session "ending" before `accepted_at` rightly doesn't
+  count. `e2e/web/shared.spec.ts` backdates it through the admin client.
+- **A device only learns a friend's new star on its next look** (2 min, or
+  15 s with a Friends screen open, or a reload). Its own uploads trigger an
+  immediate look, so the bonus for your own last star isn't delayed.
+- **The friend page's header has a backdrop blur**, which makes it the
+  containing block for `fixed` children: the picker is portalled to `body`.
+- **The visual check left an active shared Kite between the local `a@` and
+  `b@` accounts.** Harmless; a `db reset` clears it (and the accounts).
+- Docker Desktop and the local stack were down after a restart and were
+  started by me (`npx supabase start` can report "not ready" on the first try
+  while the database boots; a second run is fine).
+
+---
+
 ## 2026-10-24 — Released 0.5.0: Focus together
 
 **Status: 0.5.0 is published (tag `v0.5.0`, Latest; web deployed from the same
@@ -20,6 +107,8 @@ Lucas's desktop app runs 0.5.0. Nothing in flight. `min_client_version` is
 still null. Plan: `~/.claude/plans/let-s-proceed-with-planning-compiled-barto.md`.
 
 ### Next
+
+*(Superseded 2026-10-26: phase 5 is merged, see "M7 phase 5 merged" above. The rest of this list is carried forward there.)*
 
 - **Phase 5: shared constellations**, per `docs/plans/2026-10-22-m7-friends.md`.
 - **Tell friends 0.5.0 is out.** Focus together only reaches a friend who has
