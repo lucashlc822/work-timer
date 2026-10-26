@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 
+import type { SharedState } from '../domain/shared';
 import type { SkyState } from '../domain/types';
 import { useElementSize } from '../hooks/useElementSize';
 import { useEquippedTheme } from '../hooks/useEquippedTheme';
@@ -20,10 +21,16 @@ export const SkyView = ({
   sky,
   themeKey,
   mode,
+  shared,
+  focusId,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
   mode: SkyMode;
+  /** Shared constellations to draw alongside (M7 phase 5). */
+  shared?: readonly SharedState[];
+  /** In hero mode, the shared one the next session is for. */
+  focusId?: string | null;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -32,13 +39,37 @@ export const SkyView = ({
     <div ref={ref} className={`fixed inset-0 ${mode === 'full' ? '' : 'pointer-events-none'}`}>
       <AmbientCanvas themeKey={themeKey} />
       {sky !== undefined && width > 0 && (
-        <ConstellationLayer sky={sky} mode={mode} width={width} height={height} />
+        <ConstellationLayer
+          sky={sky}
+          mode={mode}
+          width={width}
+          height={height}
+          {...(shared !== undefined && { shared })}
+          {...(focusId !== undefined && { focusId })}
+        />
       )}
     </div>
   );
 };
 
-/** Your own sky, live from this device's store, behind everything else. */
-export const SkyBackdrop = ({ mode }: { mode: SkyMode }) => (
-  <SkyView sky={useSky()} themeKey={useEquippedTheme()} mode={mode} />
+/**
+ * Your own sky, live from this device's store, behind everything else, with
+ * your shared constellations (from the server, through `app/`) beside it.
+ */
+export const SkyBackdrop = ({
+  mode,
+  shared,
+  focusId,
+}: {
+  mode: SkyMode;
+  shared?: readonly SharedState[];
+  focusId?: string | null;
+}) => (
+  <SkyView
+    sky={useSky()}
+    themeKey={useEquippedTheme()}
+    mode={mode}
+    {...(shared !== undefined && { shared })}
+    {...(focusId !== undefined && { focusId })}
+  />
 );

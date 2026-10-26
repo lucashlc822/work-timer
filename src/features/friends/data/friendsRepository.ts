@@ -4,6 +4,7 @@ import { classifyFriendsError, type FriendsErrorKind } from '../domain/errors';
 import type { FocusStatus } from '../domain/focusStatus';
 import { decodeFriendSky, type FriendSky } from '../domain/friendSky';
 import { decodeRooms, type Room } from '../domain/room';
+import { decodeShared, type SharedDraft, type SharedRow } from '../domain/shared';
 
 /**
  * Every friends action, over the server's friends functions (M7).
@@ -224,3 +225,43 @@ export const togetherWins = async (
     return typeof r.room_id === 'string' && endsAt !== null ? [{ roomId: r.room_id, endsAt }] : [];
   });
 };
+
+// --- Shared constellations (M7 phase 5) ------------------------------------------
+
+/** Proposes a shape to an accepted friend. Returns the new shared constellation's id. */
+export const proposeShared = async (
+  client: SupabaseClient,
+  friendId: string,
+  draft: SharedDraft,
+): Promise<string> => {
+  const id = await call<string>(() =>
+    client.rpc('propose_shared', {
+      friend: friendId,
+      source: draft.source,
+      shape_id: draft.shapeId,
+      seed: draft.seed,
+      tier: draft.tier,
+      stars_needed: draft.starsNeeded,
+      min_focus_s: draft.minFocusS,
+    }),
+  );
+  if (typeof id !== 'string') throw new FriendsFailure('unknown');
+  return id;
+};
+
+/** Accept or decline a proposal made to you. */
+export const respondShared = async (
+  client: SupabaseClient,
+  sharedId: string,
+  accept: boolean,
+): Promise<void> => {
+  await call(() => client.rpc('respond_shared', { shared: sharedId, accept }));
+};
+
+/** Withdraw a proposal, or stop one in progress: it stays as it is, in both skies. */
+export const stopShared = async (client: SupabaseClient, sharedId: string): Promise<void> => {
+  await call(() => client.rpc('stop_shared', { shared: sharedId }));
+};
+
+export const myShared = async (client: SupabaseClient): Promise<SharedRow[]> =>
+  decodeShared(await call<unknown>(() => client.rpc('my_shared')));

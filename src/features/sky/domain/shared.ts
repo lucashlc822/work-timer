@@ -34,7 +34,21 @@ export type SharedStatus = 'proposed' | 'active' | 'complete' | 'stopped';
 export interface SharedState extends ConstellationState {
   partnerName: string;
   status: SharedStatus;
+  /** Stars it takes to finish, capped at the shape's points. */
+  starsNeeded: number;
+  /** The shortest session that counts toward it. */
+  minFocusS: number;
 }
+
+/** The shared constellations a session can be for now: accepted, not stopped, not full. */
+export const activeShared = (shared: readonly SharedState[]): SharedState[] =>
+  shared.filter((s) => s.status === 'active');
+
+/** `Swan with Ada`, for lists and lines. */
+export const sharedTitle = (s: SharedState): string => `${s.def.name} with ${s.partnerName}`;
+
+/** Whether a constellation on the sky is a shared one. */
+export const isShared = (state: ConstellationState): state is SharedState => 'partnerName' in state;
 
 const byEndedAt = (a: CompletedSession, b: CompletedSession): number =>
   a.endedAt - b.endedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -78,5 +92,7 @@ export const deriveShared = (input: SharedInput): SharedState => {
     abandoned: false,
     partnerName: input.partnerName,
     status,
+    starsNeeded: needed,
+    minFocusS: input.minFocusS,
   };
 };

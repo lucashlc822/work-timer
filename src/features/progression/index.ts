@@ -9,4 +9,4 @@ export { RewardNote } from './ui/RewardNote';
 export { StardustPanel } from './ui/StardustPanel';
 export { StardustPill } from './ui/StardustPill';
 export { streakAt } from './domain/streak';
-export type { TogetherWin } from './domain/reconcile';
+export type { SharedCompletion, TogetherWin } from './domain/reconcile';

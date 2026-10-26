@@ -6,6 +6,15 @@ import { FRIENDS_MESSAGES } from '../domain/errors';
 import { statusLine } from '../domain/focusStatus';
 import { lastFocusLabel } from '../domain/lastFocus';
 import type { Friends } from '../hooks/useFriends';
+import type { DescribeShared } from '../domain/shared';
+import type { Shared } from '../hooks/useShared';
+
+/** Shared constellation proposals (M7 phase 5), shown with friend requests. */
+export interface SharedRequestsProps {
+  shared: Shared;
+  me: string;
+  describe: DescribeShared;
+}
 
 const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-xl border p-4 text-sm';
 const INPUT =
@@ -33,10 +42,12 @@ export const FriendsPanel = ({
   friends,
   now,
   onOpenFriend,
+  shared,
 }: {
   friends: Friends;
   now: number;
   onOpenFriend: (friend: FriendRow) => void;
+  shared?: SharedRequestsProps;
 }) => {
   const { load, profile } = friends;
 
@@ -66,7 +77,7 @@ export const FriendsPanel = ({
           <NameCard name={profile.displayName} onSave={friends.saveName} />
           <CodeCard code={profile.friendCode} />
           <AddFriend hasName={profile.displayName !== null} onSend={friends.sendRequest} />
-          <Requests friends={friends} />
+          <Requests friends={friends} shared={shared} />
           <FriendList friends={friends} now={now} onOpen={onOpenFriend} />
         </>
       )}
@@ -280,9 +291,21 @@ const useAction = () => {
   return { busy, error, run };
 };
 
-const Requests = ({ friends }: { friends: Friends }) => {
+const Requests = ({
+  friends,
+  shared,
+}: {
+  friends: Friends;
+  shared: SharedRequestsProps | undefined;
+}) => {
   const { busy, error, run } = useAction();
-  if (friends.incoming.length === 0 && friends.outgoing.length === 0) return null;
+  const proposals = (shared?.shared.rows ?? []).filter((r) => r.acceptedAt === null);
+  const incomingShared = proposals.filter((r) => r.proposedBy !== shared?.me);
+  const outgoingShared = proposals.filter((r) => r.proposedBy === shared?.me);
+  if (friends.incoming.length === 0 && friends.outgoing.length === 0 && proposals.length === 0) {
+    return null;
+  }
+  const partner = (name: string | null) => name ?? 'Someone';
 
   return (
     <section className={CARD} aria-labelledby="friend-requests">
@@ -326,6 +349,51 @@ const Requests = ({ friends }: { friends: Friends }) => {
             </button>
           </li>
         ))}
+        {shared !== undefined &&
+          incomingShared.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2">
+              <span className="text-ink-secondary">
+                {partner(r.partnerName)} wants to build {shared.describe(r).name} with you
+              </span>
+              <span className="flex gap-2">
+                <button
+                  type="button"
+                  className={BUTTON}
+                  disabled={busy}
+                  aria-label={`Accept ${shared.describe(r).name} with ${partner(r.partnerName)}`}
+                  onClick={() => void run(() => shared.shared.respond(r.id, true))}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  disabled={busy}
+                  aria-label={`Decline ${shared.describe(r).name} with ${partner(r.partnerName)}`}
+                  onClick={() => void run(() => shared.shared.respond(r.id, false))}
+                >
+                  Decline
+                </button>
+              </span>
+            </li>
+          ))}
+        {shared !== undefined &&
+          outgoingShared.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2">
+              <span className="text-ink-secondary">
+                Waiting for {partner(r.partnerName)} to build {shared.describe(r).name}
+              </span>
+              <button
+                type="button"
+                className={BUTTON}
+                disabled={busy}
+                aria-label={`Withdraw ${shared.describe(r).name}`}
+                onClick={() => void run(() => shared.shared.stop(r.id))}
+              >
+                Withdraw
+              </button>
+            </li>
+          ))}
       </ul>
       {error !== null && <Alert>{error}</Alert>}
     </section>

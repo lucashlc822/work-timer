@@ -20,13 +20,14 @@ import {
 } from '../data/ledgerRepository';
 import { boughtTiers, ownedPackKeys, type BuyableTier } from '../domain/catalogue';
 import { goalProgress, type GoalProgress } from '../domain/goal';
-import type { ConstellationCompletion, TogetherWin } from '../domain/reconcile';
+import type { ConstellationCompletion, SharedCompletion, TogetherWin } from '../domain/reconcile';
 import { streakAt } from '../domain/streak';
 
 /** Wait after sessions change before reconciling, so a burst of pulled rows is one pass. */
 const RECONCILE_DEBOUNCE_MS = 300;
 
 const NO_WINS: readonly TogetherWin[] = [];
+const NO_SHARED: readonly SharedCompletion[] = [];
 
 /**
  * Keeps the ledger in step with the account's sessions, finished
@@ -45,6 +46,8 @@ export const useStardustReconciler = (
   completions: readonly ConstellationCompletion[] | undefined,
   /** Rooms everyone completed (M7), from the server through `app/`; empty until known. */
   togetherWins: readonly TogetherWin[] = NO_WINS,
+  /** Finished shared constellations (M7 phase 5), from the server through `app/`. */
+  sharedCompletions: readonly SharedCompletion[] = NO_SHARED,
 ): void => {
   const ended = useLiveQuery(() => db.sessions.filter((s) => s.outcome !== null).count(), []);
   const goalMin = useDailyGoal();
@@ -52,12 +55,12 @@ export const useStardustReconciler = (
   useEffect(() => {
     if (ended === undefined || goalMin === undefined || completions === undefined) return;
     const timer = setTimeout(() => {
-      reconcile(db, userId, completions, Date.now(), togetherWins).catch((e: unknown) =>
-        console.error('Stardust reconcile failed', e),
+      reconcile(db, userId, completions, Date.now(), togetherWins, sharedCompletions).catch(
+        (e: unknown) => console.error('Stardust reconcile failed', e),
       );
     }, RECONCILE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [ended, goalMin, completions, togetherWins, userId]);
+  }, [ended, goalMin, completions, togetherWins, sharedCompletions, userId]);
 };
 
 /** The live balance; `undefined` until the first read. */

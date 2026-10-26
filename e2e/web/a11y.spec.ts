@@ -129,9 +129,38 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await settleTransitions(page);
   findings.push(...(await scan(page, "a friend's sky")));
 
-  // Focus together (M7 phase 4): the panel, an invitation, and a lobby.
+  // Shared constellations (M7 phase 5): a proposal, the friend's page while
+  // building one, the timer's "Working on", and the sky with it drawn.
+  await rpc(friend, 'propose_shared', {
+    friend: user.id,
+    source: 'catalogue',
+    shape_id: 'kite',
+    seed: null,
+    tier: 'easy',
+    stars_needed: 4,
+    min_focus_s: 0,
+  });
+  await page.keyboard.press('Escape'); // a friend's sky -> friends
+  await page.getByText('Bea wants to build The Kite with you').waitFor({ timeout: 20_000 });
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'shared constellation proposal')));
+  await page.getByRole('button', { name: 'Accept The Kite with Bea' }).click();
+  await page.getByRole('button', { name: /^Bea/ }).click();
+  await page.getByText('Building The Kite together · 0 of 4').waitFor({ timeout: 20_000 });
+  await settleTransitions(page);
+  findings.push(...(await scan(page, "a friend's sky, building together")));
   await page.keyboard.press('Escape'); // a friend's sky -> friends
   await page.keyboard.press('Escape'); // friends -> timer
+  await page.getByLabel('Working on').waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'timer, working on')));
+  await openView(page, 'View sky');
+  await page.getByText('The Kite · with Bea · 0/4').waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'sky with a shared constellation')));
+  await backToTimer(page);
+
+  // Focus together (M7 phase 4): the panel, an invitation, and a lobby.
   await page.getByRole('button', { name: 'Focus with friends' }).click();
   await page.getByRole('heading', { name: 'Focus together' }).waitFor();
   await settleTransitions(page);

@@ -22,6 +22,9 @@ export type FriendsErrorKind =
   | 'roomNotFound'
   | 'roomClosed'
   | 'nobodyJoined'
+  | 'sharedAlreadyOpen'
+  | 'sharedNotFound'
+  | 'invalidShared'
   | 'offline'
   | 'unknown';
 
@@ -41,6 +44,10 @@ export const FRIENDS_MESSAGES: Record<FriendsErrorKind, string> = {
   roomNotFound: 'That session is gone.',
   roomClosed: 'That session has already started, ended or lapsed.',
   nobodyJoined: 'Wait until a friend has joined, then start.',
+  sharedAlreadyOpen:
+    'You already have a shared constellation with them. Finish or stop it to start another.',
+  sharedNotFound: 'That shared constellation is gone. The list has been refreshed.',
+  invalidShared: "That constellation can't be shared. Pick another.",
   offline: 'Connect to see your friends.',
   unknown: 'Something went wrong. Try again in a moment.',
 };
@@ -62,6 +69,9 @@ const SERVER_CODES: Record<string, FriendsErrorKind> = {
   room_not_found: 'roomNotFound',
   room_closed: 'roomClosed',
   nobody_joined: 'nobodyJoined',
+  shared_already_open: 'sharedAlreadyOpen',
+  shared_not_found: 'sharedNotFound',
+  invalid_shared: 'invalidShared',
 };
 
 /** What classification needs from a supabase-js error and its response. */

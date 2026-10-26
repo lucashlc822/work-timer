@@ -15,6 +15,15 @@ import { Silhouette } from './Silhouette';
 
 const WILD_OPTIONS_PER_TIER = 3;
 
+/**
+ * A shape picked to share with a friend (M7 phase 5): the choice, plus the
+ * star count and minimum length the server judges it finished by.
+ */
+export interface SharedPick extends ChoiceDraft {
+  starsNeeded: number;
+  minFocusS: number;
+}
+
 interface Option {
   key: string;
   draft: ChoiceDraft;
@@ -37,6 +46,7 @@ const optionsFor = (
   choiceCount: number,
   reroll: number,
   ownedPacks: ReadonlySet<string>,
+  forSharing: boolean,
 ): Option[] => [
   ...catalogueKeysForTier(tier, ownedPacks).map((key) => ({
     key,
@@ -45,7 +55,8 @@ const optionsFor = (
     shape: CATALOGUE[key].shape,
   })),
   ...Array.from({ length: WILD_OPTIONS_PER_TIER }, (_, i) => {
-    const seed = wildSeed(userId, tier, choiceCount, reroll, i);
+    // Shared wild shapes get their own seeds, so they never repeat your own options.
+    const seed = `${forSharing ? 'shared:' : ''}${wildSeed(userId, tier, choiceCount, reroll, i)}`;
     return {
       key: seed,
       draft: { source: 'generated' as const, shapeId: null, seed, tier },
@@ -61,12 +72,17 @@ const optionsFor = (
  * Each unlocked tier offers its hand-designed shapes plus a few generated
  * "wild" ones. Locked tiers say what unlocks them. Switching away from a
  * constellation with stars in it asks first, since it stays unfinished.
+ *
+ * With `onPick` (M7 phase 5: a shape to share with a friend) nothing is
+ * chosen for your own sky: the pick is handed back, and your own
+ * constellation is untouched, so there is nothing to confirm.
  */
 export const ConstellationPicker = ({
   sky,
   boughtTiers,
   ownedPacks,
   onClose,
+  onPick,
 }: {
   sky: SkyState;
   /** Tiers bought early with Stardust; choosable without finishing the tier below. */
@@ -74,6 +90,7 @@ export const ConstellationPicker = ({
   /** Shop packs owned; their shapes join the hand-designed ones. */
   ownedPacks: ReadonlySet<string>;
   onClose: () => void;
+  onPick?: (pick: SharedPick) => void;
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [reroll, setReroll] = useState(0);
@@ -90,11 +107,21 @@ export const ConstellationPicker = ({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const forSharing = onPick !== undefined;
   const unlocked = unlockedTiers(sky, boughtTiers);
-  const inProgress = sky.current !== null && sky.current.stars.length > 0 ? sky.current : null;
+  const inProgress =
+    !forSharing && sky.current !== null && sky.current.stars.length > 0 ? sky.current : null;
 
   const choose = async (option: Option) => {
-    await chooseConstellation(db, option.draft, systemClock);
+    if (onPick !== undefined) {
+      onPick({
+        ...option.draft,
+        starsNeeded: option.shape.points.length,
+        minFocusS: RULES[option.draft.tier].minSessionS,
+      });
+    } else {
+      await chooseConstellation(db, option.draft, systemClock);
+    }
     onClose();
   };
 
@@ -113,7 +140,7 @@ export const ConstellationPicker = ({
       >
         <header className="border-night-700 flex items-center justify-between border-b px-5 py-3">
           <h2 id="picker-title" className="text-ink-primary">
-            Choose a constellation
+            {forSharing ? 'Choose one to build together' : 'Choose a constellation'}
           </h2>
           <button
             ref={closeRef}
@@ -169,27 +196,30 @@ export const ConstellationPicker = ({
                   </p>
                 ) : userId === null ? null : (
                   <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {optionsFor(tier, userId, sky.constellations.length, reroll, ownedPacks).map(
-                      (option) => (
-                        <li key={option.key}>
-                          <button
-                            type="button"
-                            onClick={() => select(option)}
-                            className="rounded-soft border-night-600 hover:border-lavender-400 flex w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
-                          >
-                            <Silhouette shape={option.shape} />
-                            <span className="text-ink-primary text-xs">{option.name}</span>
-                            <span className="text-ink-muted text-[10px]">
-                              {option.draft.source === 'generated' && 'Wild · '}
-                              {option.shape.points.length} stars · ≈
-                              {focusLabel(
-                                approximateFocusS(tier, option.shape.points.length, RULES),
-                              )}
-                            </span>
-                          </button>
-                        </li>
-                      ),
-                    )}
+                    {optionsFor(
+                      tier,
+                      userId,
+                      sky.constellations.length,
+                      reroll,
+                      ownedPacks,
+                      forSharing,
+                    ).map((option) => (
+                      <li key={option.key}>
+                        <button
+                          type="button"
+                          onClick={() => select(option)}
+                          className="rounded-soft border-night-600 hover:border-lavender-400 flex w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
+                        >
+                          <Silhouette shape={option.shape} />
+                          <span className="text-ink-primary text-xs">{option.name}</span>
+                          <span className="text-ink-muted text-[10px]">
+                            {option.draft.source === 'generated' && 'Wild · '}
+                            {option.shape.points.length} stars · ≈
+                            {focusLabel(approximateFocusS(tier, option.shape.points.length, RULES))}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                 )}
               </section>

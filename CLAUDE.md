@@ -491,6 +491,20 @@ rejected). Don't pre-populate this with guesses.
   a row readable only by them, and every change touches every member's row;
   each device listens on its own filtered channel. No policy ever lets one
   person read another's row, so the isolation guard's rule stands.
+- **A shared constellation fills only from sessions run for it** (M7 phase 5,
+  2026-10-25). Before Start you pick what a session is for — your own
+  constellation or the shared one with a friend (`sessions.shared_id`) — and
+  its star goes there alone, never to both; the pick is fixed for the session
+  and a Pomodoro run keeps it for every block. One open per friendship
+  (a proposal, or accepted and unfinished). "Finished" is judged from the
+  server's sessions by the `stars_needed` and `min_focus_s` stored with it, on
+  the server (`shared_done`) and on every device alike, and pays each member
+  the solo tier bonus once (`shared:<id>`) — only from server-confirmed
+  sessions, never an unsynced local star. Stopping (either member) or
+  unfriending freezes it in both skies; a proposal is withdrawn. Shared
+  constellations are fetched, never stored on the device, so offline they
+  simply aren't drawn. Supersedes the design doc's "every session either of
+  you completes adds a star".
 - **Star style, sky theme and daily goal are their own `user_settings`
   columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
   wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A

@@ -1,23 +1,32 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
+  activeShared,
   ConstellationStatus,
   installDevTools,
   NewStarNote,
   PackPreview,
   ResultStarGlyph,
+  SharedPicker,
+  SharedStartHint,
   SkyBackdrop,
   StarGlyph,
   StartHint,
+  TargetPicker,
   ThemeSwatch,
   useEarnedTiers,
 } from '@/features/sky';
 import { AccountPanel } from '@/features/account';
 import {
+  FOCUS_POLL_MS,
   FriendSkyView,
   FriendsPanel,
   FriendsPill,
+  incomingProposals,
   InviteBanner,
+  SharedWithFriend,
   TogetherCancelNote,
   TogetherLine,
   TogetherPanel,
@@ -46,11 +55,13 @@ import {
   type TimerSlots,
 } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
+import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
+import { useSharedSky } from '../sharedSkyContext';
 import { useTogetherTimer } from '../useTogetherTimer';
 
 /**
@@ -134,6 +145,34 @@ const HomeScreen = ({ together }: { together: Together }) => {
   const me = account.userId;
   useTogetherTimer(together, timer, me);
 
+  // Shared constellations (M7 phase 5): what the next session is for. The last
+  // pick is kept per device; one that is no longer active means your own sky.
+  const { shared, states: sharedStates, describe: describeShared } = useSharedSky();
+  const storedTarget = useLiveQuery(() => readMeta<unknown>(db, META_KEYS.lastSharedTarget), []);
+  const activeTargets = activeShared(sharedStates);
+  const target =
+    typeof storedTarget === 'string' && activeTargets.some((s) => s.choice.id === storedTarget)
+      ? storedTarget
+      : null;
+  const targetState = activeTargets.find((s) => s.choice.id === target) ?? null;
+  const setTarget = useCallback((id: string | null) => {
+    void (id === null
+      ? clearMeta(db, META_KEYS.lastSharedTarget)
+      : writeMeta(db, META_KEYS.lastSharedTarget, id));
+  }, []);
+  // Behind the timer: what is running, or else what the next session is for.
+  const focusId = timer.session?.sharedId ?? target;
+
+  // While a Friends screen is open, proposals arrive as quickly as friend requests do.
+  const { refresh: refreshShared } = shared;
+  const onFriendsScreen = view === 'friends' || view === 'friend';
+  useEffect(() => {
+    if (!onFriendsScreen) return;
+    void refreshShared();
+    const timer = window.setInterval(() => void refreshShared(), FOCUS_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [onFriendsScreen, refreshShared]);
+
   useEffect(installDevTools, []);
   useEffect(installStatsDevTools, []);
 
@@ -151,9 +190,21 @@ const HomeScreen = ({ together }: { together: Together }) => {
       id === null ? null : (rooms.find((r) => r.id === id) ?? null);
     return {
       ...timerSlots,
+      targetPicker: ({ disabled }) => (
+        <TargetPicker
+          shared={sharedStates}
+          value={target}
+          onChange={setTarget}
+          disabled={disabled}
+        />
+      ),
       startHint: (plannedS) => (
         <>
-          <StartHint plannedS={plannedS} />
+          {targetState === null ? (
+            <StartHint plannedS={plannedS} />
+          ) : (
+            <SharedStartHint shared={targetState} plannedS={plannedS} />
+          )}
           {hasFriends && (
             <button
               type="button"
@@ -187,7 +238,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         </>
       ),
     };
-  }, [rooms, hasFriends, inRoom, me]);
+  }, [rooms, hasFriends, inRoom, me, sharedStates, target, targetState, setTarget]);
 
   useEffect(() => {
     if (view === 'timer') return;
@@ -201,7 +252,11 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
   return (
     <>
-      <SkyBackdrop mode={view === 'sky' ? 'full' : 'hero'} />
+      <SkyBackdrop
+        mode={view === 'sky' ? 'full' : 'hero'}
+        shared={sharedStates}
+        focusId={focusId}
+      />
 
       <main
         inert={away}
@@ -223,7 +278,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         )}
 
         <section className="flex w-full flex-1 flex-col items-center justify-center pt-24">
-          <TimerScreen slots={slots} />
+          <TimerScreen slots={slots} sharedId={target} />
         </section>
 
         <footer className="flex flex-col items-center gap-3">
@@ -244,7 +299,10 @@ const HomeScreen = ({ together }: { together: Together }) => {
             >
               Stats
             </button>
-            <FriendsPill waiting={friends.incoming.length} onOpen={() => setView('friends')} />
+            <FriendsPill
+              waiting={friends.incoming.length + incomingProposals(shared.rows, me).length}
+              onOpen={() => setView('friends')}
+            />
             <button
               type="button"
               onClick={() => setView('account')}
@@ -292,6 +350,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
           <FriendsPanel
             friends={friends}
             now={Date.now()}
+            shared={{ shared, me, describe: describeShared }}
             onOpenFriend={(f) => {
               setFriend(f);
               setView('friend');
@@ -321,6 +380,27 @@ const HomeScreen = ({ together }: { together: Together }) => {
             summarize={(sky) => summarizeFriend(sky, Date.now())}
             status={friends.focus.get(friend.friendId) ?? null}
             now={Date.now()}
+            shared={
+              <SharedWithFriend
+                friendId={friend.friendId}
+                friendName={friend.displayName ?? 'your friend'}
+                shared={shared}
+                me={me}
+                describe={describeShared}
+                // Portalled: the header's backdrop blur would trap a fixed dialog inside it.
+                renderPicker={({ onPick, onClose }) =>
+                  createPortal(
+                    <SharedPicker
+                      boughtTiers={boughtTiers}
+                      ownedPacks={ownedPacks}
+                      onPick={onPick}
+                      onClose={onClose}
+                    />,
+                    document.body,
+                  )
+                }
+              />
+            }
           />
         </div>
       )}

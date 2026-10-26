@@ -255,6 +255,12 @@ export const META_KEYS = {
   /** The tag last chosen on the idle screen (M4), or absent. */
   lastTagId: 'lastTagId',
   /**
+   * The shared constellation last chosen as "Working on" (M7 phase 5), or
+   * absent for one's own sky. Per device, like `lastTagId`; a value that is no
+   * longer an active shared constellation reads as one's own sky.
+   */
+  lastSharedTarget: 'lastSharedTarget',
+  /**
    * Sync (M5): per table, the newest `server_updated_at` already pulled
    * (`Partial<Record<table, string>>`). Server time, never this device's clock.
    */
