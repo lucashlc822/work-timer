@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(61);
+select plan(62);
 
 -- --- catalogue guards ----------------------------------------------------------
 
@@ -35,8 +35,8 @@ select set_eq(
      where n.nspname = 'public' and c.relkind in ('r', 'p')
        and not exists (select 1 from pg_attribute a
                        where a.attrelid = c.oid and a.attname = 'user_id' and not a.attisdropped) $$,
-  array['app_config', 'invites', 'friendships', 'together_rooms'],
-  'the only public tables without a user_id are app_config, invites, friendships and together_rooms');
+  array['app_config', 'invites', 'friendships', 'together_rooms', 'shared_constellations'],
+  'the only public tables without a user_id are app_config, invites, friendships, together_rooms and shared_constellations');
 
 select set_eq(
   $$ select c.relname || ':' || p.priv
@@ -87,7 +87,8 @@ select set_eq(
         'remove_friend', 'my_friends', 'friend_sky',
         'set_focus_status', 'clear_focus_status', 'friends_focus',
         'create_room', 'respond_room', 'start_room', 'leave_room', 'cancel_room',
-        'my_rooms', 'together_wins'],
+        'my_rooms', 'together_wins',
+        'propose_shared', 'respond_shared', 'stop_shared', 'my_shared'],
   'the only security definer functions in public are the account and friends functions');
 
 select is_empty(
@@ -103,6 +104,8 @@ select ok(not has_function_privilege('authenticated', 'public.new_friend_code()'
   'signed-in users cannot generate friend codes');
 select ok(not has_function_privilege('authenticated', 'public.together_touch(uuid)', 'execute'),
   'signed-in users cannot touch room memberships directly');
+select ok(not has_function_privilege('authenticated', 'public.shared_done(public.shared_constellations)', 'execute'),
+  'signed-in users cannot run shared_done directly');
 
 select set_eq(
   $$ select schemaname || '.' || tablename from pg_publication_tables where pubname = 'supabase_realtime' $$,

@@ -167,8 +167,8 @@ select is(jsonb_array_length((current_setting('t.sky')::jsonb) -> 'sessions'), 2
 select set_eq(
   $$ select distinct k from jsonb_array_elements((current_setting('t.sky')::jsonb) -> 'sessions') s,
        jsonb_object_keys(s) k $$,
-  array['id', 'seed', 'started_at', 'ended_at', 'actual_focus_s', 'outcome', 'star_style'],
-  '5.2 sessions carry exactly the agreed fields: no tag, device, or away time');
+  array['id', 'seed', 'started_at', 'ended_at', 'actual_focus_s', 'outcome', 'star_style', 'shared_id'],
+  '5.2 sessions carry exactly the agreed fields: no tag, device, or away time (M7 phase 5: plus shared_id)');
 select is((current_setting('t.sky')::jsonb) #>> '{sessions,0,outcome}', 'completed',
   '5.2 sessions come in end order, with their outcome');
 select is((current_setting('t.sky')::jsonb) #>> '{constellations,0,shape_id}', 'the-fox',
