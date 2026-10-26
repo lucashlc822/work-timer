@@ -98,6 +98,8 @@ to read first; the 2026-10-24 phase 4 entry below has the detail.
 
 ### Next
 
+*(Superseded 2026-10-24: 0.5.0 is released, see "Released 0.5.0" above. Still open from this list: phase 5, tell friends, R12 and R14 (need a friend on 0.5.0), `cargo install cargo-audit`, the other machine. All of these are repeated in that entry's Next.)*
+
 - **Release 0.5.0**, the same routine as 0.4.0:
   1. `db push --dry-run`, then push the together migration when Lucas says
      "push". 0.5.0 sends `together_id` with every session, and a server without
@@ -148,6 +150,8 @@ hosted project does **not** have `20261024044635_m7_together.sql` yet. Local
 section; the file was reused for later plans).
 
 ### Next
+
+*(Superseded 2026-10-24: 0.5.0 is released, see "Released 0.5.0" above. Phase 5 and the other open items are carried forward there.)*
 
 - **Release as 0.5.0**, the same routine as 0.4.0 (`RELEASING.md`):
   1. Push `20261024044635_m7_together.sql` first. 0.5.0 sends `together_id`
