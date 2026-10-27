@@ -12,6 +12,40 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-26 — Session wrap-up: 0.5.0 released, phase 5 merged
+
+**Status: everything is merged to `master` (#83–#89) and CI is green; no PR is
+open.** Local `master` matches `origin/master`, with nothing uncommitted. The
+entries below have the detail: "Released 0.5.0" and "M7 phase 5 merged". Phase
+5 is **not** released: the hosted project lacks `20261026040305_m7_shared.sql`.
+
+### Next
+
+- **Release 0.6.0**, as in the phase 5 entry's Next (migration first, then
+  probes, the installed-0.5.0 check, bump, `e2e:desktop`, tag, review, publish).
+- The rest of the open list (the "together" label fix, tell friends, R12 ×2 and
+  R14, `cargo-audit`, the other machine) is in that entry.
+
+### Found along the way (not in the entries below)
+
+- **An e2e test failed once, on a PR that changed only `NOTES.md`** (#89): the
+  25-minute timer test in `e2e/web/timer.spec.ts` waited 20 s for its session
+  to reach the server and didn't see it. It passed on re-run, in #88's CI and
+  locally. Not reproduced, so the cause is unknown; treat a second occurrence as
+  a real flake worth its own look (the poll window or the sync trigger).
+- **`master` went red once from CI itself, with no test run:** the e2e job
+  couldn't start the local database ("port 54322 already in use" on the runner).
+  Re-running the failed job fixed it. Not a repo problem.
+- **Check a PR's CI result before merging, even for a docs-only change.**
+
+### Things worth not rediscovering
+
+- **Docker Desktop and the local stack don't survive a restart.** Start Docker
+  Desktop, then `npx supabase start` (it can say "not ready" the first time
+  while the database boots; run it again).
+
+---
+
 ## 2026-10-26 — M7 phase 5 merged: shared constellations
 
 **Status: phase 5 is on `master` in three PRs (#86–#88); nothing is released.**
