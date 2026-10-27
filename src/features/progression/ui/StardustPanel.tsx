@@ -9,6 +9,7 @@ const REASONS: Record<string, string> = {
   goal: 'Daily goal reached',
   streak: 'Streak milestone',
   constellation: 'Constellation finished',
+  together: 'Focus together bonus',
   shared: 'Shared constellation finished',
   purchase: 'Purchase',
 };
