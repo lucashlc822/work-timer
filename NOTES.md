@@ -12,6 +12,52 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-27 — CI skips the test jobs for Markdown-only changes
+
+**Status: merged (#91). Nothing is released; no PR is open.** Local `master`
+matches `origin/master`. This entry was itself the first docs-only PR since the
+change, and the test of it: see "Observed" below.
+
+### What changed
+
+- `.github/workflows/ci.yml` has a new first job, `changes`. It lists the files
+  a push or pull request touched (`git diff --name-only --no-renames`, base to
+  head) and says `code=false` only when the list is non-empty and every path
+  ends in `.md`. Then `web`, `desktop`, `db` and `e2e` run only when `code` is
+  true; otherwise they show as **skipped** (not absent), so a docs-only PR is
+  still visibly checked.
+- **When unsure it runs everything:** a mixed change, a code file renamed to
+  `.md`, an empty list, a missing or all-zeros base (a new branch), a failed
+  diff. A change to `ci.yml` itself is not `.md`, so it runs everything.
+- All four jobs are skipped, not just e2e: nothing they check can be affected
+  by a `.md` file (`.prettierignore` already excludes `*.md`).
+- No third-party action; a few lines of shell. `master` has no branch
+  protection, so no required check can be left pending by a skipped job.
+
+### Observed (on #92, the PR that added this entry)
+
+- `changes` passed in 6 s and `web`, `desktop`, `db` and `e2e` showed as
+  skipped; the whole run took 9 s, against about 5 minutes before. Its log listed
+  `NOTES.md` and said "Docs only: test jobs skipped."
+- The push to `master` after #91 (a code change) still ran all four jobs, all
+  green.
+
+### Next
+
+- Nothing from this change. The open list is in the "M7 phase 5 merged"
+  entry: release 0.6.0 first.
+
+### Things worth not rediscovering
+
+- **A docs-only PR's checks show `changes` passing and the other four
+  "skipping"**: that is intended, not a stuck run. Merge it as usual.
+- **A change that includes any non-Markdown file, even `.mdx` or `.MD`, runs
+  everything.** The match is a lowercase `.md` suffix, on purpose.
+- **To see why a run did or didn't skip,** read the `changes` job log: it
+  lists the changed files and the decision.
+
+---
+
 ## 2026-10-26 — Session wrap-up: 0.5.0 released, phase 5 merged
 
 **Status: everything is merged to `master` (#83–#89) and CI is green; no PR is
