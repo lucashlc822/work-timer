@@ -30,6 +30,16 @@ exists, because agents and MCP servers load at session start.
   exist in `.ui-review/`, `git status` unchanged).
 - If the agent refuses the browser tools, `mcp__playwright` in its `tools:` line
   didn't match; list the individual `mcp__playwright__browser_*` names instead.
+- **First run of test 5 was partial:** the agent's `grep '^UI_REVIEW_' .env` was
+  refused by the permission system ("Credential Materialization"), so it saw
+  only signed-out screens. Fixed by design, not by a permission rule: the agent
+  never reads `.env`; Playwright now keeps a persistent Edge profile in
+  `.ui-review/profile` (was `--isolated`), Lucas signs in there once, and the
+  agent asks him to if it finds the sign-in screen. A relative
+  `--user-data-dir` resolves against the server's start folder (checked: it
+  landed in `work-timer/.ui-review/`). Screenshots must be passed as
+  `.ui-review/<name>.png`; a bare filename lands in the repo root.
+- The partial run's four app findings are fixed on a separate branch/PR.
 
 ### What was done
 

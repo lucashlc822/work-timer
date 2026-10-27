@@ -59,9 +59,11 @@ Playwright MCP server (`.mcp.json`) at desktop, tablet and narrow sizes, walks
 every timer state plus loading, empty, error and offline, runs axe against
 WCAG 2.2 AA, checks keyboard use and focus, flags colour or spacing that isn't
 from `src/styles/tokens.css`, and reports Blocker / High / Medium / Low with
-screenshots in `.ui-review/`. It changes nothing until you approve. It signs in
-with `UI_REVIEW_EMAIL` / `UI_REVIEW_PASSWORD` from `.env` (gitignored; setup in
-`supabase/README.md`, "Local test accounts").
+screenshots in `.ui-review/`. It changes nothing until you approve. It never
+handles a password: you sign the local `ui-review@test.local` account in once in
+its Edge profile (`.ui-review/profile`, ignored, kept between runs), and it asks
+you to again if that sign-in is ever lost. Setup is in `supabase/README.md`,
+"Local test accounts".
 
 Both dev commands read `.env.development.local`, which points at the local
 stack; `.env.example` explains every env file. Without it the app shows "This
@@ -251,8 +253,10 @@ in `NOTES.md`.
 - **The `ui-ux-reviewer` agent and the Playwright tools appear only in sessions
   started after they were added**, and Claude Code asks you to approve a
   project's `.mcp.json` server once per machine. The review needs the local
-  Supabase stack up and the test account from `.env`; without them it stops and
-  says so. Its screenshots go to `.ui-review/` (ignored).
+  Supabase stack up and the test account signed in in its profile; without them
+  it stops and says so. Its screenshots and Edge profile live in `.ui-review/`
+  (ignored); deleting `.ui-review/profile` resets the sign-in. Only one browser
+  can use that profile at a time, so two reviews at once fail to launch Edge.
 - **Git Bash rewrites `reg` switches like `/v` into paths** ("ERROR: Invalid
   syntax"). Use PowerShell (`Get-ItemProperty`, `Remove-ItemProperty`) or
   Node's `execSync`, which goes through cmd.

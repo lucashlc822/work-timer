@@ -9,7 +9,8 @@
         "@playwright/mcp@0.0.83",
         "--browser",
         "msedge",
-        "--isolated",
+        "--user-data-dir",
+        ".ui-review/profile",
         "--output-dir",
         ".ui-review"
       ]
