@@ -235,7 +235,10 @@ export const AuthScreens = ({ onSignedIn }: Props) => {
           {busy ? 'One moment…' : submitLabel[step]}
         </button>
 
-        <nav className="flex flex-col items-center gap-2 pt-1 text-xs">
+        {/* Each link pads out to a 44×44 target; the negative margins (here and on a
+            leading link) keep the block where it was, so only the space between
+            links grows. */}
+        <nav className="-mb-3.5 flex flex-col items-center pt-1 text-xs">
           {step === 'signIn' && (
             <>
               <Link onClick={() => go('signUp')}>New here? Create an account</Link>
@@ -297,7 +300,7 @@ const Link = ({ onClick, children }: { onClick: () => void; children: ReactNode 
   <button
     type="button"
     onClick={onClick}
-    className="text-ink-muted hover:text-ink-primary transition-colors"
+    className="text-ink-muted hover:text-ink-primary min-w-11 px-2 py-3.5 transition-colors first:-mt-3.5"
   >
     {children}
   </button>
