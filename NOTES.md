@@ -12,6 +12,71 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-27 — Released 0.6.0: Shared constellations
+
+**Status: 0.6.0 is published (tag `v0.6.0`, Latest; web deployed from the same
+commit, `282e9a1`). The shared migration is on the hosted project.** Lucas's
+desktop app runs 0.6.0. No PR is open; local `master` matches `origin/master`.
+`min_client_version` is still null. Plan:
+`~/.claude/plans/please-proceed-with-planning-polymorphic-quasar.md`.
+
+### Next
+
+- **Tell friends 0.3.0–0.6.0 are out.** Shared constellations, like focus
+  together, only reach a friend who has updated.
+- **R12 ×2 and R14 are still unrun**, plus a real shared constellation between
+  two people (propose, accept, run sessions for it, finish, both get the bonus).
+  All need a friend on 0.6.0.
+- Still open: `cargo install cargo-audit`, the other machine.
+
+### What was done, in order
+
+1. **Label fix first (#93):** `together: 'Focus together bonus'` in `REASONS`
+   (`StardustPanel.tsx`), so the phase 4 bonus no longer shows as the raw word.
+   Key checked against the reconciler (`reconcile.ts`, `reconcile.test.ts`).
+   Lint, types and Prettier clean; CI green. No render test exists for the panel
+   and the label was not looked at in the running app.
+2. **Hosted state read first:** `migration list --linked` showed the shared
+   migration local only; `db push --dry-run` listed only
+   `20261026040305_m7_shared.sql`. Probes: `sessions` 401 (control),
+   `sessions?select=shared_id` 400, `rpc/my_shared` and `rpc/stop_shared` 404.
+3. **Pushed** (Lucas said "push"): histories matched; all four probes 401.
+4. **Installed 0.5.0 after the push:** a session backed up and Friends listed
+   (reported by Lucas).
+5. **Bump PR #94**, merged as `282e9a1`. Version tests 26/26, exit 0; CI green.
+6. `e2e:desktop` 5/5 -> tag `v0.6.0` -> `Release` green.
+   - The draft had 4 assets (installers 2,329,058 bytes).
+   - `latest.json` said 0.6.0 at `/download/v0.6.0/`, signed with key
+     `8E3AF18012526DA8`.
+   - A "What's new" line was added to the description (Lucas approved the wording).
+7. **Published by id with `tag_name` in the same call** (Lucas said "publish"):
+   Latest `v0.6.0`, no `untagged-` tag. `Deploy web` ran green on `282e9a1`.
+8. **Live checks:**
+   - The web bundle (starkeep.vercel.app) reports 0.6.0 and contains `my_shared`.
+   - `Starkeep-setup.exe` is served (206 to a one-byte range request).
+   - `min_client_version` is null.
+   - Lucas's desktop app updated to 0.6.0, signed in, and a solo session showed
+     "Backed up" (reported by Lucas; the hosted `sessions` row was not read).
+
+### Acceptance results
+
+A1-A9 pass as run by me; A3 and A10 are Lucas's own observations on his installed
+app. Not run: a real two-person shared constellation, R12 ×2, R14 (need a friend
+on 0.6.0).
+
+### Things worth not rediscovering
+
+- **Docker Desktop and the local stack were down again** when `e2e:desktop` was
+  due. `Start-Process` on Docker Desktop, then `npx supabase start` twice (the
+  first answers "not ready" while the database boots).
+- **The `Stopped services:` list `supabase start` prints** (storage, imgproxy,
+  edge runtime, analytics, vector, pooler) is the optional services this project
+  excludes, not a failure.
+- **`gh pr checks` right after `gh pr create` says "no checks reported"**; the
+  runs appear a few seconds later.
+
+---
+
 ## 2026-10-27 — CI skips the test jobs for Markdown-only changes
 
 **Status: merged (#91). Nothing is released; no PR is open.** Local `master`
@@ -44,6 +109,8 @@ change, and the test of it: see "Observed" below.
 
 ### Next
 
+*(Superseded 2026-10-27: 0.6.0 is released, see "Released 0.6.0" above.)*
+
 - Nothing from this change. The open list is in the "M7 phase 5 merged"
   entry: release 0.6.0 first.
 
@@ -66,6 +133,8 @@ entries below have the detail: "Released 0.5.0" and "M7 phase 5 merged". Phase
 5 is **not** released: the hosted project lacks `20261026040305_m7_shared.sql`.
 
 ### Next
+
+*(Superseded 2026-10-27: 0.6.0 is released, see "Released 0.6.0" above. Still open: tell friends, R12 ×2 and R14, `cargo-audit`, the other machine.)*
 
 - **Release 0.6.0**, as in the phase 5 entry's Next (migration first, then
   probes, the installed-0.5.0 check, bump, `e2e:desktop`, tag, review, publish).
@@ -101,6 +170,8 @@ The hosted project does **not** have `20261026040305_m7_shared.sql`. Local
 it now holds the phase 5 plan).
 
 ### Next
+
+*(Superseded 2026-10-27: 0.6.0 is released and the "together" label fix shipped in it, see "Released 0.6.0" above.)*
 
 - **Release as 0.6.0**, the same routine as 0.5.0 (`RELEASING.md`):
   1. Push `20261026040305_m7_shared.sql` first. 0.6.0 sends `shared_id` with
