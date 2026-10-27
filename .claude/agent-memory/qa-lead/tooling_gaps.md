@@ -5,11 +5,14 @@ metadata:
   type: project
 ---
 
-- **`cargo audit` is not installed** on this dev machine as of 2026-10-21
-  (`cargo audit --version` → "error: no such command: `audit`"). Step 5's
-  `cd src-tauri && cargo audit` cannot run until it is. Install with
-  `cargo install cargo-audit`. Report as "Not run — tool missing" each time,
-  don't skip silently.
+- **`cargo audit` is installed on this machine since 2026-10-26** (0.22.2).
+  Run it from `src-tauri/`, which picks up `src-tauri/.cargo/audit.toml`: it
+  ignores RUSTSEC-2026-0367/0368/0369 (zip via tauri-plugin-updater 2.x,
+  unreachable for signed .exe updates; reasons in the file, #96). A clean run
+  exits 0 with "6 allowed warnings" (unmaintained/unsound, informational). Any
+  new vulnerability, or zip >= 9.0.0 in `cargo tree -i zip` (the ignores
+  should then be dropped), is a finding. On a machine without it, report
+  "Not run — tool missing" (`cargo install cargo-audit`), don't skip silently.
 - Chrome and Edge are both installed (`C:\Program Files\Google\Chrome\...`,
   `C:\Program Files (x86)\Microsoft\Edge\...`), so `npm run perf:lighthouse`
   runs fine here — no gap to report for that step on this machine.
