@@ -12,6 +12,61 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-27 — QA pass on 0.6.0, and the Rust dependency audit
+
+**Status: merged (#96, #97); nothing is released since 0.6.0.** Local `master`
+matches `origin/master`; no PR is open. The TLS patch in #96 reaches people
+only with the next release.
+
+### Next
+
+- **Next feature: undecided.** M7 was the last planned milestone, and Lucas has
+  no next one written down yet. Plan it (outcomes, acceptance tests) before code.
+- **On hold, by Lucas's choice: the two-person M7 checks** (R12 ×2, R14, a real
+  shared constellation). There is nobody to test with for now; M7 is shipped
+  but not signed off.
+- **Tell friends 0.3.0–0.6.0 are out**, whenever there are friends to tell.
+- **Set up the other machine**, including `cargo install cargo-audit` there.
+
+### What was done
+
+1. **`qa-lead` full pass on `ff34c9b` (0.6.0): no Critical, Should fix or
+   Minor findings.** Lint, format, types, 579 unit tests, build, clippy/fmt,
+   284 pgTAP, 37/37 `e2e:web` with the a11y scan, Lighthouse 100/100,
+   `npm audit` 0. A hand review of `20261026040305_m7_shared.sql` found RLS on,
+   no table grants, `security definer` + empty `search_path`, execute revoked
+   from `anon` (checked live). `e2e:desktop` was skipped (it had passed 5/5 on
+   that commit before tagging).
+2. **Installed `cargo-audit` 0.22.2 on this machine.** The first audit found 5
+   vulnerabilities in 3 crates plus 6 warnings.
+3. **#96:** `rustls-webpki` 0.103.15 → 0.103.16 and `webpki-root-certs` 1.0.9 →
+   1.0.11 (`Cargo.lock` only; distrusted-certificate advisories). New
+   `src-tauri/.cargo/audit.toml` ignores the three `zip` 4.6.1 advisories, with
+   the reason in the file. `cargo audit` now exits 0 with 6 allowed warnings;
+   clippy clean; `e2e:desktop` 5/5; CI green.
+4. **#97:** qa-lead's notes from the run, and its tooling note corrected
+   (cargo-audit is installed).
+
+### Things worth not rediscovering
+
+- **Why the zip advisories are ignored:** `zip` comes only through
+  `tauri-plugin-updater` 2.x (newest 2.14.0; zip ≥ 9 is only in the 3.0
+  alpha). The updater unzips only when the download *is* a zip, and ours is a
+  plain NSIS `.exe`; it checks the signature before installing; the flaws are
+  about Unix permissions and symlinks. Drop the ignores once `cargo tree -i zip`
+  shows ≥ 9.0.0.
+- **The 6 allowed warnings** (unmaintained `proc-macro-error`, `zbus_names`,
+  `zvariant`, `zvariant_derive`; unsound `glib`, `tokio`) are informational,
+  not vulnerabilities. Their dependency chains weren't traced.
+- **CI doesn't run `cargo audit`**; `audit.toml` only affects runs by hand,
+  from `src-tauri/`.
+- **The JS bundle is +5.2% over `e2e/perf-baseline.json`** (260.2 kB gzip vs
+  247.2). That's under the 10% line, but it is the number to watch as features land.
+- **The patched TLS crates can only be exercised for real by the next
+  release's update check.** Nothing local runs that path.
+
+---
+
 ## 2026-10-27 — Released 0.6.0: Shared constellations
 
 **Status: 0.6.0 is published (tag `v0.6.0`, Latest; web deployed from the same
@@ -28,6 +83,8 @@ desktop app runs 0.6.0. No PR is open; local `master` matches `origin/master`.
   two people (propose, accept, run sessions for it, finish, both get the bonus).
   All need a friend on 0.6.0.
 - Still open: `cargo install cargo-audit`, the other machine.
+
+*(Updated 2026-10-27: cargo-audit is installed on this machine and the audit is clean, see "QA pass on 0.6.0" above. The two-person checks are on hold.)*
 
 ### What was done, in order
 
