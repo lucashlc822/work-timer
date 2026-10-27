@@ -16,7 +16,7 @@ export const GoalAndStreak = () => {
   return (
     <section
       aria-label="Daily goal and streak"
-      className="border-night-600 bg-night-800/70 flex w-full flex-col gap-4 rounded-xl border p-4"
+      className="border-night-600 bg-night-800/70 rounded-soft flex w-full flex-col gap-4 border p-4"
     >
       <div className="flex items-baseline justify-between text-sm">
         <span className="text-ink-primary">Today</span>
@@ -50,7 +50,7 @@ export const GoalAndStreak = () => {
           >
             −
           </button>
-          <span className="text-ink-primary min-w-[4.5rem] text-center">{goalMin} min</span>
+          <span className="text-ink-primary min-w-18 text-center">{goalMin} min</span>
           <button
             type="button"
             aria-label={`Raise the goal by ${STEP_MIN} minutes`}

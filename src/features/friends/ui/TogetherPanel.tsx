@@ -5,7 +5,7 @@ import { FRIENDS_MESSAGES } from '../domain/errors';
 import { MAX_INVITEES, nameOf, stateOf, type MemberState, type Room } from '../domain/room';
 import type { Together } from '../hooks/useTogether';
 
-const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-xl border p-4 text-sm';
+const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-soft border p-4 text-sm';
 const BUTTON =
   'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50';
 const PRIMARY =

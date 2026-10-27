@@ -160,7 +160,7 @@ export const AuthScreens = ({ onSignedIn }: Props) => {
       <form
         onSubmit={submit}
         noValidate
-        className="bg-night-800/80 border-night-600 flex w-full max-w-sm flex-col gap-4 rounded-2xl border p-6 backdrop-blur"
+        className="bg-night-800/80 border-night-600 rounded-soft flex w-full max-w-sm flex-col gap-4 border p-6 backdrop-blur"
       >
         <header className="flex flex-col items-center gap-2 pb-2">
           <StarMark size={28} />
@@ -275,7 +275,7 @@ export const AuthScreens = ({ onSignedIn }: Props) => {
 };
 
 const INPUT =
-  'bg-night-900 border-night-600 text-ink-primary focus:border-lavender-400 w-full rounded-lg border px-3 py-2 text-sm outline-none';
+  'bg-night-900 border-night-600 text-ink-primary w-full rounded-soft border px-3 py-2 text-sm';
 
 const Field = ({
   label,

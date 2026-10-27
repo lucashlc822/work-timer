@@ -2,6 +2,13 @@ import type { FocusBucket } from '../domain/aggregate';
 import { formatFocus } from '../domain/format';
 import type { PeriodKind } from '../domain/period';
 
+/*
+ * Chart geometry is computed (bar heights from data, gaps from bar density),
+ * so it is set inline in px rather than from the Tailwind scale, and bars use
+ * a small 4px top radius (`rounded-t-sm`) because `--radius-soft` would round
+ * a thin bar into a pill. A deliberate exception to "spacing and radius from
+ * tokens".
+ */
 const CHART_HEIGHT = 140;
 
 /** A round number at or above `max`, so the top gridline is a value someone would say. */
@@ -42,7 +49,7 @@ export const FocusBars = ({ kind, buckets }: { kind: PeriodKind; buckets: FocusB
 
       <div className="flex gap-2">
         <div
-          className="text-ink-muted flex flex-col justify-between pb-5 text-right text-[11px]"
+          className="text-ink-muted text-2xs flex flex-col justify-between pb-5 text-right"
           style={{ height: CHART_HEIGHT + 20 }}
           aria-hidden="true"
         >
@@ -76,14 +83,14 @@ export const FocusBars = ({ kind, buckets }: { kind: PeriodKind; buckets: FocusB
                     className="focus-visible:outline-lavender-300 flex h-full w-full items-end outline-offset-2"
                   >
                     <span
-                      className="bg-lavender-400 group-hover:bg-lavender-300 block w-full rounded-t-[4px] transition-colors"
+                      className="bg-lavender-400 group-hover:bg-lavender-300 block w-full rounded-t-sm transition-colors"
                       // A focused day always shows a sliver, so it is never mistaken for an empty one.
                       style={{ height: b.focusS > 0 ? `max(${ratio * 100}%, 3px)` : 0 }}
                     />
                   </button>
                   <span
                     role="presentation"
-                    className="bg-night-700 border-night-600 text-ink-primary pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded-md border px-2 py-1 text-xs whitespace-nowrap group-focus-within:block group-hover:block"
+                    className="bg-night-700 border-night-600 text-ink-primary rounded-soft pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 border px-2 py-1 text-xs whitespace-nowrap group-focus-within:block group-hover:block"
                   >
                     {label}
                   </span>
@@ -93,7 +100,7 @@ export const FocusBars = ({ kind, buckets }: { kind: PeriodKind; buckets: FocusB
           </ul>
 
           <ul
-            className="border-night-600 text-ink-muted flex border-t pt-1 text-[11px]"
+            className="border-night-600 text-ink-muted text-2xs flex border-t pt-1"
             aria-hidden="true"
           >
             {buckets.map((b, i) => (

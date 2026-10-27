@@ -26,7 +26,7 @@ export const MiniWindow = () => {
       data-tauri-drag-region
       className="bg-night-800 border-night-600 flex h-dvh w-dvw cursor-grab flex-col items-center justify-center gap-2 border"
     >
-      <p data-tauri-drag-region className="text-ink-muted text-[10px] tracking-widest uppercase">
+      <p data-tauri-drag-region className="text-ink-muted text-3xs tracking-widest uppercase">
         {APP_NAME}
       </p>
       <MiniCountdown />

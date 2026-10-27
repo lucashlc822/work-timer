@@ -59,7 +59,7 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
 
       <SyncStatus status={sync} onSyncNow={onSyncNow} />
 
-      <section className="bg-night-800/70 border-night-600 flex flex-col gap-2 rounded-xl border p-4 text-sm">
+      <section className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-2 border p-4 text-sm">
         <h3 className="text-ink-primary">About your data</h3>
         <p className="text-ink-secondary">
           Your sessions, constellation choices, tag names and settings are kept on this device and
@@ -169,7 +169,7 @@ const DeleteAccount = ({
   return (
     <section
       aria-label="Delete account"
-      className="border-faded/40 flex flex-col gap-3 rounded-xl border p-4 text-sm"
+      className="border-faded/40 rounded-soft flex flex-col gap-3 border p-4 text-sm"
     >
       <h3 className="text-ink-primary">Delete account</h3>
       <p className="text-ink-secondary">
@@ -191,7 +191,7 @@ const DeleteAccount = ({
           disabled={deleting}
           onChange={(e) => setTyped(e.target.value)}
           placeholder={email ?? ''}
-          className="bg-night-900 border-night-600 text-ink-primary focus:border-lavender-400 rounded-lg border px-3 py-2 text-sm outline-none"
+          className="bg-night-900 border-night-600 text-ink-primary rounded-soft border px-3 py-2 text-sm"
         />
       </label>
       <div className="flex items-center justify-between gap-3">

@@ -134,7 +134,7 @@ export const Shop = ({
   const section = (title: string, note: string, rows: ReactNode) => (
     <div className="flex flex-col gap-2">
       <h3 className="text-ink-secondary text-xs tracking-widest uppercase">{title}</h3>
-      <ul className="border-night-600 bg-night-800/70 divide-night-600 divide-y rounded-xl border">
+      <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft divide-y border">
         {rows}
       </ul>
       <p className="text-ink-muted text-xs">{note}</p>

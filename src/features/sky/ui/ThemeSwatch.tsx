@@ -4,7 +4,7 @@ import { themeSwatchBackground } from '../domain/skyThemes';
 export const ThemeSwatch = ({ theme }: { theme: string }) => (
   <span
     aria-hidden="true"
-    className="border-night-600 inline-block h-10 w-16 rounded-md border"
+    className="border-night-600 rounded-soft inline-block h-10 w-16 border"
     style={{ background: themeSwatchBackground(theme) }}
   />
 );
