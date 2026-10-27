@@ -5,6 +5,13 @@
 # tree, so it is cached aggressively and runs on Windows — the only platform
 # actually targeted, and cheaper than installing the GTK/WebKit stack a Linux
 # runner would need.
+#
+# A change where every file is Markdown (the session log, the docs) can't
+# affect anything these jobs check: Prettier ignores `*.md`, and nothing else
+# reads one. The `changes` job decides that first, and the four jobs below are
+# skipped when it says so. They show as "skipped" rather than being absent, so
+# a docs-only PR is still visibly checked. When in doubt (no file list, a
+# failed diff, a new branch) everything runs.
 name: CI
 
 on:
@@ -20,7 +27,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.decide.outputs.code }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Is anything other than Markdown changed?
+        id: decide
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          code=true
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No earlier commit to compare with: running everything."
+          elif ! files=$(git diff --name-only --no-renames "$BASE" "$HEAD"); then
+            echo "The diff failed: running everything."
+          else
+            echo "Changed files:"
+            echo "$files" | sed 's/^/  /'
+            n=$(echo "$files" | grep -c .) || n=0
+            other=$(echo "$files" | grep -v '^$' | grep -vc '\.md$') || other=0
+            if [ "$n" -gt 0 ] && [ "$other" -eq 0 ]; then code=false; fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = false ]; then
+            echo "Docs only: test jobs skipped." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Code changed: running all jobs." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
   web:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -59,6 +104,8 @@ jobs:
           git diff --exit-code --stat public/ src-tauri/icons/
 
   desktop:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
 
@@ -90,6 +137,8 @@ jobs:
   # Postgres on every change. GitHub's Linux runners have Docker, which the
   # local Supabase stack needs.
   db:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -116,6 +165,8 @@ jobs:
   # nothing here has, or needs, a secret. The services the tests don't use are
   # left out to start faster.
   e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
