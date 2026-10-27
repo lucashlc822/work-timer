@@ -57,8 +57,16 @@ the hosted project, and `db reset` removes them):
 |---|---|
 | `a@test.local` | `local-test-pass-1` |
 | `b@test.local` | `local-test-pass-1` |
+| `ui-review@test.local` | whatever you put in `.env` as `UI_REVIEW_PASSWORD` (gitignored, never committed) |
 
 Invite them first: `npm run invite -- add a@test.local --local` (and `b@…`).
+
+The `ui-review@` account is the one the `ui-ux-reviewer` agent signs in with.
+Create it once: invite it (`npm run invite -- add ui-review@test.local --local`),
+put `UI_REVIEW_EMAIL` and `UI_REVIEW_PASSWORD` in a `.env` file at the repo root
+(see `.env.example`), then sign up in the app with those details and enter the
+6-digit code from the local inbox at `http://127.0.0.1:54324`. `db reset`
+removes it; repeat the invite and sign-up.
 
 ## End-to-end tests
 
