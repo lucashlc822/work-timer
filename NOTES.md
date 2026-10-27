@@ -15,8 +15,8 @@ Once this file passes ~1,000 lines, archive older entries to
 ## 2026-10-27 — CI skips the test jobs for Markdown-only changes
 
 **Status: merged (#91). Nothing is released; no PR is open.** Local `master`
-matches `origin/master`. This entry is itself the first docs-only PR since the
-change, so it is the test of it (result below).
+matches `origin/master`. This entry was itself the first docs-only PR since the
+change, and the test of it: see "Observed" below.
 
 ### What changed
 
@@ -33,6 +33,14 @@ change, so it is the test of it (result below).
   by a `.md` file (`.prettierignore` already excludes `*.md`).
 - No third-party action; a few lines of shell. `master` has no branch
   protection, so no required check can be left pending by a skipped job.
+
+### Observed (on #92, the PR that added this entry)
+
+- `changes` passed in 6 s and `web`, `desktop`, `db` and `e2e` showed as
+  skipped; the whole run took 9 s, against about 5 minutes before. Its log listed
+  `NOTES.md` and said "Docs only: test jobs skipped."
+- The push to `master` after #91 (a code change) still ran all four jobs, all
+  green.
 
 ### Next
 
