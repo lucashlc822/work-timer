@@ -1,0 +1,23 @@
+# cargo-audit configuration (`cargo audit`, run from src-tauri/).
+#
+# Each ignore names why the advisory can't reach Starkeep, and when to drop it.
+# Re-check on every Tauri update: delete an entry as soon as `cargo tree -i zip`
+# shows zip >= 9.0.0, and never add an entry without the reason beside it.
+
+[advisories]
+ignore = [
+  # zip 4.6.1, only via tauri-plugin-updater 2.14.0 (newest 2.x; zip 9 is only
+  # in the 3.0 alpha). All three are extraction flaws: SUID/SGID bits kept,
+  # symlink targets outside the destination, Unix permissions applied through
+  # symlinks. Unreachable here:
+  # - The updater only unzips when the download is a zip; our releases ship a
+  #   plain NSIS .exe (latest.json points at Starkeep_X.Y.Z_x64-setup.exe).
+  # - It verifies the download's minisign signature against the public key in
+  #   tauri.conf.json before installing, so only an update signed with our key
+  #   would ever be extracted.
+  # - The flaws concern Unix permissions and symlinks; the updater's zip path
+  #   is compiled for Windows only.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
+]
