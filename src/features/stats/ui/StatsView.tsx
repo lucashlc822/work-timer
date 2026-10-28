@@ -6,15 +6,11 @@ import { focusBuckets, focusByTag, historyFor, totals } from '../domain/aggregat
 import { isCurrent, periodContaining, shiftPeriod, type PeriodKind } from '../domain/period';
 import { useEarliestStart, useStats } from '../hooks/useStats';
 import { FocusBars } from './FocusBars';
+import { PeriodTabs } from './PeriodTabs';
+import { PERIOD_PANEL_ID, periodTabId } from './periodTabIds';
 import { SessionHistory } from './SessionHistory';
 import { TagBreakdown } from './TagBreakdown';
 import { Totals } from './Totals';
-
-const KINDS: ReadonlyArray<{ kind: PeriodKind; label: string }> = [
-  { kind: 'week', label: 'Week' },
-  { kind: 'month', label: 'Month' },
-  { kind: 'all', label: 'All time' },
-];
 
 const EMPTY_TEXT: Record<PeriodKind, string> = {
   week: 'No focus sessions this week.',
@@ -66,24 +62,7 @@ export const StatsView = () => {
       <header className="flex flex-col items-center gap-4">
         <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Stats</h2>
 
-        <div role="tablist" aria-label="Period" className="flex gap-2">
-          {KINDS.map(({ kind: k, label }) => (
-            <button
-              key={k}
-              type="button"
-              role="tab"
-              aria-selected={k === kind}
-              onClick={() => pick(k)}
-              className={`rounded-pill border px-4 py-1.5 text-xs transition-colors ${
-                k === kind
-                  ? 'border-lavender-400 text-ink-primary'
-                  : 'border-night-600 text-ink-secondary hover:border-lavender-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <PeriodTabs kind={kind} onChange={pick} />
 
         <div className="flex items-center gap-4">
           {kind !== 'all' && (
@@ -113,18 +92,25 @@ export const StatsView = () => {
         </div>
       </header>
 
-      {view === undefined ? (
-        <p className="text-ink-muted text-center text-sm">Opening…</p>
-      ) : view.empty ? (
-        <p className="text-ink-muted py-12 text-center text-sm">{EMPTY_TEXT[kind]}</p>
-      ) : (
-        <>
-          <Totals totals={view.totals} />
-          <FocusBars kind={kind} buckets={view.buckets} />
-          <TagBreakdown rows={view.byTag} tags={data!.tags} />
-          <SessionHistory sessions={view.history} tags={data!.tags} />
-        </>
-      )}
+      <div
+        role="tabpanel"
+        id={PERIOD_PANEL_ID}
+        aria-labelledby={periodTabId(kind)}
+        className="flex flex-col gap-6"
+      >
+        {view === undefined ? (
+          <p className="text-ink-muted text-center text-sm">Opening…</p>
+        ) : view.empty ? (
+          <p className="text-ink-muted py-12 text-center text-sm">{EMPTY_TEXT[kind]}</p>
+        ) : (
+          <>
+            <Totals totals={view.totals} />
+            <FocusBars kind={kind} buckets={view.buckets} />
+            <TagBreakdown rows={view.byTag} tags={data!.tags} />
+            <SessionHistory sessions={view.history} tags={data!.tags} />
+          </>
+        )}
+      </div>
     </div>
   );
 };
