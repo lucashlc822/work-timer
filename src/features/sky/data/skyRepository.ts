@@ -1,5 +1,5 @@
 import type { ConstellationRow, SessionRow, WorkTimerDb } from '@/shared/db';
-import { newId, newSeed, type Clock } from '@/shared/lib';
+import { newId, newSeed, SEED_DEVICE, type Clock } from '@/shared/lib';
 
 import type { CompletedSession, ConstellationChoice, Tier } from '../domain/types';
 
@@ -108,7 +108,7 @@ export const seedCompletedSessions = async (
       awayMs: 0,
       tagId: null,
       seed: newSeed(),
-      device: 'dev/seed',
+      device: SEED_DEVICE,
       clientCreatedAt: now,
       syncedAt: null,
     };

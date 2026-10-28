@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, type SessionRow, type WorkTimerDb } from '@/shared/db';
-import { createTestClock } from '@/shared/lib';
+import { createTestClock, SEED_DEVICE } from '@/shared/lib';
 import { createSyncEngine } from '@/shared/sync';
 import { FakeRemote } from '@/shared/sync/fakeRemote';
 import { sessionToWire } from '@/shared/sync/wire';
@@ -51,6 +51,20 @@ const device = (remote: FakeRemote) => {
 };
 
 describe('reconcile', () => {
+  it('earns nothing for dev-seeded sessions, and still credits a real one beside them', async () => {
+    const db = newDb();
+    await db.sessions.bulkAdd([session({ device: SEED_DEVICE }), session({ device: SEED_DEVICE })]);
+    expect(await reconcile(db, USER)).toBe(0);
+    expect(await db.ledger.count()).toBe(0);
+
+    const real = session();
+    await db.sessions.add(real);
+    await reconcile(db, USER);
+    const rows = await db.ledger.toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ ref: real.id, delta: 25 });
+  });
+
   it('credits a completed session once, and an early ending not at all (case 1)', async () => {
     const db = newDb();
     await db.sessions.bulkAdd([session(), session({ outcome: 'cancelled', actualFocusS: 900 })]);

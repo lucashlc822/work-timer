@@ -11,7 +11,7 @@ import {
   type PomodoroSettingsRow,
   type WorkTimerDb,
 } from '../db';
-import type { Clock } from '../lib';
+import { isSeeded, isSeededTag, type Clock } from '../lib';
 import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import {
   constellationFromWire,
@@ -386,7 +386,7 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
     try {
       // --- up: tags first, since sessions reference them ---
       const tags = await db.tags
-        .filter((t) => t.syncedAt === null && !rejected.tags.has(t.id))
+        .filter((t) => t.syncedAt === null && !rejected.tags.has(t.id) && !isSeededTag(t.id))
         .toArray();
       counts.pushed += await pushTable(
         'tags',
@@ -415,6 +415,7 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
             s.syncedAt === null &&
             s.endedAt !== null &&
             s.outcome !== null &&
+            !isSeeded(s) &&
             !rejected.sessions.has(s.id),
         )
         .toArray();
@@ -606,9 +607,9 @@ export const countPending = async (
   const unsynced = (row: { id: string; syncedAt: number | null }) =>
     row.syncedAt === null && !skip.has(row.id);
   const pending =
-    (await db.tags.filter(unsynced).count()) +
+    (await db.tags.filter((t) => unsynced(t) && !isSeededTag(t.id)).count()) +
     (await db.constellations.filter(unsynced).count()) +
-    (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null).count()) +
+    (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null && !isSeeded(s)).count()) +
     (await db.ledger.filter(unsynced).count()) +
     (settingsWaiting ? 1 : 0);
   return { pending, rejected: skip.size + refusedSettings.length };
