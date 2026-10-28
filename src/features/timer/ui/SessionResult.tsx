@@ -1,4 +1,6 @@
-import { StarMark } from '@/shared/ui';
+import { useRef } from 'react';
+
+import { StarMark, useFocusIfLost } from '@/shared/ui';
 
 import { formatDuration, formatTimeOfDay } from '../domain/format';
 import type { FinishedResult } from '../domain/timerMachine';
@@ -30,6 +32,9 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
     endedBy: result.endedBy,
   };
   const customStar = completed ? slots.resultStar?.(info) : undefined;
+  // The button that ended the session (or the countdown) is gone; land on Done.
+  const doneRef = useRef<HTMLButtonElement>(null);
+  useFocusIfLost(doneRef);
 
   return (
     <div className="flex flex-col items-center gap-5 text-center">
@@ -71,6 +76,7 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
       {error !== null && <p className="text-faded text-xs">{error}</p>}
 
       <button
+        ref={doneRef}
         type="button"
         onClick={onDone}
         className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-8 py-2.5 text-sm transition-colors"

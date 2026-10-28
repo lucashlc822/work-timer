@@ -1,5 +1,7 @@
+import { useRef } from 'react';
+
 import { systemClock } from '@/shared/lib';
-import { StarMark } from '@/shared/ui';
+import { StarMark, useFocusIfLost } from '@/shared/ui';
 
 import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { breakEndsAt, breakProgress, breakRemainingMs, isBreakOver } from '../domain/pomodoro';
@@ -45,6 +47,11 @@ export const BreakScreen = ({
   const now = systemClock.now();
   const resting = brk !== null && !isBreakOver(brk, now);
   useTick(resting);
+  // The countdown (or Skip break) is gone: land on the break, then on "Start block".
+  const breakRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<HTMLButtonElement>(null);
+  useFocusIfLost(breakRef, resting);
+  useFocusIfLost(startRef, !resting);
 
   const nextBlock = run.blocksDone + 1;
   const info: ResultInfo | null =
@@ -67,7 +74,12 @@ export const BreakScreen = ({
   });
 
   return (
-    <div className="flex w-full flex-col items-center gap-5 text-center">
+    // A focus target only (never in the Tab order), so no ring.
+    <div
+      ref={breakRef}
+      tabIndex={-1}
+      className="flex w-full flex-col items-center gap-5 text-center focus:outline-none"
+    >
       {info !== null && (
         <div className="flex flex-col items-center gap-2">
           <div className="relative flex h-16 w-16 items-center justify-center">
@@ -112,6 +124,7 @@ export const BreakScreen = ({
             </p>
           </div>
           <button
+            ref={startRef}
             type="button"
             onClick={onStartNext}
             disabled={busy}

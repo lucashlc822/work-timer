@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { db, getLocalUserId } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
+import { useDialogFocus } from '@/shared/ui';
 
 import { chooseConstellation, type ChoiceDraft } from '../data/skyRepository';
 import { CATALOGUE, catalogueKeysForTier } from '../domain/catalogue';
@@ -95,11 +96,12 @@ export const ConstellationPicker = ({
   const [userId, setUserId] = useState<string | null>(null);
   const [reroll, setReroll] = useState(0);
   const [pending, setPending] = useState<Option | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(dialogRef, closeRef);
 
   useEffect(() => {
     void getLocalUserId(db).then(setUserId);
-    closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -133,6 +135,7 @@ export const ConstellationPicker = ({
   return (
     <div className="bg-night-950/75 fixed inset-0 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="picker-title"

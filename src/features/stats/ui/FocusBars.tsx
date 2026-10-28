@@ -25,13 +25,16 @@ const fullLabel = (kind: PeriodKind, start: number): string =>
  *
  * One series in one hue, so there is no legend; the chart title names it.
  * Bars sit on the baseline with a rounded top, the grid is two faint lines,
- * and every bar has a hover/focus tooltip and an accessible name. A table
- * view below carries the same numbers for anyone who prefers or needs them.
+ * and every bar has a hover tooltip. Up to 14 bars are buttons with an
+ * accessible name and a focus tooltip; more are too thin for a 24px target, so
+ * they are hover-only and hidden from assistive tech. A table view below
+ * carries the same numbers for anyone who prefers or needs them.
  */
 export const FocusBars = ({ kind, buckets }: { kind: PeriodKind; buckets: FocusBucket[] }) => {
   const top = niceCeiling(Math.max(...buckets.map((b) => b.focusS), 0));
   // Month view has up to 31 bars, so label every few; the rest keep their tooltips.
   const labelEvery = buckets.length > 14 ? Math.ceil(buckets.length / 8) : 1;
+  // Month view (and a long "all time"): bars too thin to click or tab through.
   const dense = buckets.length > 14;
 
   return (
@@ -64,23 +67,33 @@ export const FocusBars = ({ kind, buckets }: { kind: PeriodKind; buckets: FocusB
           <ul
             className="relative flex items-end"
             style={{ height: CHART_HEIGHT, gap: dense ? 2 : 8 }}
+            aria-hidden={dense ? true : undefined}
           >
             {buckets.map((b) => {
               const ratio = top === 0 ? 0 : b.focusS / top;
               const label = `${fullLabel(kind, b.start)}: ${formatFocus(b.focusS)}`;
+              const bar = (
+                <span
+                  className="bg-lavender-400 group-hover:bg-lavender-300 block w-full rounded-t-[4px] transition-colors"
+                  // A focused day always shows a sliver, so it is never mistaken for an empty one.
+                  style={{ height: b.focusS > 0 ? `max(${ratio * 100}%, 3px)` : 0 }}
+                />
+              );
               return (
                 <li key={b.start} className="group relative flex h-full flex-1 items-end">
-                  <button
-                    type="button"
-                    aria-label={label}
-                    className="focus-visible:outline-lavender-300 flex h-full w-full items-end outline-offset-2"
-                  >
-                    <span
-                      className="bg-lavender-400 group-hover:bg-lavender-300 block w-full rounded-t-[4px] transition-colors"
-                      // A focused day always shows a sliver, so it is never mistaken for an empty one.
-                      style={{ height: b.focusS > 0 ? `max(${ratio * 100}%, 3px)` : 0 }}
-                    />
-                  </button>
+                  {dense ? (
+                    // Too narrow to be a 24px target (WCAG 2.5.8): hover-only here,
+                    // and the table below is the keyboard and screen-reader route.
+                    <span className="flex h-full w-full items-end">{bar}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={label}
+                      className="focus-visible:outline-lavender-300 flex h-full w-full items-end outline-offset-2"
+                    >
+                      {bar}
+                    </button>
+                  )}
                   <span
                     role="presentation"
                     className="bg-night-700 border-night-600 text-ink-primary pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded-md border px-2 py-1 text-xs whitespace-nowrap group-focus-within:block group-hover:block"
