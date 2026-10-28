@@ -30,7 +30,7 @@ export const StardustPanel = (shop: ShopProps) => {
   const recent = useRecentLedger(20);
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-6 pt-10 pb-28">
+    <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-6 pt-10 pb-32">
       <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Stardust</h2>
 
       <p className="text-ink-primary text-3xl">

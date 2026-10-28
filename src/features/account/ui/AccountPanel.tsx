@@ -51,7 +51,7 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-28">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-32">
       <header className="flex flex-col items-center gap-1">
         <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Account</h2>
         <p className="text-ink-primary text-base">{email ?? 'Signed in'}</p>
@@ -158,7 +158,7 @@ const DeleteAccount = ({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-ink-muted hover:text-faded text-xs transition-colors"
+          className="text-ink-muted hover:text-faded -my-1 px-2 py-1 text-xs transition-colors"
         >
           Delete account…
         </button>
@@ -203,7 +203,7 @@ const DeleteAccount = ({
             setTyped('');
             setError(null);
           }}
-          className="text-ink-muted hover:text-ink-primary text-xs transition-colors disabled:opacity-50"
+          className="text-ink-muted hover:text-ink-primary -mx-2 -my-1 px-2 py-1 text-xs transition-colors disabled:opacity-50"
         >
           Cancel
         </button>

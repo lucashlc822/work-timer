@@ -70,7 +70,8 @@ export const SyncStatus = ({
         type="button"
         disabled={status.phase === 'syncing'}
         onClick={onSyncNow}
-        className="text-ink-muted hover:text-ink-primary text-xs transition-colors disabled:opacity-50"
+        // Padded out to a 24px target; the negative margin keeps the layout where it was.
+        className="text-ink-muted hover:text-ink-primary -my-1 px-2 py-1 text-xs transition-colors disabled:opacity-50"
       >
         Sync now
       </button>
