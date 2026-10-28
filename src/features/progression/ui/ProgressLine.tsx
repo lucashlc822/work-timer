@@ -10,7 +10,7 @@ export const ProgressLine = () => {
   if (progress === undefined) return null;
   const { focusMin, goalMin, reached, streak } = progress;
   return (
-    <p className="text-ink-muted text-xs">
+    <p className="text-ink-secondary text-xs">
       <span className={reached ? 'text-star-warm' : undefined}>
         {reached && <span aria-hidden>✦ </span>}
         Today {focusMin} of {goalMin} min

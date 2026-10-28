@@ -10,6 +10,7 @@ import {
   ROSE_300,
   STAR_COOL,
   STAR_CORE,
+  STAR_WHITE,
   STAR_WARM,
 } from '../../design-tokens.mjs';
 
@@ -35,6 +36,7 @@ describe('design token mirror', () => {
     ['--color-star-warm', STAR_WARM],
     ['--color-star-cool', STAR_COOL],
     ['--color-star-core', STAR_CORE],
+    ['--color-star-white', STAR_WHITE],
     ['--color-lavender-400', LAVENDER_400],
     ['--color-rose-300', ROSE_300],
     ['--color-mint-300', MINT_300],
