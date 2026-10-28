@@ -89,27 +89,26 @@ export const ConstellationLayer = ({
       {sky.wandering.map(({ session }) => {
         const [x, y] = wanderingPosition(session.seed, width, height);
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
+        const r = Math.max(1, look.radius * 1.3);
+        const label = `Wandering ${starLabel(session.endedAt, session.actualFocusS).toLowerCase()}`;
         return (
-          <circle
+          <g
             key={session.id}
-            cx={x}
-            cy={y}
-            r={Math.max(1, look.radius * 1.3)}
-            fill={look.color}
-            opacity={(full ? 0.8 : 0.5) * look.brightness}
             tabIndex={full ? 0 : undefined}
             role={full ? 'img' : undefined}
-            aria-label={
-              full
-                ? `Wandering ${starLabel(session.endedAt, session.actualFocusS).toLowerCase()}`
-                : undefined
-            }
-            className="focus:outline-none"
+            aria-label={full ? label : undefined}
+            className="group focus:outline-none"
           >
-            {full && (
-              <title>{`Wandering ${starLabel(session.endedAt, session.actualFocusS).toLowerCase()}`}</title>
-            )}
-          </circle>
+            {full && <title>{label}</title>}
+            <circle
+              cx={x}
+              cy={y}
+              r={r}
+              fill={look.color}
+              opacity={(full ? 0.8 : 0.5) * look.brightness}
+            />
+            {full && <FocusRing x={x} y={y} r={r} />}
+          </g>
         );
       })}
 
@@ -119,6 +118,22 @@ export const ConstellationLayer = ({
     </svg>
   );
 };
+
+/**
+ * A keyboard focus ring for a star. Stars are SVG groups, where the global
+ * `:focus-visible` outline would box the whole glow, so the group hides its
+ * outline and shows this circle instead (WCAG 2.4.7).
+ */
+const FocusRing = ({ x, y, r }: { x: number; y: number; r: number }) => (
+  <circle
+    cx={x}
+    cy={y}
+    r={r + 5}
+    fill="none"
+    strokeWidth={2}
+    className="stroke-lavender-300 opacity-0 group-focus-visible:opacity-100"
+  />
+);
 
 /** Behind the timer: the constellation in progress, else the most recent one. */
 const heroShown = (sky: SkyState, width: number, height: number) => {
@@ -247,27 +262,33 @@ const Figure = ({
             tabIndex={full ? 0 : undefined}
             role={full ? 'img' : undefined}
             aria-label={full ? label : undefined}
-            className={full ? 'sky-twinkle focus:outline-none' : undefined}
-            style={
-              full
-                ? {
-                    animationDuration: `${look.twinklePeriodMs}ms`,
-                    animationDelay: `-${(look.twinklePhase / (Math.PI * 2)) * look.twinklePeriodMs}ms`,
-                  }
-                : undefined
-            }
+            className={full ? 'group focus:outline-none' : undefined}
           >
             {full && <title>{label}</title>}
-            <circle
-              cx={x}
-              cy={y}
-              r={r * halo}
-              fill={look.color}
-              opacity={(style === 'plain' ? 0.22 : 0.26) * look.brightness}
-              filter={`url(#${glowId})`}
-            />
-            <circle cx={x} cy={y} r={r} fill={look.color} opacity={look.brightness} />
-            <circle cx={x} cy={y} r={r * 0.45} fill="#ffffff" opacity={0.9} />
+            <g
+              className={full ? 'sky-twinkle' : undefined}
+              style={
+                full
+                  ? {
+                      animationDuration: `${look.twinklePeriodMs}ms`,
+                      animationDelay: `-${(look.twinklePhase / (Math.PI * 2)) * look.twinklePeriodMs}ms`,
+                    }
+                  : undefined
+              }
+            >
+              <circle
+                cx={x}
+                cy={y}
+                r={r * halo}
+                fill={look.color}
+                opacity={(style === 'plain' ? 0.22 : 0.26) * look.brightness}
+                filter={`url(#${glowId})`}
+              />
+              <circle cx={x} cy={y} r={r} fill={look.color} opacity={look.brightness} />
+              <circle cx={x} cy={y} r={r * 0.45} fill="#ffffff" opacity={0.9} />
+            </g>
+            {/* Outside the twinkle, so the ring never fades with the star. */}
+            {full && <FocusRing x={x} y={y} r={r} />}
           </g>
         );
       })}

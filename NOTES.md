@@ -12,11 +12,58 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-27 (later) — First full UI review, its fixes, and three merges
+
+**Status: #99 (reviewer), #100 (first-run findings) and #101 (the three High
+findings) merged in that order.** The entry below is superseded where it
+says "not merged" or "test 5 not done".
+
+### Next
+
+- **Remaining findings from the full review, not started** (report in the #101
+  session; IDs as the reviewer gave them), each worth its own PR:
+  - M1: the floating "Back to timer" covers panel bottoms.
+  - M2: the Stats tabs have no arrow keys and no tabpanel.
+  - M3: five controls are under 24px (picker Close, swatches, Sync now,
+    Delete account…, mini ×).
+  - M4: `ink-muted` over the nebula is unmeasured.
+  - M5: offline shows "Syncing…" for 15–30 s first.
+  - M6: there are no `role=status` live regions.
+  - M7: the server-down status flickers, and Friends can't tell empty from
+    failed.
+  - M8: the dev helpers' seeded rows upload and can't be cleared.
+  - Lows L1–L7.
+- The mini window's signed-out blank state is still deferred.
+
+### What was done
+
+1. **Test 5 passed** (full signed-in run, 68 screenshots, `git status` clean
+   apart from its memory). Lucas signed `ui-review@test.local` in by hand in
+   `.ui-review/profile`; the agent never touched the password.
+2. Opening that Edge profile crashed `npm run dev`: Vite's watcher hit a file
+   Edge keeps locked (EBUSY). `vite.config.ts` now ignores `**/.ui-review/**`.
+3. #101: `shared/ui/focus.ts` (`useDialogFocus`, `useFocusIfLost`) for the cancel
+   dialog, the picker, and focus after Start or a session's end; a focus ring
+   on sky stars; Month bars above 14 are hover-only (table carries the data).
+   The `FocusBars.tsx` conflict with #100 was resolved by keeping both changes.
+
+### Things worth not rediscovering
+
+- **Docker Desktop doesn't survive a session restart here.** "Couldn't reach
+  the server" on sign-in was Docker down, not the account.
+- The `ui-review` account carries seeded history on the local server
+  (~2,160 Stardust); `clearSeeded()` only clears the local copy (M8). A
+  `db reset` removes it, along with the account.
+- GitHub auto-merge is disabled on this repo; merge by hand once CI is green.
+
+---
+
 ## 2026-10-27 — UI/UX review system (`ui-ux-reviewer`)
 
-**Status: PR open on `chore/ui-ux-reviewer`, not merged; acceptance test 5 (a
-real review run) not yet done.** It needs a session started after this branch
-exists, because agents and MCP servers load at session start.
+**Status (superseded, see the entry above): PR open on
+`chore/ui-ux-reviewer`, not merged; acceptance test 5 (a real review run) not
+yet done.** It needs a session started after this branch exists, because
+agents and MCP servers load at session start.
 
 ### Next
 

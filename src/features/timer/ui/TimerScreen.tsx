@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { systemClock } from '@/shared/lib';
+import { useFocusIfLost } from '@/shared/ui';
 
 import { DEFAULT_MINUTES, minutesToSeconds } from '../domain/durations';
 import { formatDuration, formatTimeOfDay } from '../domain/format';
@@ -47,6 +48,9 @@ export const TimerScreen = ({
 
   const inFlight = timer.status === 'running' || timer.status === 'finishing';
   useTick(inFlight);
+  // Start (or "Start block") is gone once the countdown shows; land on the countdown.
+  const countdownRef = useRef<HTMLDivElement>(null);
+  useFocusIfLost(countdownRef, inFlight && timer.session !== null);
   const now = systemClock.now();
 
   const keepGoing = useCallback(() => setConfirming(false), []);
@@ -108,10 +112,13 @@ export const TimerScreen = ({
             Block {block} · Pomodoro
           </p>
         )}
-        <CountdownDisplay
-          remainingMs={remainingMs(session, now)}
-          progress={progress(session, now)}
-        />
+        {/* A focus target only (never in the Tab order), so no ring. */}
+        <div ref={countdownRef} tabIndex={-1} className="w-full focus:outline-none">
+          <CountdownDisplay
+            remainingMs={remainingMs(session, now)}
+            progress={progress(session, now)}
+          />
+        </div>
         <p className="text-ink-muted text-xs">
           {formatDuration(session.plannedDurationS)} · ends at{' '}
           {formatTimeOfDay(plannedEndAt(session))}

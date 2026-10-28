@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { useDialogFocus } from '@/shared/ui';
+
 interface Props {
   /** e.g. "12 minutes" — what will be credited if the user confirms. */
   focusedSoFar: string;
@@ -25,10 +27,11 @@ export const CancelDialog = ({
   onKeepGoing,
   onConfirm,
 }: Props) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const keepGoingRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(dialogRef, keepGoingRef);
 
   useEffect(() => {
-    keepGoingRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onKeepGoing();
     };
@@ -39,6 +42,7 @@ export const CancelDialog = ({
   return (
     <div className="bg-night-950/70 fixed inset-0 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="cancel-title"
