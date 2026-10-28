@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { prefersReducedMotion } from '@/shared/lib';
+import { onReducedMotionChange, prefersReducedMotion } from '@/shared/lib';
 
 let frames = 0;
 
@@ -62,8 +62,10 @@ export const useFrameLoop = (draw: (elapsedMs: number) => void, enabled = true, 
 
     sync();
     document.addEventListener('visibilitychange', sync);
+    const stopMotionWatch = onReducedMotionChange(sync);
     return () => {
       document.removeEventListener('visibilitychange', sync);
+      stopMotionWatch();
       if (handle !== null) cancelAnimationFrame(handle);
     };
   }, [enabled, fps]);

@@ -28,3 +28,14 @@ export const isStandalone = (): boolean =>
  * that triggers vestibular symptoms.
  */
 export const prefersReducedMotion = (): boolean => matches('(prefers-reduced-motion: reduce)');
+
+/**
+ * Calls `callback` whenever the reduced-motion setting flips while the app is
+ * open. Returns an unsubscribe. A silent no-op where `matchMedia` is missing.
+ */
+export const onReducedMotionChange = (callback: () => void): (() => void) => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {};
+  const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+  query.addEventListener('change', callback);
+  return () => query.removeEventListener('change', callback);
+};
