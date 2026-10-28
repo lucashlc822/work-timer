@@ -12,6 +12,71 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-28 — The other fifteen findings fixed; confirmation review
+
+**Status: #102–#108 merged; `master` passes lint, typecheck, 610 unit tests,
+build and `e2e:web` 37/37.** The "Remaining findings" list in the entry below
+is done (M1–M8, L1–L3, L5, L6; L4 and L7 needed no change). The confirmation
+review found the earlier fixes held, plus the new items under Next.
+
+### Next
+
+Found by the confirmation `ui-ux-reviewer` run, none started (each its own PR):
+
+- **High: focus drops to `<body>` after common actions.** Closing a panel
+  (Esc, Back to timer) should return focus to its opener; "Done" on the result
+  should land on Start; picking a tag should land on the tag button; opening
+  "Delete account…" should move to the email field, and Cancel back to the
+  button. `useFocusIfLost` and `useDialogFocus` in `shared/ui/focus.ts` are the
+  tools (panels aren't dialogs, so they may need their own opener memory).
+- **Medium:** "Manage tags" and "Done" in the tag manager are 16px high, and
+  the rename fields 20px (WCAG 2.5.8); `ink-muted` on the running line
+  ("N minutes · ends at …"), "Finished at …" and the break line is 4.3–4.7:1
+  over the sky, so use `ink-secondary` like the idle screen; the floating
+  "Back to timer" still covers content mid-scroll and half-covers the
+  "Delete my account" button (a backdrop or an in-flow button); the Pomodoro
+  sliders drop fast key repeats because each press works from a stale stored
+  value (keep a local value, persist on change).
+- **Low:** `rounded-full` on dots and bars instead of the pill token (7 files);
+  star targets are 12px (maybe fine under the 2.5.8 spacing exception, unproven);
+  history rows wrap awkwardly at 375; Friends keeps the last list with no
+  stale-data hint when the server drops without a reload.
+- **Still deferred or known:** "Delete account…" contrast at 375 wide (3.93:1,
+  pre-existing), the mini window's signed-out blank state.
+- **Not covered by the review:** real "Time away" data (a headless pane never
+  reports hidden; the five-tile row was checked by simulation), the focus-
+  together lobby, the "starting"/"completing" states (too brief).
+
+### What was done
+
+1. Seven PRs, one idea each: #102 result announced (M6), #103 tokens, night
+   first paint, legible muted text (M4, L2, L6), #104 reduced motion live (L5),
+   #105 24px targets and layout (M1, M3, L1, L3), #106 dev seed data stays
+   local (M8), #107 honest sync line (M5, M7), #108 Stats tabs (M2). #102–#104
+   and #106 were built in their own sessions; #105, #107, #108 here.
+2. Merge order was #102–#105, #107, #108, then #106: it conflicted with #104 in
+   `src/shared/lib/index.ts` (adjacent export lines, kept both) and needed a
+   fresh CI run.
+
+### Things worth not rediscovering
+
+- **Sessions share ports and one local stack.** `npm run dev` (5173) serves
+  whichever checkout started it, and `npm run e2e:web` (4174) is fixed in the
+  config and five spec files, so two runs collide ("already used" / "not able
+  to start"). Wait for the port rather than killing the other run; heavy
+  parallel load also makes Realtime-based friends tests time out, and they
+  pass alone. Simulate offline or server-down per page (Playwright's context
+  offline / route abort) instead of stopping Docker containers when anything
+  else is using the stack.
+- **A headless pane never reports `hidden`**, so away time can't be produced
+  there.
+- **Prettier checks every folder, including `.claude/worktrees/`**, so a local
+  `npm run format:check` can fail on another session's checkout; CI has no such
+  folder. Use `npx prettier --check src`.
+- Session worktrees live in `.claude/worktrees/` inside this repo.
+
+---
+
 ## 2026-10-27 (later) — First full UI review, its fixes, and three merges
 
 **Status: #99 (reviewer), #100 (first-run findings) and #101 (the three High
@@ -20,7 +85,8 @@ says "not merged" or "test 5 not done".
 
 ### Next
 
-- **Remaining findings from the full review, not started** (report in the #101
+- **Remaining findings from the full review, not started** (superseded: done in
+  #102–#108; report in the #101
   session; IDs as the reviewer gave them), each worth its own PR:
   - M1: the floating "Back to timer" covers panel bottoms.
   - M2: the Stats tabs have no arrow keys and no tabpanel.

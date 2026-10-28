@@ -4,7 +4,10 @@ Short notes for the next review: false alarms and which CLAUDE.md entry explains
 them, screens that need special setup, token exceptions that are intentional.
 Never store passwords, tokens or anything from `.env*` files.
 
-- Last review: 2026-10-27, FULL signed-in pass (dev server on 5173 started by main session, signed in by Lucas in `.ui-review/profile`). Never reads `.env`.
+- Confirmation pass 2026-10-28: H1-3, M1-M8, L1-L3, L5, L6 fixed. Open: focus drops to BODY after panel Esc/Back, Done, tag pick, Delete-account expand; ink-muted on running/result lines (4.3-4.7:1 over sky); "Manage tags"/"Done" 16px high; Pomodoro sliders drop rapid key repeats (press with ~250 ms gaps). Seeds now stay local.
+- Sky stars are role=img `g` elements (not buttons); focus ring is an inner circle. Panels are fixed overlays on top of the timer (not dialogs); Delete account is an inline expander. Headless pane never reports `hidden`, so away time can't be produced; L1 was checked by simulating a 5th tile.
+- Rendered-colour check: CSS custom props aren't enumerable from document.styleSheets in dev; map computed rgb to tokens.css by hand.
+- Earlier: 2026-10-27, FULL signed-in pass (dev server on 5173 started by main session, signed in by Lucas in `.ui-review/profile`). Never reads `.env`.
 - Playwright `filename:` for screenshots resolves against the workspace root: pass `.ui-review/<name>.png`.
 - `browser_run_code_unsafe` is sandboxed: page.* works, `require`/`import` don't. `page.keyboard`, `page.context().setOffline`, `page.clock` all work.
 - Do NOT use `page.clock.install/fastForward` to skip a session: the session ends in the real future, the server refuses it (400 `session_not_from_the_future`, "1 change waiting" stays) and the fake clock sticks to the context until `browser_close` + reopen. Use the 1 min (dev) length (a 62 s wait) instead.
