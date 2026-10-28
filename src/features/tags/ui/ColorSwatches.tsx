@@ -11,7 +11,7 @@ export const ColorSwatches = ({
   onChange: (color: TagColor) => void;
   label: string;
 }) => (
-  <div role="radiogroup" aria-label={label} className="flex items-center gap-1.5">
+  <div role="radiogroup" aria-label={label} className="-m-0.5 flex items-center gap-0.5">
     {TAG_COLORS.map((color) => (
       <button
         key={color}
@@ -20,11 +20,18 @@ export const ColorSwatches = ({
         aria-checked={color === value}
         aria-label={color}
         onClick={() => onChange(color)}
-        className={`h-5 w-5 rounded-full border-2 transition-colors ${
-          color === value ? 'border-ink-primary' : 'hover:border-ink-muted border-transparent'
-        }`}
-        style={{ backgroundColor: tagColorVar(color) }}
-      />
+        // A 24px target around a 20px dot, so the dots sit where they did.
+        className="group grid size-6 place-items-center"
+      >
+        <span
+          className={`h-5 w-5 rounded-full border-2 transition-colors ${
+            color === value
+              ? 'border-ink-primary'
+              : 'group-hover:border-ink-muted border-transparent'
+          }`}
+          style={{ backgroundColor: tagColorVar(color) }}
+        />
+      </button>
     ))}
   </div>
 );

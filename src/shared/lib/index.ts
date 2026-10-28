@@ -8,7 +8,7 @@ export { newId, newSeed, stableId } from './id';
 
 export { isSeeded, isSeededTag, SEED_DEVICE, SEED_TAG_NAMES, seedTagId } from './seed';
 
-export { isStandalone, prefersReducedMotion } from './platform';
+export { isStandalone, onReducedMotionChange, prefersReducedMotion } from './platform';
 
 export { between, hashSeed, intBetween, mulberry32, pick, rngFromSeed } from './random';
 export type { Rng } from './random';

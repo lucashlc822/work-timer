@@ -33,7 +33,8 @@ export const MiniWindow = () => {
       <button
         type="button"
         onClick={() => void close()}
-        className="text-ink-muted hover:text-ink-secondary absolute top-1 right-2 text-xs transition-colors"
+        // A 24px target whose glyph sits where the bare × did.
+        className="text-ink-muted hover:text-ink-secondary absolute top-0 right-0 grid size-6 place-items-center text-xs transition-colors"
         aria-label="Close mini timer"
       >
         ×

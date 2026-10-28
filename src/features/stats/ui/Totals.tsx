@@ -5,12 +5,16 @@ const Tile = ({
   label,
   value,
   note,
+  className = '',
 }: {
   label: string;
   value: string;
   note?: string | undefined;
+  className?: string;
 }) => (
-  <div className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-1 border px-4 py-3">
+  <div
+    className={`bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-1 border px-4 py-3 ${className}`}
+  >
     <dt className="text-ink-muted text-xs">{label}</dt>
     <dd className="text-ink-primary text-xl">{value}</dd>
     {note !== undefined && <dd className="text-ink-muted text-xs">{note}</dd>}
@@ -21,7 +25,11 @@ const Tile = ({
 export const Totals = ({ totals }: { totals: TotalsData }) => {
   const sessions = totals.completed + totals.endedEarly;
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    // "Time away" is a fifth tile only when there is some; size the row to fit
+    // so it never sits alone on a second line.
+    <dl
+      className={`grid grid-cols-2 gap-3 ${totals.awayMs > 0 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}
+    >
       <Tile label="Focus" value={formatFocus(totals.focusS)} />
       <Tile
         label="Stars"
@@ -39,6 +47,7 @@ export const Totals = ({ totals }: { totals: TotalsData }) => {
           label="Time away"
           value={formatAway(totals.awayMs)}
           note="window hidden mid-session"
+          className="col-span-2 sm:col-span-1"
         />
       )}
     </dl>

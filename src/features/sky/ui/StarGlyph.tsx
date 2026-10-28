@@ -1,5 +1,7 @@
 import { useId } from 'react';
 
+import { STAR_WHITE } from '../../../../design-tokens.mjs';
+
 import { starAppearance } from '../domain/starAppearance';
 
 /**
@@ -37,7 +39,7 @@ export const StarGlyph = ({
           <stop offset="100%" stopColor={look.color} stopOpacity={0} />
         </radialGradient>
         <radialGradient id={`${id}-core`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="0%" stopColor={STAR_WHITE} />
           <stop offset="45%" stopColor={look.color} />
           <stop offset="100%" stopColor={look.color} stopOpacity={0.85} />
         </radialGradient>

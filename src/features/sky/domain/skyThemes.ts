@@ -1,4 +1,10 @@
-import { LAVENDER_400, MINT_300, NIGHT_900, ROSE_300 } from '../../../../design-tokens.mjs';
+import {
+  LAVENDER_400,
+  MINT_300,
+  NIGHT_900,
+  ROSE_300,
+  STAR_WHITE,
+} from '../../../../design-tokens.mjs';
 
 import type { StarStyle } from './starStyles';
 
@@ -39,7 +45,7 @@ export const SKY_THEMES: Readonly<Record<string, SkyTheme>> = {
   tide: {
     ground: ['#06141f', '#0b2431'],
     cloudHues: ['#8ec5ff', MINT_300, '#8ec5ff', MINT_300],
-    starPalette: { cool: '#c4e4ff', core: '#ffffff', warm: '#dff6ee' },
+    starPalette: { cool: '#c4e4ff', core: STAR_WHITE, warm: '#dff6ee' },
   },
   bloom: {
     ground: ['#1a1030', '#241238'],

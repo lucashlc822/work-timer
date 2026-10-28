@@ -19,7 +19,7 @@ export const UpdatePrompt = () => {
   return (
     <div
       role="status"
-      className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-sm items-center gap-3 border p-3 backdrop-blur"
+      className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 border p-3 backdrop-blur"
     >
       <p className="text-ink-secondary flex-1 text-sm">A new version is ready.</p>
       <button

@@ -30,6 +30,7 @@ export const STAR_WARM = '#ffe9c4';
 /** Star colour temperature: cool end, neutral core, warm end. */
 export const STAR_COOL = '#d6e8ff';
 export const STAR_CORE = '#fffdf8';
+export const STAR_WHITE = '#ffffff';
 
 /** Nebula hues, blended additively over the night ground. */
 export const LAVENDER_400 = '#ab93e6';

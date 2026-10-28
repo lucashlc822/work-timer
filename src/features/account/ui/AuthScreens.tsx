@@ -194,7 +194,7 @@ export const AuthScreens = ({ onSignedIn }: Props) => {
               autoComplete="one-time-code"
               value={code}
               onChange={(e) => setCode(normalizeCode(e.target.value))}
-              className={`${INPUT} text-center text-lg tracking-[0.4em]`}
+              className={`${INPUT} tracking-code text-center text-lg`}
               autoFocus
             />
           </Field>

@@ -44,6 +44,8 @@
      so these are tokens rather than magic numbers in the renderer. */
   --color-star-cool: #d6e8ff;
   --color-star-core: #fffdf8;
+  /* Pure white: the classic star's centre, pinned by golden tests. */
+  --color-star-white: #ffffff;
   --color-star-warm: #ffe9c4;
 
   /* --- Tag colours ------------------------------------------------------ */
@@ -85,6 +87,9 @@
   /* Slow, gentle easing throughout. Nothing in a focus app should feel snappy
      or urgent. All of these are neutralised under prefers-reduced-motion. */
   --ease-gentle: cubic-bezier(0.33, 0.9, 0.35, 1);
+
+  /* Letter-spacing for the 6-digit code field. */
+  --tracking-code: 0.4em;
   --duration-drift: 40s;
   --duration-twinkle: 4s;
 }

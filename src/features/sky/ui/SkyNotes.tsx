@@ -58,7 +58,7 @@ export const StartHint = ({ plannedS }: { plannedS: number }) => {
     case 'counts': {
       const c = verdict.constellation;
       return (
-        <p className="text-ink-muted text-xs">
+        <p className="text-ink-secondary text-xs">
           Adds star {c.stars.length + 1} of {c.def.shape.points.length} to {c.def.name}
         </p>
       );
@@ -72,7 +72,7 @@ export const StartHint = ({ plannedS }: { plannedS: number }) => {
       );
     case 'no-constellation':
       return (
-        <p className="text-ink-muted text-xs">
+        <p className="text-ink-secondary text-xs">
           No constellation chosen: this will be a wandering star.
         </p>
       );

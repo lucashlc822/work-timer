@@ -78,7 +78,7 @@ export const TagManager = ({ tags, selectedId, onArchivedSelected }: Props) => {
                     if (archiving && tag.id === selectedId) onArchivedSelected();
                   })
                 }
-                className="text-ink-muted hover:text-ink-primary shrink-0 text-xs transition-colors"
+                className="text-ink-muted hover:text-ink-primary -mx-2 -my-1 shrink-0 px-2 py-1 text-xs transition-colors"
               >
                 {tag.archivedAt === null ? 'Archive' : 'Restore'}
               </button>

@@ -1,6 +1,12 @@
 import { useId } from 'react';
 
-import { LAVENDER_300, LAVENDER_400, MINT_300, ROSE_300 } from '../../../../design-tokens.mjs';
+import {
+  LAVENDER_300,
+  LAVENDER_400,
+  MINT_300,
+  ROSE_300,
+  STAR_WHITE,
+} from '../../../../design-tokens.mjs';
 import { hashSeed } from '@/shared/lib';
 
 import {
@@ -285,7 +291,7 @@ const Figure = ({
                 filter={`url(#${glowId})`}
               />
               <circle cx={x} cy={y} r={r} fill={look.color} opacity={look.brightness} />
-              <circle cx={x} cy={y} r={r * 0.45} fill="#ffffff" opacity={0.9} />
+              <circle cx={x} cy={y} r={r * 0.45} fill={STAR_WHITE} opacity={0.9} />
             </g>
             {/* Outside the twinkle, so the ring never fades with the star. */}
             {full && <FocusRing x={x} y={y} r={r} />}

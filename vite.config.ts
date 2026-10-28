@@ -17,7 +17,10 @@ import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from './brand.mjs';
 const injectBrand = (): PluginOption => ({
   name: 'inject-brand',
   transformIndexHtml: (html: string) =>
-    html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION),
+    html
+      .replaceAll('%APP_NAME%', APP_NAME)
+      .replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION)
+      .replaceAll('%NIGHT_900%', NIGHT_900),
 });
 
 /**

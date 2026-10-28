@@ -85,7 +85,7 @@ export const BreakScreen = ({
           <div className="relative flex h-16 w-16 items-center justify-center">
             {star ?? <StarMark size={48} className="relative" />}
           </div>
-          <p className="text-ink-secondary text-xs">
+          <p role="status" className="text-ink-secondary text-xs">
             Block {result!.session.runIndex ?? run.blocksDone} done ·{' '}
             {formatDuration(info.actualFocusS)} of focus
           </p>
