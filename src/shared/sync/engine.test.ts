@@ -12,7 +12,7 @@ import {
   type TagRow,
   type WorkTimerDb,
 } from '../db';
-import { createTestClock, stableId } from '../lib';
+import { createTestClock, SEED_DEVICE, seedTagId, stableId } from '../lib';
 import { countPending, createSyncEngine, PULL_PAGE, type SyncLock } from './engine';
 import { FakeRemote } from './fakeRemote';
 import { sessionToWire, settingsToWire, tagToWire } from './wire';
@@ -476,6 +476,28 @@ describe('settings', () => {
     expect(await readMeta(db, META_KEYS.settingsSyncedAt)).toBe(T0);
     expect(remote.pushCalls).toBe(pushesAfterFirst);
     expect(await countPending(db)).toEqual({ pending: 0, rejected: 0 });
+  });
+
+  it('keeps dev-seeded sessions and demo tags on the device: never pending, never uploaded', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    const seededTag = tag({ id: seedTagId('Writing') });
+    await db.tags.add(seededTag);
+    await db.sessions.bulkAdd([
+      session({ device: SEED_DEVICE, tagId: seededTag.id }),
+      session({ device: SEED_DEVICE }),
+    ]);
+    expect(await countPending(db)).toEqual({ pending: 0, rejected: 0 });
+
+    await engine.syncNow();
+    expect(remote.tables.sessions.size).toBe(0);
+    expect(remote.tables.tags.size).toBe(0);
+
+    // A real session beside them still goes up.
+    await db.sessions.add(session());
+    expect((await countPending(db)).pending).toBe(1);
+    await engine.syncNow();
+    expect(remote.tables.sessions.size).toBe(1);
   });
 
   // U2

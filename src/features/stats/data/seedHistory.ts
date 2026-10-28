@@ -1,8 +1,13 @@
 import type { SessionRow, TagRow, WorkTimerDb } from '@/shared/db';
-import { newId, newSeed, type Clock } from '@/shared/lib';
-
-/** Marks seeded rows so `clearSeeded` removes exactly those and nothing real. */
-export const SEED_DEVICE = 'dev/seed';
+import {
+  isSeeded,
+  newId,
+  newSeed,
+  SEED_DEVICE,
+  SEED_TAG_NAMES,
+  seedTagId,
+  type Clock,
+} from '@/shared/lib';
 
 const DEMO_TAGS: ReadonlyArray<Pick<TagRow, 'name' | 'color'>> = [
   { name: 'Writing', color: 'lavender' },
@@ -25,7 +30,7 @@ export const seedHistory = async (db: WorkTimerDb, days: number, clock: Clock): 
   if (tags.length === 0) {
     tags = DEMO_TAGS.map((t, i) => ({
       ...t,
-      id: newId(),
+      id: seedTagId(t.name),
       createdAt: now + i,
       updatedAt: now + i,
       archivedAt: null,
@@ -83,6 +88,19 @@ export const seedHistory = async (db: WorkTimerDb, days: number, clock: Clock): 
   return rows.length;
 };
 
-/** Dev-only: remove everything `seedHistory` wrote (the demo tags are left; archive them by hand). */
+/**
+ * Dev-only: remove everything `seedHistory` and the sky's `seed` wrote — the
+ * sessions, the demo tags, and any Stardust already earned from those sessions
+ * (rows made before the reconciler learned to skip them).
+ */
 export const clearSeeded = (db: WorkTimerDb): Promise<number> =>
-  db.sessions.filter((s) => s.device === SEED_DEVICE).delete();
+  db.transaction('rw', db.sessions, db.tags, db.ledger, async () => {
+    const ids = (await db.sessions.filter(isSeeded).primaryKeys());
+    const idSet = new Set(ids);
+    await db.ledger
+      .filter((r) => r.reason === 'session' && r.ref !== null && idSet.has(r.ref))
+      .delete();
+    await db.tags.bulkDelete(SEED_TAG_NAMES.map(seedTagId));
+    await db.sessions.bulkDelete(ids);
+    return ids.length;
+  });
