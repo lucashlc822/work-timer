@@ -35,6 +35,7 @@ export type AuthErrorKind =
   | 'weakPassword'
   | 'rateLimited'
   | 'offline'
+  | 'unreachable'
   | 'unknown';
 
 export const AUTH_MESSAGES: Record<AuthErrorKind, string> = {
@@ -44,7 +45,8 @@ export const AUTH_MESSAGES: Record<AuthErrorKind, string> = {
   badCode: "That code didn't work. Check it, or send a new one.",
   weakPassword: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
   rateLimited: 'Too many tries for now. Wait a minute and try again.',
-  offline: "Couldn't reach the server. Check your connection and try again.",
+  offline: "You're offline. Check your connection and try again.",
+  unreachable: "Couldn't reach the server. Try again in a moment.",
   unknown: 'Something went wrong. Try again in a moment.',
 };
 
@@ -63,18 +65,26 @@ export interface AuthErrorLike {
  * database refusal during sign-up as "Database error saving new user", so that
  * message is how a sign-up from an uninvited address is recognised.
  *
- * "Offline" means no answer arrived at all (status 0) or a gateway in between
- * failed (502–504). supabase-js labels every HTTP 500 `AuthRetryableFetchError`
- * too — including the invite refusal — so that name alone proves nothing.
+ * No answer arrived at all (status 0) or a gateway in between failed (502–504):
+ * that is `offline` when the device itself reports no connection, else
+ * `unreachable` (the server or the way to it is down), so the person knows
+ * whether to check their own network. supabase-js labels every HTTP 500
+ * `AuthRetryableFetchError` too — including the invite refusal — so that name
+ * alone proves nothing.
  */
-export const classifyAuthError = (error: AuthErrorLike): AuthErrorKind => {
+export const classifyAuthError = (
+  error: AuthErrorLike,
+  online: boolean = typeof navigator === 'undefined' || navigator.onLine !== false,
+): AuthErrorKind => {
   const code = error.code ?? '';
   const message = (error.message ?? '').toLowerCase();
   const status = error.status;
 
   if (message.includes('database error saving new user')) return 'notInvited';
   if (status === 0 || status === undefined || (status >= 502 && status <= 504)) {
-    if (error.name === 'AuthRetryableFetchError' || status !== undefined) return 'offline';
+    if (error.name === 'AuthRetryableFetchError' || status !== undefined) {
+      return online ? 'unreachable' : 'offline';
+    }
   }
   if (code === 'invalid_credentials' || message.includes('invalid login credentials')) {
     return 'wrongCredentials';

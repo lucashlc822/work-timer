@@ -16,9 +16,9 @@ export interface SharedRequestsProps {
   describe: DescribeShared;
 }
 
-const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-xl border p-4 text-sm';
+const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-soft border p-4 text-sm';
 const INPUT =
-  'bg-night-900 border-night-600 text-ink-primary focus:border-lavender-400 w-full rounded-lg border px-3 py-2 text-sm outline-none';
+  'bg-night-900 border-night-600 text-ink-primary w-full rounded-soft border px-3 py-2 text-sm';
 const BUTTON =
   'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50';
 const LINK = 'text-ink-muted hover:text-ink-primary text-xs transition-colors';
@@ -451,7 +451,7 @@ const FriendList = ({
                 <button
                   type="button"
                   onClick={() => onOpen(f)}
-                  className="hover:bg-night-700/60 flex flex-1 flex-col items-start rounded-lg px-2 py-1.5 text-left transition-colors"
+                  className="hover:bg-night-700/60 rounded-soft flex flex-1 flex-col items-start px-2 py-1.5 text-left transition-colors"
                 >
                   <span className="text-ink-primary">{nameOf(f)}</span>
                   <span className="text-ink-muted text-xs">

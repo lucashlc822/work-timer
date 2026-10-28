@@ -64,7 +64,7 @@ export const TargetPicker = ({
         value={value ?? ''}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-        className="bg-night-800 border-night-600 text-ink-primary focus:border-lavender-400 rounded-pill border px-3 py-1.5 text-xs outline-none disabled:opacity-60"
+        className="bg-night-800 border-night-600 text-ink-primary rounded-pill border px-3 py-1.5 text-xs disabled:opacity-60"
       >
         <option value="">{own === undefined ? 'Your own sky' : `Your ${own}`}</option>
         {options.map((s) => (

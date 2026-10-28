@@ -92,7 +92,7 @@ const Numbers = ({ summary }: { summary: FriendSummary }) => (
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col-reverse gap-0.5">
-    <dt className="text-ink-secondary text-[11px]">{label}</dt>
+    <dt className="text-ink-secondary text-2xs">{label}</dt>
     <dd className="text-ink-primary text-sm">{value}</dd>
   </div>
 );

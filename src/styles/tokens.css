@@ -70,6 +70,13 @@
      'aw', not an error state. The app is not angry at you. */
   --color-faded: #e88898;
 
+  /* --- Type ---------------------------------------------------------- */
+  /* Two sizes below Tailwind's text-xs (12px), for chart axes, the mini
+     window's caption and small labels. Font size only: they inherit the
+     surrounding line height, as the one-off values they replace did. */
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-3xs: 0.625rem; /* 10px */
+
   /* --- Radius ----------------------------------------------------------- */
   --radius-soft: 0.75rem;
   --radius-pill: 999px;

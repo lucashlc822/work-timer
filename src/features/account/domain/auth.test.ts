@@ -33,8 +33,11 @@ describe('input checks', () => {
 
 describe('classifyAuthError', () => {
   it.each([
-    [{ name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' }, 'offline'],
-    [{ name: 'AuthRetryableFetchError', status: 503, message: 'Service Unavailable' }, 'offline'],
+    [{ name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' }, 'unreachable'],
+    [
+      { name: 'AuthRetryableFetchError', status: 503, message: 'Service Unavailable' },
+      'unreachable',
+    ],
     // Exactly what supabase-js returned for an uninvited sign-up on the local stack.
     [
       { name: 'AuthRetryableFetchError', status: 500, message: 'Database error saving new user' },
@@ -60,7 +63,22 @@ describe('classifyAuthError', () => {
     ],
     [{ status: 429, code: 'over_email_send_rate_limit', message: 'rate limit' }, 'rateLimited'],
     [{ status: 500, message: 'something new' }, 'unknown'],
-  ])('%o -> %s', (error, kind) => {
-    expect(classifyAuthError(error)).toBe(kind);
+  ])('%o -> %s (device online)', (error, kind) => {
+    expect(classifyAuthError(error, true)).toBe(kind);
+  });
+
+  it('says offline, not unreachable, when the device has no connection', () => {
+    const noAnswer = { name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' };
+    expect(classifyAuthError(noAnswer, false)).toBe('offline');
+    expect(classifyAuthError({ ...noAnswer, status: 503 }, false)).toBe('offline');
+  });
+
+  it('keeps answers that did arrive as they are when the device reports offline', () => {
+    const wrong = {
+      status: 400,
+      code: 'invalid_credentials',
+      message: 'Invalid login credentials',
+    };
+    expect(classifyAuthError(wrong, false)).toBe('wrongCredentials');
   });
 });

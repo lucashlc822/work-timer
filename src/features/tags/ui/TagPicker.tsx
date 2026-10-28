@@ -84,7 +84,7 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
           id={panelId}
           role="dialog"
           aria-label="Choose a tag"
-          className="bg-night-800 border-night-600 absolute top-full left-1/2 z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-3 rounded-xl border p-3 text-left shadow-lg"
+          className="bg-night-800 border-night-600 rounded-soft absolute top-full left-1/2 z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-3 border p-3 text-left shadow-lg"
         >
           {managing ? (
             <>
@@ -141,7 +141,7 @@ const Option = ({
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`hover:bg-night-700 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+      className={`hover:bg-night-700 rounded-soft flex w-full items-center gap-2 px-2 py-1.5 text-sm transition-colors ${
         selected ? 'text-ink-primary' : 'text-ink-secondary'
       }`}
     >
@@ -214,7 +214,7 @@ const NewTagForm = ({ taken, onCreated }: { taken: number; onCreated: (id: strin
           placeholder="New tag"
           aria-label="New tag name"
           maxLength={MAX_TAG_NAME_LENGTH + 8}
-          className="bg-night-900 border-night-600 text-ink-primary placeholder:text-ink-muted focus:border-lavender-400 min-w-0 flex-1 rounded-md border px-2 py-1 text-sm outline-none"
+          className="bg-night-900 border-night-600 text-ink-primary placeholder:text-ink-muted rounded-soft min-w-0 flex-1 border px-2 py-1 text-sm"
         />
         <button
           type="submit"
