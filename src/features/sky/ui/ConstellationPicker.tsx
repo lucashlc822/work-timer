@@ -149,7 +149,7 @@ export const ConstellationPicker = ({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="text-ink-muted hover:text-ink-secondary text-sm transition-colors"
+            className="text-ink-muted hover:text-ink-secondary -mx-2 -my-1 px-2 py-1 text-sm transition-colors"
           >
             Close
           </button>
@@ -211,7 +211,7 @@ export const ConstellationPicker = ({
                         <button
                           type="button"
                           onClick={() => select(option)}
-                          className="rounded-soft border-night-600 hover:border-lavender-400 flex w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
+                          className="rounded-soft border-night-600 hover:border-lavender-400 flex h-full w-full flex-col items-center gap-1 border p-2 text-center transition-colors"
                         >
                           <Silhouette shape={option.shape} />
                           <span className="text-ink-primary text-xs">{option.name}</span>

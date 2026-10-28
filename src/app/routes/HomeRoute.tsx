@@ -83,6 +83,12 @@ const timerSlots: TimerSlots = {
   ),
 };
 
+/**
+ * The scrolling layer behind every panel. `scroll-pb-24` keeps a focused
+ * control scrolled clear of the floating "Back to timer" button.
+ */
+const OVERLAY = 'bg-night-900/85 fixed inset-0 z-10 scroll-pb-24 overflow-y-auto backdrop-blur-sm';
+
 const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
 
@@ -316,13 +322,13 @@ const HomeScreen = ({ together }: { together: Together }) => {
       </main>
 
       {view === 'stats' && (
-        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+        <div className={OVERLAY}>
           <StatsView />
         </div>
       )}
 
       {view === 'stardust' && (
-        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+        <div className={OVERLAY}>
           <StardustPanel
             userId={account.userId}
             earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
@@ -334,7 +340,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'account' && (
-        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+        <div className={OVERLAY}>
           <AccountPanel
             email={account.email}
             sync={sync}
@@ -346,7 +352,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'friends' && (
-        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+        <div className={OVERLAY}>
           <FriendsPanel
             friends={friends}
             now={Date.now()}
@@ -360,7 +366,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'together' && (
-        <div className="bg-night-900/85 fixed inset-0 z-10 overflow-y-auto backdrop-blur-sm">
+        <div className={OVERLAY}>
           <TogetherPanel
             together={together}
             friends={friends.friends}
