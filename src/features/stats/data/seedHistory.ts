@@ -95,7 +95,7 @@ export const seedHistory = async (db: WorkTimerDb, days: number, clock: Clock): 
  */
 export const clearSeeded = (db: WorkTimerDb): Promise<number> =>
   db.transaction('rw', db.sessions, db.tags, db.ledger, async () => {
-    const ids = (await db.sessions.filter(isSeeded).primaryKeys());
+    const ids = await db.sessions.filter(isSeeded).primaryKeys();
     const idSet = new Set(ids);
     await db.ledger
       .filter((r) => r.reason === 'session' && r.ref !== null && idSet.has(r.ref))
