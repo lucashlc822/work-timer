@@ -10,6 +10,7 @@ export declare const LAVENDER_300: string;
 export declare const STAR_WARM: string;
 export declare const STAR_COOL: string;
 export declare const STAR_CORE: string;
+export declare const STAR_WHITE: string;
 export declare const LAVENDER_400: string;
 export declare const ROSE_300: string;
 export declare const MINT_300: string;
