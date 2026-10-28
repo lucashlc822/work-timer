@@ -51,7 +51,7 @@ export const StardustPanel = (shop: ShopProps) => {
       <Shop {...shop} />
 
       {recent !== undefined && recent.length > 0 && (
-        <ul className="border-night-600 bg-night-800/70 divide-night-600 w-full divide-y rounded-xl border">
+        <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft w-full divide-y border">
           {recent.map((row) => (
             <li key={row.id} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
               <span className="flex flex-col">

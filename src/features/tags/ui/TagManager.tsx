@@ -58,7 +58,7 @@ export const TagManager = ({ tags, selectedId, onArchivedSelected }: Props) => {
         {tags.map((tag) => (
           <li
             key={tag.id}
-            className={`border-night-600 flex flex-col gap-1.5 rounded-lg border p-2 ${
+            className={`border-night-600 rounded-soft flex flex-col gap-1.5 border p-2 ${
               tag.archivedAt !== null ? 'opacity-60' : ''
             }`}
           >

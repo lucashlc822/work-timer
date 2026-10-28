@@ -10,7 +10,7 @@ const Tile = ({
   value: string;
   note?: string | undefined;
 }) => (
-  <div className="bg-night-800/70 border-night-600 flex flex-col gap-1 rounded-xl border px-4 py-3">
+  <div className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-1 border px-4 py-3">
     <dt className="text-ink-muted text-xs">{label}</dt>
     <dd className="text-ink-primary text-xl">{value}</dd>
     {note !== undefined && <dd className="text-ink-muted text-xs">{note}</dd>}

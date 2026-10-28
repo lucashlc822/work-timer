@@ -212,7 +212,7 @@ export const ConstellationPicker = ({
                         >
                           <Silhouette shape={option.shape} />
                           <span className="text-ink-primary text-xs">{option.name}</span>
-                          <span className="text-ink-muted text-[10px]">
+                          <span className="text-ink-muted text-3xs">
                             {option.draft.source === 'generated' && 'Wild · '}
                             {option.shape.points.length} stars · ≈
                             {focusLabel(approximateFocusS(tier, option.shape.points.length, RULES))}

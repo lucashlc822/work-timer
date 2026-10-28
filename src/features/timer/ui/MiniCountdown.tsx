@@ -35,7 +35,7 @@ export const MiniCountdown = () => {
 
   return (
     <>
-      {brk !== null && <p className="text-mint-300 text-[10px] tracking-widest uppercase">Break</p>}
+      {brk !== null && <p className="text-mint-300 text-3xs tracking-widest uppercase">Break</p>}
       <p role="timer" className="text-ink-primary font-mono text-2xl tabular-nums">
         {remaining !== null ? formatRemaining(remaining) : '--:--'}
       </p>
