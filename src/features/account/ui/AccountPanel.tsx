@@ -19,9 +19,9 @@ interface Props {
 const useBusy = (): boolean => useLiveQuery(() => hasWorkInFlight(db), [], false);
 
 /**
- * The outcome of the last finished sync attempt. While offline, sync retries
- * on its own and reads "Syncing…" for seconds at a time; whether the server
- * can be reached is still what the last attempt found, not unknown.
+ * The outcome of the last finished sync attempt. A round someone is waiting
+ * on ("Sync now") reads "Syncing…" while it runs; whether the server can be
+ * reached is still what the last attempt found, not unknown.
  */
 const useSettledPhase = (phase: SyncStatusView['phase']): SyncStatusView['phase'] => {
   const [settled, setSettled] = useState(phase);
