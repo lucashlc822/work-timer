@@ -41,3 +41,6 @@ npm-debug.log*
 # Playwright output
 playwright-report/
 test-results/
+
+# UI/UX reviewer screenshots (.claude/agents/ui-ux-reviewer.md)
+.ui-review/

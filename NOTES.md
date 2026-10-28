@@ -12,6 +12,57 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-27 — UI/UX review system (`ui-ux-reviewer`)
+
+**Status: PR open on `chore/ui-ux-reviewer`, not merged; acceptance test 5 (a
+real review run) not yet done.** It needs a session started after this branch
+exists, because agents and MCP servers load at session start.
+
+### Next
+
+- **Create the test account** (steps in `supabase/README.md`, "Local test
+  accounts"): invite `ui-review@test.local --local`, write `UI_REVIEW_EMAIL` and
+  `UI_REVIEW_PASSWORD` into a root `.env`, sign up, enter the code from
+  `http://127.0.0.1:54324`.
+- **In a new session, approve the `playwright` server** when asked, then ask for
+  the `ui-ux-reviewer` agent. Check its first report against the plan's test 5
+  (every size, state, axe with `wcag22aa`, keyboard, token drift, screenshots
+  exist in `.ui-review/`, `git status` unchanged).
+- If the agent refuses the browser tools, `mcp__playwright` in its `tools:` line
+  didn't match; list the individual `mcp__playwright__browser_*` names instead.
+- **First run of test 5 was partial:** the agent's `grep '^UI_REVIEW_' .env` was
+  refused by the permission system ("Credential Materialization"), so it saw
+  only signed-out screens. Fixed by design, not by a permission rule: the agent
+  never reads `.env`; Playwright now keeps a persistent Edge profile in
+  `.ui-review/profile` (was `--isolated`), Lucas signs in there once, and the
+  agent asks him to if it finds the sign-in screen. A relative
+  `--user-data-dir` resolves against the server's start folder (checked: it
+  landed in `work-timer/.ui-review/`). Screenshots must be passed as
+  `.ui-review/<name>.png`; a bare filename lands in the repo root.
+- The partial run's four app findings are fixed on a separate branch/PR.
+
+### What was done
+
+1. `.claude/settings.json` enables `frontend-design@claude-plugins-official`
+   (installed with `claude plugin install … --scope project`).
+2. `.mcp.json` adds Playwright MCP 0.0.83 on Edge (`--browser msedge`,
+   `--isolated`, output to `.ui-review/`, ignored). `cmd /c` because Windows
+   can't spawn `npx` directly.
+3. `@axe-core/playwright` 4.14.0 was already a dev dependency; no change.
+4. `.claude/agents/ui-ux-reviewer.md` plus its own guard hook (a copy of
+   qa-lead's, writes allowed only under `.claude/agent-memory/ui-ux-reviewer/`).
+5. CLAUDE.md "UI standards", `.env.example`, `supabase/README.md`.
+
+### Things worth not rediscovering
+
+- **tokens.css has no spacing tokens.** "Spacing from tokens" therefore means
+  Tailwind's default scale; the reviewer flags arbitrary values.
+- **Acceptance pass:** tests 1 (settings format, plugin install), 2 (the pinned
+  server runs `--help`), 3, 4 (guard: 5 cases), 6, 7 passed in the authoring
+  session. Not verified: that Edge actually opens and the agent runs (test 5).
+
+---
+
 ## 2026-10-27 — QA pass on 0.6.0, and the Rust dependency audit
 
 **Status: merged (#96, #97); nothing is released since 0.6.0.** Local `master`

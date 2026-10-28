@@ -53,6 +53,18 @@ For a full QA pass, ask Claude Code to use the **`qa-lead`** agent
 tests, accessibility, size, Lighthouse, dependency audits and a security
 review, and reports Critical / Should fix / Minor. It never edits the project.
 
+For a design and accessibility review, ask for the **`ui-ux-reviewer`** agent
+(`.claude/agents/ui-ux-reviewer.md`): it drives the app in Edge through the
+Playwright MCP server (`.mcp.json`) at desktop, tablet and narrow sizes, walks
+every timer state plus loading, empty, error and offline, runs axe against
+WCAG 2.2 AA, checks keyboard use and focus, flags colour or spacing that isn't
+from `src/styles/tokens.css`, and reports Blocker / High / Medium / Low with
+screenshots in `.ui-review/`. It changes nothing until you approve. It never
+handles a password: you sign the local `ui-review@test.local` account in once in
+its Edge profile (`.ui-review/profile`, ignored, kept between runs), and it asks
+you to again if that sign-in is ever lost. Setup is in `supabase/README.md`,
+"Local test accounts".
+
 Both dev commands read `.env.development.local`, which points at the local
 stack; `.env.example` explains every env file. Without it the app shows "This
 build isn't connected to a server" — tests and `npm run build` still pass with
@@ -238,6 +250,13 @@ in `NOTES.md`.
 - **`debug_native_log` exists in debug builds only.** It records the tray
   tooltip and notifications the app asked for, since Windows lets no test read
   them back. A release build has no such command (the update test checks).
+- **The `ui-ux-reviewer` agent and the Playwright tools appear only in sessions
+  started after they were added**, and Claude Code asks you to approve a
+  project's `.mcp.json` server once per machine. The review needs the local
+  Supabase stack up and the test account signed in in its profile; without them
+  it stops and says so. Its screenshots and Edge profile live in `.ui-review/`
+  (ignored); deleting `.ui-review/profile` resets the sign-in. Only one browser
+  can use that profile at a time, so two reviews at once fail to launch Edge.
 - **Git Bash rewrites `reg` switches like `/v` into paths** ("ERROR: Invalid
   syntax"). Use PowerShell (`Get-ItemProperty`, `Remove-ItemProperty`) or
   Node's `execSync`, which goes through cmd.
@@ -305,6 +324,24 @@ in `NOTES.md`.
   upgraded, so clear that account's `work-timer-account-<id>` database first.
   Removing the worktree fails with "Filename too long": delete it with
   `cmd /c 'rd /s /q "\\?\<full path>"'`, then `git worktree prune`.
+
+## UI standards
+
+- **`src/styles/tokens.css` is the only source** of colour, radius and motion.
+  Use the generated utilities (`bg-night-800`, `text-ink-primary`,
+  `rounded-soft`); never a hex, rgb or hsl literal, and no arbitrary Tailwind
+  value like `bg-[#…]` or `p-[13px]`. Canvas and build-time code that can't
+  read CSS use the mirror in `design-tokens.mjs` (a test keeps the two in step).
+- **Spacing comes from Tailwind's default scale**; tokens.css defines none of
+  its own. If a spacing need keeps recurring, add a token there rather than a
+  one-off value.
+- **Text colours:** `--color-ink-muted` only on night-900/800, never night-700.
+- **Accessibility target is WCAG 2.2 AA**; the axe scan in
+  `e2e/web/a11y.spec.ts` must stay enforcing.
+- **Tone is gentle**: nothing urgent-looking, and an early ending is a soft
+  "aw", not an error. The frontend-design plugin is installed for this project;
+  where its taste conflicts with the tokens, the tokens win.
+- Ask for the `ui-ux-reviewer` agent to check a change against all of this.
 
 ## Decisions already made — don't re-open these
 

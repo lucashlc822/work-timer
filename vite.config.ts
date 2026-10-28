@@ -44,8 +44,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     watch: {
-      // Rust build artefacts are noisy and would trigger endless reloads.
-      ignored: ['**/src-tauri/**'],
+      // Rust build artefacts are noisy and would trigger endless reloads. The
+      // ui-ux-reviewer's Edge profile holds locked files that crash the watcher
+      // (EBUSY) while that browser is open.
+      ignored: ['**/src-tauri/**', '**/.ui-review/**'],
     },
   },
   // Tauri's own output is more useful than Vite's banner during `tauri dev`.
