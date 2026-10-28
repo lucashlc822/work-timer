@@ -19,7 +19,7 @@ export const RunSummary = ({ summary, onDone }: Props) => {
   return (
     <div className="flex flex-col items-center gap-5 text-center">
       <StarMark size={56} className={summary.blocks > 0 ? '' : 'opacity-40'} />
-      <div className="space-y-1">
+      <div role="status" className="space-y-1">
         <h2 className="text-ink-primary text-xl">Run ended</h2>
         <p className="text-ink-secondary text-sm">
           {summary.blocks} {summary.blocks === 1 ? 'star' : 'stars'} this run ·{' '}
