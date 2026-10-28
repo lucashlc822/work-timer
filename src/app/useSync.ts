@@ -16,6 +16,8 @@ import {
   type SyncOutcome,
 } from '@/shared/sync';
 
+import { isOffline, phaseFor, showsSyncing, type Phase } from './syncPhase';
+
 /** Regular check-in while the app is open, for changes made on other devices. */
 const PERIODIC_MS = 5 * 60_000;
 /** Wait after a local change before uploading, so a burst becomes one round. */
@@ -24,25 +26,6 @@ const DEBOUNCE_MS = 2_000;
 const LIVE_DEBOUNCE_MS = 500;
 const BACKOFF_FIRST_MS = 5_000;
 const BACKOFF_MAX_MS = 5 * 60_000;
-
-type Phase = SyncStatusView['phase'];
-
-const phaseFor = (outcome: SyncOutcome, previous: Phase): Phase => {
-  if (outcome.ok) return 'synced';
-  switch (outcome.reason) {
-    case 'busy':
-      return previous; // another window is syncing this account right now
-    case 'network':
-    case 'signedOut': // no usable token yet — typically offline after it expired
-      return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'unreachable';
-    case 'auth':
-      return 'unreachable';
-    case 'outdated':
-      return 'outdated';
-    default:
-      return 'error';
-  }
-};
 
 /**
  * Keeps this account's local store in step with the server, for the main
@@ -55,6 +38,12 @@ const phaseFor = (outcome: SyncOutcome, previous: Phase): Phase => {
  * 5 min), and any of the triggers above still gets a round in sooner. That
  * includes "Please update": once the server's minimum is lowered again, sync
  * resumes on the next retry.
+ *
+ * The line says what is true as soon as it is known: no connection reads
+ * "Offline" at once, without waiting for a request to fail (an expired sign-in
+ * can hold one for ~30 s), and "Syncing…" is shown only for the first round and
+ * for one someone is waiting on ("Sync now", the connection coming back) —
+ * background rounds and retries keep the last settled line.
  */
 export const useSync = (userId: string): SyncStatusView & { syncNow: () => void } => {
   const [{ engine, remote }] = useState<{
@@ -77,7 +66,8 @@ export const useSync = (userId: string): SyncStatusView & { syncNow: () => void 
   });
 
   const [phase, setPhase] = useState<Phase>('syncing');
-  const phaseRef = useRef<Phase>('syncing');
+  // The last finished outcome; null until the first round settles.
+  const settledRef = useRef<Phase | null>(null);
   const failures = useRef(0);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,32 +78,44 @@ export const useSync = (userId: string): SyncStatusView & { syncNow: () => void 
     null,
   );
 
-  const run = useCallback(async () => {
-    if (engine === null) return;
-    if (retryTimer.current !== null) clearTimeout(retryTimer.current);
-    retryTimer.current = null;
-
-    setPhase('syncing');
-    let outcome: SyncOutcome;
-    try {
-      outcome = await engine.syncNow();
-    } catch (e) {
-      console.error('Sync failed', e);
-      outcome = { ok: false, reason: 'server' };
-    }
-
-    const next = phaseFor(outcome, phaseRef.current === 'syncing' ? 'synced' : phaseRef.current);
-    phaseRef.current = next;
+  const settle = useCallback((next: Phase) => {
+    settledRef.current = next;
     setPhase(next);
+  }, []);
 
-    if (outcome.ok || outcome.reason === 'busy') {
-      failures.current = 0;
-      return;
-    }
-    const wait = Math.min(BACKOFF_MAX_MS, BACKOFF_FIRST_MS * 2 ** failures.current);
-    failures.current += 1;
-    retryTimer.current = setTimeout(() => void run(), wait);
-  }, [engine]);
+  const run = useCallback(
+    async (awaited = false) => {
+      if (engine === null) return;
+      if (retryTimer.current !== null) clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+
+      // Known offline: say so now. The `online` event brings the next round.
+      if (isOffline()) {
+        settle('offline');
+        return;
+      }
+
+      if (showsSyncing(awaited, settledRef.current)) setPhase('syncing');
+      let outcome: SyncOutcome;
+      try {
+        outcome = await engine.syncNow();
+      } catch (e) {
+        console.error('Sync failed', e);
+        outcome = { ok: false, reason: 'server' };
+      }
+
+      settle(phaseFor(outcome, settledRef.current ?? 'synced'));
+
+      if (outcome.ok || outcome.reason === 'busy') {
+        failures.current = 0;
+        return;
+      }
+      const wait = Math.min(BACKOFF_MAX_MS, BACKOFF_FIRST_MS * 2 ** failures.current);
+      failures.current += 1;
+      retryTimer.current = setTimeout(() => void run(), wait);
+    },
+    [engine, settle],
+  );
 
   // Start, visibility, connectivity, and the periodic check-in.
   useEffect(() => {
@@ -122,17 +124,20 @@ export const useSync = (userId: string): SyncStatusView & { syncNow: () => void 
     const onVisible = () => {
       if (document.visibilityState === 'visible') void run();
     };
-    const onOnline = () => void run();
+    const onOnline = () => void run(true);
+    const onOffline = () => settle('offline');
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
     const periodic = setInterval(() => void run(), PERIODIC_MS);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
       clearInterval(periodic);
       if (retryTimer.current !== null) clearTimeout(retryTimer.current);
     };
-  }, [engine, run]);
+  }, [engine, run, settle]);
 
   // Another device changed something: fetch it now rather than at the next check-in.
   useEffect(() => {
@@ -160,6 +165,6 @@ export const useSync = (userId: string): SyncStatusView & { syncNow: () => void 
     lastSyncedAt,
     pending: counts.pending,
     rejected: counts.rejected,
-    syncNow: () => void run(),
+    syncNow: () => void run(true),
   };
 };
