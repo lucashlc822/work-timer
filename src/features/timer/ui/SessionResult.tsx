@@ -55,7 +55,7 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
         )}
       </div>
 
-      <div className="space-y-1">
+      <div role="status" className="space-y-1">
         <h2 className="text-ink-primary text-xl">
           {completed ? 'Session complete' : 'Session ended early'}
         </h2>
@@ -73,7 +73,11 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
 
       {slots.resultNote?.(info)}
 
-      {error !== null && <p className="text-faded text-xs">{error}</p>}
+      {error !== null && (
+        <p role="alert" className="text-faded text-xs">
+          {error}
+        </p>
+      )}
 
       <button
         ref={doneRef}
