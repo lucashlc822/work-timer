@@ -50,7 +50,7 @@ export const SessionHistory = ({
                   <>
                     <span
                       aria-hidden="true"
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      className="rounded-pill inline-block h-2.5 w-2.5 shrink-0"
                       style={{ backgroundColor: tagColorVar(tag.color) }}
                     />
                     <span className="truncate">{tag.name}</span>

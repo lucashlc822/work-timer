@@ -34,9 +34,9 @@ export const TagBreakdown = ({ rows, tags }: { rows: TagFocus[]; tags: Map<strin
                   {formatFocus(row.focusS)} · {percentOf(row.focusS, total)}%
                 </span>
               </div>
-              <div className="bg-night-700/60 h-2 rounded-full">
+              <div className="bg-night-700/60 rounded-pill h-2">
                 <div
-                  className="h-full rounded-full"
+                  className="rounded-pill h-full"
                   style={{
                     width: `${biggest === 0 ? 0 : (row.focusS / biggest) * 100}%`,
                     backgroundColor: color,

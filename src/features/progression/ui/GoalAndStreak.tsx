@@ -30,10 +30,10 @@ export const GoalAndStreak = () => {
         aria-valuemin={0}
         aria-valuemax={goalMin}
         aria-valuenow={Math.min(focusMin, goalMin)}
-        className="bg-night-700 h-1.5 w-full overflow-hidden rounded-full"
+        className="bg-night-700 rounded-pill h-1.5 w-full overflow-hidden"
       >
         <div
-          className="bg-lavender-400 h-full rounded-full transition-[width] duration-500"
+          className="bg-lavender-400 rounded-pill h-full transition-[width] duration-500"
           style={{ width: `${fraction * 100}%` }}
         />
       </div>
