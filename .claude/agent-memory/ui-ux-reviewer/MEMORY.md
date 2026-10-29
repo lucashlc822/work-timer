@@ -4,16 +4,17 @@ Short notes for the next review: false alarms and which CLAUDE.md entry explains
 them, screens that need special setup, token exceptions that are intentional.
 Never store passwords, tokens or anything from `.env*` files.
 
-- Confirmation pass 2026-10-28: H1-3, M1-M8, L1-L3, L5, L6 fixed. Open: focus drops to BODY after panel Esc/Back, Done, tag pick, Delete-account expand; ink-muted on running/result lines (4.3-4.7:1 over sky); "Manage tags"/"Done" 16px high; Pomodoro sliders drop rapid key repeats (press with ~250 ms gaps). Seeds now stay local.
-- Sky stars are role=img `g` elements (not buttons); focus ring is an inner circle. Panels are fixed overlays on top of the timer (not dialogs); Delete account is an inline expander. Headless pane never reports `hidden`, so away time can't be produced; L1 was checked by simulating a 5th tile.
-- Rendered-colour check: CSS custom props aren't enumerable from document.styleSheets in dev; map computed rgb to tokens.css by hand.
-- Earlier: 2026-10-27, FULL signed-in pass (dev server on 5173 started by main session, signed in by Lucas in `.ui-review/profile`). Never reads `.env`.
+- Final confirmation pass 2026-10-28 (master b4bac28): all earlier items fixed (H-A, M-A..M-D, L-A..L-E). Open/new: focus lands on "Back to timer" (last control) when a panel opens, so Tab leaves the panel and Shift+Tab reaches content; Account version line ink-muted fails axe only if scanned <1 s after open (mid-fade), passes once settled.
+- Axe is lost on every page reload (re-add the script tag); open panels block clicks on the nav (close with Escape before clicking nav again).
+- Friends load error copy: "Couldn't reach the server" appears only on a fresh load with kong stopped (reload first); opening Friends after the first load keeps the old list. "You're offline" needs navigator.onLine false at load (spoof it; no service worker in dev).
+- Sky stars are role=img `g` elements (24x24, not buttons). Panels are fixed overlays with a footer "Back to timer" bar; sky and friend's sky keep the floating pill. Delete account is an inline expander. Headless pane never reports `hidden`, so away time can't be produced.
+- Rendered-colour check: map computed rgb to tokens.css by hand; colours with alpha come back as oklab and are skipped.
 - Playwright `filename:` for screenshots resolves against the workspace root: pass `.ui-review/<name>.png`.
-- `browser_run_code_unsafe` is sandboxed: page.* works, `require`/`import` don't. `page.keyboard`, `page.context().setOffline`, `page.clock` all work.
-- Do NOT use `page.clock.install/fastForward` to skip a session: the session ends in the real future, the server refuses it (400 `session_not_from_the_future`, "1 change waiting" stays) and the fake clock sticks to the context until `browser_close` + reopen. Use the 1 min (dev) length (a 62 s wait) instead.
-- `__starkeep.seed/seedHistory` rows SYNC to the server and `clearSeeded()` only clears the local copy, so after a reload they come back (and earn Stardust). Seed sparingly; tell Lucas the test account keeps them.
-- Pomodoro sliders: Home key drops Short break to 1 min (a synced setting); restore to 5 before finishing.
-- Screens with no obvious entry: Pomodoro lobby (needs a friend; one account can't), tag manager (only when tags exist), Delete account dialog (destructive; not opened).
-- False alarms seen: Countdown/Pomodoro pill looks unselected right after a click, and ghost blobs on panels (CLAUDE.md: transitions stall while pane hidden; check computed style); `hover:text-faded` contrast on Account at 375 (mid-transition); axe `color-contrast` is "incomplete" over the sky canvas (can't be proven by axe).
-- Mini window `/?window=mini` signed in renders (shows `--:--` idle, countdown when a main tab runs a session); signed-out it is blank (deferred).
-- Static drift left after PR #100 (`#ffffff`, `tracking-[0.4em]`, `bottom-[calc(...)]`) was removed by the colour-tokens PR. Still approved, do not re-flag: FocusBars' inline px geometry (the code comment says so) and `--color-faded` for "ended early" (the intended soft tone).
+- `browser_run_code_unsafe` is sandboxed: page.* works, `require`/`import` don't. `page.keyboard`, `page.context().setOffline`, `page.route`, `emulateMedia` all work.
+- Do NOT use `page.clock.install/fastForward` to skip a session (server refuses it, fake clock sticks). Use the 1 min (dev) length (a 62 s wait).
+- Seeds stay local now; `clearSeeded()` + reload leaves the real 14 sessions the account already has (not seeded; no true empty state without a new account; an earlier week shows the empty copy).
+- Pomodoro sliders: restore Focus 25 and Short break 5 after a test run (synced settings); rapid ArrowRight now works.
+- Screens with no obvious entry: Pomodoro lobby and friend's sky (need a friend), Delete account confirm (not submitted).
+- False alarms seen: pill looks unselected right after click and ghost blobs on panels (transitions stall while pane hidden); axe `color-contrast` "incomplete" over the sky canvas.
+- Mini window `/?window=mini` signed in renders (`--:--` idle, countdown when a main tab runs); signed-out it is blank (deferred).
+- Approved, do not re-flag: FocusBars inline px geometry and 4px top radius (`rounded-t-sm`, documented in the file), `--color-faded` for "ended early", AmbientCanvas rgba helper (sky renderer).
