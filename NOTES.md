@@ -12,6 +12,62 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-28 (final) — Medium and Low findings fixed; third review clean
+
+**Status: #112–#118 merged; `master` passes lint, typecheck, 620 unit tests,
+build and `e2e:web` 41/41, and the final `ui-ux-reviewer` pass found no
+Blocker or High.** Every item from the confirmation review is fixed or closed
+(see below); the review system has done its job for this round.
+
+### Next
+
+Optional, none started (each its own PR if wanted):
+
+- **Focus on opening a panel lands on "Back to timer"**, the last control, so a
+  keyboard user presses Shift+Tab to reach the content and a screen reader
+  reads the button before the panel's title. It comes from `autoFocus` in
+  `BackButton` (`HomeRoute.tsx`), which predates this work and was kept
+  deliberately in #110 (the timer screen is `inert`, so focus has to go
+  somewhere inside the panel). Better: focus the panel's heading
+  (`tabIndex={-1}`) on open. `focus.spec.ts` asserts the current behaviour and
+  would change with it.
+- **Account's "Starkeep 0.6.0" line is `ink-muted`** and fails axe's contrast
+  only if scanned within ~1 s of the panel fading in (3.93:1 over `#231f39`,
+  the panel mid-transition); settled it passes. `ink-secondary` would make it
+  immune. The same early-scan false alarm was behind the "Delete account…"
+  hit at 375 wide, which never reproduced in scripted runs.
+- **Known and still deferred:** the mini window's signed-out blank state.
+- **Never covered by any review:** real "Time away" data (a headless pane never
+  reports hidden), the focus-together lobby and a friend's sky (need a second
+  account), the "starting"/"completing" states (too brief), confirming
+  "Delete account", the desktop (WebView2) app, and screen-reader output.
+
+### What was done
+
+1. #112 sliders keep up with fast keys; #113 24px targets in the tag manager
+   and sky; #114 `rounded-pill` token; #115 "Back to timer" in a footer bar
+   (`PanelLayer` in `HomeRoute.tsx`); #116 `ink-secondary` for text on the sky;
+   #117 Friends says offline vs server-down; #118 history rows at 375 wide.
+   #112–#114 were built in their own sessions; #115–#118 here.
+2. #114 first failed `format:check`: the repo's prettier sorts Tailwind
+   classes, and `rounded-pill` sorts differently from `rounded-full`. Run
+   `npx prettier --write` after any class rename.
+
+### Things worth not rediscovering
+
+- **Contrast over the sky can only be measured from pixels** (axe reports
+  "incomplete"). Screenshot, then take the lightest background pixel from the
+  empty rows above and below each line against the text's computed colour;
+  sampling the glyph box itself mixes in anti-aliased text edges and reads far
+  too low.
+- **A/B a layout change on the same page** by swapping the old classes back in
+  with `className` and measuring both, instead of stashing and reloading; it
+  avoids any doubt about what the dev server is serving.
+- **`:focus-visible` after script-moved focus** follows the browser's rule, so
+  a mouse-only session shows no ring and one after keyboard use does.
+
+---
+
 ## 2026-10-28 (later) — Keyboard focus no longer falls to the page (#110)
 
 **Status: #110 merged; `master` passes lint, typecheck, 615 unit tests, build
