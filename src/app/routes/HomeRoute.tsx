@@ -503,7 +503,7 @@ const AutostartToggle = () => {
   };
 
   return (
-    <label className="text-ink-muted hover:text-ink-secondary flex cursor-pointer items-center gap-2 text-xs transition-colors">
+    <label className="text-ink-secondary hover:text-ink-primary flex cursor-pointer items-center gap-2 text-xs transition-colors">
       <input
         type="checkbox"
         checked={enabled}
