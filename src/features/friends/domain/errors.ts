@@ -98,3 +98,15 @@ export const classifyFriendsError = (error: FriendsErrorLike): FriendsErrorKind 
     (typeof navigator !== 'undefined' && navigator.onLine === false);
   return noAnswer ? 'offline' : 'unknown';
 };
+
+/**
+ * What a failed load of the friends list says. "Offline" covers two different
+ * things, so it asks the browser which: no connection at all, or a connection
+ * with the server out of reach.
+ */
+export const friendsLoadMessage = (load: 'offline' | 'error', online: boolean): string => {
+  if (load === 'error') return FRIENDS_MESSAGES.unknown;
+  return online
+    ? "Couldn't reach the server. Try again in a moment."
+    : "You're offline. Your friends will show when you reconnect.";
+};

@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import { FriendsFailure, type FriendRow } from '../data/friendsRepository';
 import { formatCode, normalizeCode } from '../domain/code';
-import { FRIENDS_MESSAGES } from '../domain/errors';
+import { FRIENDS_MESSAGES, friendsLoadMessage } from '../domain/errors';
 import { statusLine } from '../domain/focusStatus';
 import { lastFocusLabel } from '../domain/lastFocus';
 import type { Friends } from '../hooks/useFriends';
@@ -64,7 +64,10 @@ export const FriendsPanel = ({
       {(load === 'offline' || load === 'error') && (
         <section className="flex flex-col items-center gap-2 text-center">
           <p className="text-ink-secondary text-sm">
-            {FRIENDS_MESSAGES[load === 'offline' ? 'offline' : 'unknown']}
+            {friendsLoadMessage(
+              load,
+              typeof navigator === 'undefined' || navigator.onLine !== false,
+            )}
           </p>
           <button type="button" className={BUTTON} onClick={() => void friends.refresh()}>
             Try again
