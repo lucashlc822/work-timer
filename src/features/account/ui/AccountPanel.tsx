@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { APP_VERSION } from '@/shared/config';
 import { db, hasWorkInFlight } from '@/shared/db';
+import { useFocusIfLost } from '@/shared/ui';
 
 import { SyncStatus, type SyncStatusView } from './SyncStatus';
 
@@ -132,6 +133,14 @@ const DeleteAccount = ({
   const [typed, setTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Opening swaps the button for the box and Cancel swaps it back, so the
+  // pressed button vanishes each time: land on the field, then on the button
+  // (only after a Cancel, never when the panel first appears).
+  const [opened, setOpened] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  useFocusIfLost(inputRef, open);
+  useFocusIfLost(deleteRef, opened && !open);
 
   const confirmed = email !== null && typed.trim().toLowerCase() === email.toLowerCase();
   const blocked = busy
@@ -156,8 +165,12 @@ const DeleteAccount = ({
     return (
       <section className="flex flex-col items-center">
         <button
+          ref={deleteRef}
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+            setOpened(true);
+          }}
           className="text-ink-muted hover:text-faded -my-1 px-2 py-1 text-xs transition-colors"
         >
           Delete account…
@@ -185,6 +198,7 @@ const DeleteAccount = ({
       <label className="text-ink-secondary flex flex-col gap-1 text-xs">
         Type your email address to confirm
         <input
+          ref={inputRef}
           type="email"
           autoComplete="off"
           value={typed}

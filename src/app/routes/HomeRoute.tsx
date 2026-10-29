@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -57,7 +57,7 @@ import {
 import { APP_NAME } from '@/shared/config';
 import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
-import { StarMark } from '@/shared/ui';
+import { StarMark, useFocusIfLost } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
@@ -133,10 +133,19 @@ export const HomeRoute = () => {
   );
 };
 
+type View = 'timer' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend' | 'together';
+
 const HomeScreen = ({ together }: { together: Together }) => {
-  const [view, setView] = useState<
-    'timer' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend' | 'together'
-  >('timer');
+  const [view, setView] = useState<View>('timer');
+  // The timer-screen control that opened the current panel. The timer screen
+  // stays mounted (inert) underneath, so closing the panel can hand focus back
+  // to it instead of letting it fall to the page with the Back button.
+  const opener = useRef<HTMLElement | null>(null);
+  const openView = useCallback((next: View) => {
+    if (document.activeElement instanceof HTMLElement) opener.current = document.activeElement;
+    setView(next);
+  }, []);
+  useFocusIfLost(opener, view === 'timer');
   // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
   const [friend, setFriend] = useState<FriendRow | null>(null);
   const friends = useFriends({ watching: view === 'friends' || view === 'friend' });
@@ -214,7 +223,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
           {hasFriends && (
             <button
               type="button"
-              onClick={() => setView('together')}
+              onClick={() => openView('together')}
               className="text-lavender-200 hover:text-ink-primary text-xs underline-offset-4 transition-colors hover:underline"
             >
               {inRoom ? 'Back to your friends session' : 'Focus with friends'}
@@ -244,7 +253,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         </>
       ),
     };
-  }, [rooms, hasFriends, inRoom, me, sharedStates, target, targetState, setTarget]);
+  }, [rooms, hasFriends, inRoom, me, sharedStates, target, targetState, setTarget, openView]);
 
   useEffect(() => {
     if (view === 'timer') return;
@@ -290,28 +299,28 @@ const HomeScreen = ({ together }: { together: Together }) => {
         <footer className="flex flex-col items-center gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />
-            <StardustPill onOpen={() => setView('stardust')} />
+            <StardustPill onOpen={() => openView('stardust')} />
             <button
               type="button"
-              onClick={() => setView('sky')}
+              onClick={() => openView('sky')}
               className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
             >
               View sky
             </button>
             <button
               type="button"
-              onClick={() => setView('stats')}
+              onClick={() => openView('stats')}
               className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
             >
               Stats
             </button>
             <FriendsPill
               waiting={friends.incoming.length + incomingProposals(shared.rows, me).length}
-              onOpen={() => setView('friends')}
+              onOpen={() => openView('friends')}
             />
             <button
               type="button"
-              onClick={() => setView('account')}
+              onClick={() => openView('account')}
               className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
             >
               Account

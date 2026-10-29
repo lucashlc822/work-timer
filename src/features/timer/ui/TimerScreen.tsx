@@ -51,6 +51,15 @@ export const TimerScreen = ({
   // Start (or "Start block") is gone once the countdown shows; land on the countdown.
   const countdownRef = useRef<HTMLDivElement>(null);
   useFocusIfLost(countdownRef, inFlight && timer.session !== null);
+  // "Done" on a result or run summary is gone once the idle screen shows; land
+  // on Start. Set by that click only, so opening the app never focuses Start.
+  const startRef = useRef<HTMLButtonElement>(null);
+  const [landOnStart, setLandOnStart] = useState(false);
+  useFocusIfLost(startRef, timer.status === 'idle' && prefs.loaded && landOnStart);
+  const done = () => {
+    setLandOnStart(true);
+    timer.dismiss();
+  };
   const now = systemClock.now();
 
   const keepGoing = useCallback(() => setConfirming(false), []);
@@ -71,18 +80,11 @@ export const TimerScreen = ({
   }
 
   if (timer.status === 'finished' && timer.result !== null) {
-    return (
-      <SessionResult
-        result={timer.result}
-        error={timer.error}
-        onDone={timer.dismiss}
-        slots={slots}
-      />
-    );
+    return <SessionResult result={timer.result} error={timer.error} onDone={done} slots={slots} />;
   }
 
   if (timer.status === 'runSummary' && timer.summary !== null) {
-    return <RunSummary summary={timer.summary} onDone={timer.dismiss} />;
+    return <RunSummary summary={timer.summary} onDone={done} />;
   }
 
   if ((timer.status === 'onBreak' || timer.status === 'breakOver') && timer.run !== null) {
@@ -180,15 +182,17 @@ export const TimerScreen = ({
         <DurationPicker minutes={minutes} onChange={setMinutes} disabled={starting} />
       )}
       <button
+        ref={startRef}
         type="button"
         disabled={starting}
-        onClick={() =>
+        onClick={() => {
+          setLandOnStart(false);
           timer.start(
             pomodoro
               ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId }
               : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
-          )
-        }
+          );
+        }}
         className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-10 py-3 text-base transition-colors disabled:opacity-60"
       >
         {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}

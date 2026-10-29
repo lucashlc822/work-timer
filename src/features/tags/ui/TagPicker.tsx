@@ -28,18 +28,22 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
   const [open, setOpen] = useState(false);
   const [managing, setManaging] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const panelId = useId();
 
   const current = active.find((t) => t.id === value) ?? null;
 
-  // Close on an outside press or Escape; the panel never traps focus.
+  // Close on an outside press or Escape; the panel never traps focus. Escape
+  // from inside the panel hands focus back to the pill rather than the page.
   useEffect(() => {
     if (!open) return;
     const onPointer = (e: PointerEvent) => {
       if (root.current !== null && !root.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key !== 'Escape') return;
+      if (root.current?.contains(document.activeElement) === true) trigger.current?.focus();
+      setOpen(false);
     };
     document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
@@ -56,12 +60,15 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
 
   const choose = (tagId: string | null) => {
     if (tagId !== value) onChange(tagId);
+    // The option is about to disappear with the panel; keep focus on the pill.
+    trigger.current?.focus();
     setOpen(false);
   };
 
   return (
     <div ref={root} className="relative">
       <button
+        ref={trigger}
         type="button"
         disabled={disabled}
         aria-expanded={open}
