@@ -12,6 +12,48 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-28 (end of session) — Everything merged, nothing released yet
+
+**Status: merged to `master`, not published.** All of the UI/UX review work
+(#99–#119) is on `master`, but the latest published release is still **v0.6.0**
+(published 2026-10-27, tagged 2026-10-26 at `282e9a1`). So the web app (Vercel)
+and friends' desktop apps have none of it. `master` is 59 commits ahead of the
+tag, and `package.json` still says 0.6.0, so a release needs a version bump first.
+
+Merging reaches nobody (`RELEASING.md`): only publishing a draft GitHub Release
+ships the web version and the desktop update together. What would ride in the
+next release is everything in the three 2026-10-28 entries and the two
+2026-10-27 entries below them (keyboard focus, 24px targets, the honest sync
+line, the Back button's footer, readable text over the sky, the Stats tabs, and
+the rest).
+
+Nothing on the server changed since v0.6.0 (only a note in `supabase/README.md`),
+so there is no migration, `app_config.min_client_version` stays empty, and older
+app versions keep working. 0.6.1 fits: fixes and polish, no new features.
+
+### Next
+
+- **Release 0.6.1: Lucas's call, not started.** Per `RELEASING.md`: open the
+  version-bump PR (`npm run version:set -- 0.6.1`), merge it, tag `v0.6.1`, let CI
+  build the draft, then Lucas reviews the draft and clicks Publish.
+- **Housekeeping, each its own change:** `NOTES.md` is past the ~1,000-line
+  archive threshold (1,259 lines before this entry), so older entries should move
+  to `docs/notes-archive/`. Seven finished session worktrees are still under
+  `.claude/worktrees/` (their branches are merged); a local
+  `npx prettier --check .` trips on them, CI doesn't.
+
+### Things worth not rediscovering
+
+- **To see what has actually shipped,** run `gh release list` and
+  `git log --oneline <latest tag>..master`; `package.json`'s version only moves
+  when a bump PR merges.
+- **The local test accounts collect real sessions from scripted runs**
+  (`a@test.local` has about 19). Harmless; `npx supabase db reset` clears them,
+  after which the `a@`/`b@`/`c@` accounts need re-seeding and the reviewer's
+  `ui-review@test.local` needs signing in again by hand.
+
+---
+
 ## 2026-10-28 (final) — Medium and Low findings fixed; third review clean
 
 **Status: #112–#118 merged; `master` passes lint, typecheck, 620 unit tests,
@@ -80,6 +122,8 @@ and `e2e:web` 41/41.** This fixes the confirmation review's High (below).
   over the sky on the running/result/break lines, the floating "Back to timer"
   covering content mid-scroll, Pomodoro sliders dropping fast key repeats,
   then the Lows. "Delete account…" contrast at 375 wide is still pre-existing.
+  **(Superseded 2026-10-28 — the Medium and Low items were fixed in #112–#118;
+  the "(final)" entry above lists what remains.)**
 
 ### What was done
 
@@ -116,6 +160,8 @@ review found the earlier fixes held, plus the new items under Next.
 ### Next
 
 Found by the confirmation `ui-ux-reviewer` run, none started (each its own PR):
+**(Superseded 2026-10-28 — the High was fixed in #110 and the Medium and Low
+items in #112–#118; the "(final)" entry above lists what remains.)**
 
 - **High (done in #110, see the entry above): focus drops to `<body>` after common actions.** Closing a panel
   (Esc, Back to timer) should return focus to its opener; "Done" on the result
