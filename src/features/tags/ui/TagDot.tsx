@@ -5,7 +5,7 @@ import { tagColorVar } from '@/shared/ui';
 export const TagDot = ({ color }: { color: TagColor }) => (
   <span
     aria-hidden="true"
-    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+    className="inline-block h-2.5 w-2.5 shrink-0 rounded-pill"
     style={{ backgroundColor: tagColorVar(color) }}
   />
 );

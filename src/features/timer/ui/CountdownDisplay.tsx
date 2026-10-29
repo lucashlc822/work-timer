@@ -46,10 +46,10 @@ export const ProgressBar = ({
     aria-valuemin={0}
     aria-valuemax={100}
     aria-valuenow={Math.round(progress * 100)}
-    className="bg-night-700 h-1 w-full max-w-56 overflow-hidden rounded-full"
+    className="bg-night-700 h-1 w-full max-w-56 overflow-hidden rounded-pill"
   >
     <div
-      className="bg-lavender-300 h-full rounded-full"
+      className="bg-lavender-300 h-full rounded-pill"
       style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
     />
   </div>

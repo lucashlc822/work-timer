@@ -42,7 +42,7 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
         {completed && (
           <div
             aria-hidden="true"
-            className="bg-mint-300/20 absolute inset-2 rounded-full blur-2xl"
+            className="bg-mint-300/20 absolute inset-2 rounded-pill blur-2xl"
           />
         )}
         {customStar !== undefined ? (
