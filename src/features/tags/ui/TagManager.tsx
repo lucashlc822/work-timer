@@ -140,7 +140,7 @@ const RenameField = ({
           e.currentTarget.blur();
         }
       }}
-      className="text-ink-primary min-w-0 flex-1 bg-transparent text-sm outline-none focus:underline"
+      className="text-ink-primary -my-0.5 min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none focus:underline"
     />
   );
 };

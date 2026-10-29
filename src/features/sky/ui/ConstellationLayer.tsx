@@ -106,6 +106,7 @@ export const ConstellationLayer = ({
             className="group focus:outline-none"
           >
             {full && <title>{label}</title>}
+            {full && <HitArea x={x} y={y} />}
             <circle
               cx={x}
               cy={y}
@@ -124,6 +125,14 @@ export const ConstellationLayer = ({
     </svg>
   );
 };
+
+/**
+ * An invisible 24x24 target around a star (WCAG 2.5.8): the visible star is
+ * often smaller, and the group's box is what a pointer or an audit measures.
+ */
+const HitArea = ({ x, y }: { x: number; y: number }) => (
+  <circle cx={x} cy={y} r={12} fill="transparent" />
+);
 
 /**
  * A keyboard focus ring for a star. Stars are SVG groups, where the global
@@ -271,6 +280,7 @@ const Figure = ({
             className={full ? 'group focus:outline-none' : undefined}
           >
             {full && <title>{label}</title>}
+            {full && <HitArea x={x} y={y} />}
             <g
               className={full ? 'sky-twinkle' : undefined}
               style={

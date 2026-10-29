@@ -166,7 +166,7 @@ const PanelLink = ({ onClick, children }: { onClick: () => void; children: React
   <button
     type="button"
     onClick={onClick}
-    className="text-ink-muted hover:text-ink-primary self-start text-xs transition-colors"
+    className="text-ink-muted hover:text-ink-primary -my-1 self-start py-1 text-xs transition-colors"
   >
     {children}
   </button>
