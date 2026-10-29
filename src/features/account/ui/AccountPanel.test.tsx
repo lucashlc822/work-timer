@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_VERSION } from '@/shared/config';
@@ -27,6 +28,21 @@ const renderPanel = () =>
   );
 
 describe('AccountPanel', () => {
+  it('moves focus into the delete box when it opens, and back to its button on Cancel', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const opener = screen.getByRole('button', { name: 'Delete account…' });
+    // Nothing is grabbed when the panel first appears.
+    expect(opener).not.toHaveFocus();
+
+    opener.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Type your email address to confirm')).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Delete account…' })).toHaveFocus();
+  });
+
   it('shows which version of the app this is', () => {
     renderPanel();
 
