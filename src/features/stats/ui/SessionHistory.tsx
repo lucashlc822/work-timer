@@ -41,7 +41,7 @@ export const SessionHistory = ({
           const cancelled = s.outcome === 'cancelled';
           return (
             <li key={s.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm">
-              <span className="text-ink-primary w-44 shrink-0">{when(s.startedAt)}</span>
+              <span className="text-ink-primary w-full shrink-0 sm:w-44">{when(s.startedAt)}</span>
               <span className="text-ink-secondary w-20 shrink-0">
                 {formatFocus(s.actualFocusS)}
               </span>
@@ -56,7 +56,7 @@ export const SessionHistory = ({
                     <span className="truncate">{tag.name}</span>
                   </>
                 ) : (
-                  <span className="text-ink-muted">
+                  <span className="text-ink-muted whitespace-nowrap">
                     {s.tagId === null ? 'No tag' : 'Unknown tag'}
                   </span>
                 )}
