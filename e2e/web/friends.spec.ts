@@ -193,10 +193,14 @@ test('a friend’s sky, its numbers, and what happens when the friendship ends',
     // 4.1: the server out of reach, then back.
     await b.page.route('**/rest/v1/**', (route) => route.abort('internetdisconnected'));
     await b.page.evaluate(() => window.dispatchEvent(new Event('online')));
-    await expect(b.page.getByText('Connect to see your friends.')).toBeVisible();
+    await expect(
+      b.page.getByText("Couldn't reach the server. Try again in a moment."),
+    ).toBeVisible();
     await b.page.unroute('**/rest/v1/**');
     await b.page.getByRole('button', { name: 'Try again' }).click();
-    await expect(b.page.getByText('Connect to see your friends.')).toBeHidden();
+    await expect(
+      b.page.getByText("Couldn't reach the server. Try again in a moment."),
+    ).toBeHidden();
   } finally {
     await closeDevices(b);
   }

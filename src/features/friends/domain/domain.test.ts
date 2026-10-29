@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { formatCode, normalizeCode } from './code';
-import { classifyFriendsError } from './errors';
+import { classifyFriendsError, friendsLoadMessage } from './errors';
 import { decodeFriendSky } from './friendSky';
 import { lastFocusLabel } from './lastFocus';
 
@@ -156,5 +156,24 @@ describe('lastFocusLabel', () => {
     expect(lastFocusLabel(new Date(2026, 9, 22, 0, 5).getTime(), now)).toBe('Focused today');
     expect(lastFocusLabel(new Date(2026, 9, 21, 23, 55).getTime(), now)).toBe('Focused yesterday');
     expect(lastFocusLabel(new Date(2026, 9, 19, 12, 0).getTime(), now)).toBe('Focused 3 days ago');
+  });
+});
+
+describe('friendsLoadMessage', () => {
+  it('says the connection is down when the browser knows it is offline', () => {
+    expect(friendsLoadMessage('offline', false)).toBe(
+      "You're offline. Your friends will show when you reconnect.",
+    );
+  });
+
+  it('blames the server when the browser is online but nothing answered', () => {
+    expect(friendsLoadMessage('offline', true)).toBe(
+      "Couldn't reach the server. Try again in a moment.",
+    );
+  });
+
+  it('keeps the general message for anything else that went wrong, online or not', () => {
+    expect(friendsLoadMessage('error', true)).toBe('Something went wrong. Try again in a moment.');
+    expect(friendsLoadMessage('error', false)).toBe('Something went wrong. Try again in a moment.');
   });
 });
