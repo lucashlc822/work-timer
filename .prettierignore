@@ -17,6 +17,11 @@ public/*.png
 supabase/.temp
 supabase/.branches
 
+# Session worktrees (each a full checkout with its own node_modules). Git hides
+# them through .git/info/exclude, which Prettier doesn't read, so without this
+# line format:check fails locally while a worktree exists.
+.claude/worktrees
+
 # Playwright output
 playwright-report
 test-results

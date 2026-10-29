@@ -15,6 +15,7 @@ export default tseslint.config(
       'node_modules',
       'src-tauri/target',
       'src-tauri/gen',
+      '.claude/worktrees',
       'playwright-report',
       'test-results',
     ],
