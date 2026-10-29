@@ -12,6 +12,44 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-28 (later) — Keyboard focus no longer falls to the page (#110)
+
+**Status: #110 merged; `master` passes lint, typecheck, 615 unit tests, build
+and `e2e:web` 41/41.** This fixes the confirmation review's High (below).
+
+### Next
+
+- The confirmation review's **Medium** and **Low** items in the entry below
+  are still open, none started: tag-manager targets under 24px, `ink-muted`
+  over the sky on the running/result/break lines, the floating "Back to timer"
+  covering content mid-scroll, Pomodoro sliders dropping fast key repeats,
+  then the Lows. "Delete account…" contrast at 375 wide is still pre-existing.
+
+### What was done
+
+- Panels hand focus back to the timer-screen control that opened them
+  (`openView` in `HomeRoute.tsx` records it; `useFocusIfLost` restores it once
+  the timer screen stops being `inert`). Done on a result or run summary lands
+  on Start (a flag set by that click, so launching the app focuses nothing).
+  Picking a tag, or Escape inside the popover, keeps focus on the tag pill.
+  The delete box takes focus on open and returns it on Cancel (only after it
+  has been opened).
+- `e2e/web/focus.spec.ts` locks all four in; it and the new unit tests fail on
+  the old code.
+
+### Things worth not rediscovering
+
+- **`:focus-visible` on script-moved focus follows the browser's own rule:** in
+  a mouse-only session the restored focus shows no ring, but after keyboard use
+  earlier in the same page it does. Not a bug.
+- **Docker Desktop and the dev server don't survive an overnight restart here**:
+  "The local Supabase stack isn't running" from `e2e:web` is Docker, not the
+  tests.
+- Out of scope, still: "Back to friends" lands on the panel's Back button, not
+  the friend's row (the list re-renders).
+
+---
+
 ## 2026-10-28 — The other fifteen findings fixed; confirmation review
 
 **Status: #102–#108 merged; `master` passes lint, typecheck, 610 unit tests,
@@ -23,7 +61,7 @@ review found the earlier fixes held, plus the new items under Next.
 
 Found by the confirmation `ui-ux-reviewer` run, none started (each its own PR):
 
-- **High: focus drops to `<body>` after common actions.** Closing a panel
+- **High (done in #110, see the entry above): focus drops to `<body>` after common actions.** Closing a panel
   (Esc, Back to timer) should return focus to its opener; "Done" on the result
   should land on Start; picking a tag should land on the tag button; opening
   "Delete account…" should move to the email field, and Cancel back to the
