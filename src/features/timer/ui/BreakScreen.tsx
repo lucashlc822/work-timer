@@ -102,7 +102,7 @@ export const BreakScreen = ({
             progress={breakProgress(brk, now)}
             label="Break progress"
           />
-          <p className="text-ink-muted text-xs">
+          <p className="text-ink-secondary text-xs">
             Back at {formatTimeOfDay(breakEndsAt(brk))} · block {nextBlock} waits for you
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">

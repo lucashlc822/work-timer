@@ -60,7 +60,7 @@ export const SessionResult = ({ result, error, onDone, slots }: Props) => {
           {completed ? 'Session complete' : 'Session ended early'}
         </h2>
         <p className="text-ink-secondary text-sm">{formatDuration(ending.actualFocusS)} of focus</p>
-        <p className="text-ink-muted text-xs">
+        <p className="text-ink-secondary text-xs">
           {completed ? 'Finished' : 'Ended'} at {formatTimeOfDay(ending.endedAt)}
         </p>
       </div>

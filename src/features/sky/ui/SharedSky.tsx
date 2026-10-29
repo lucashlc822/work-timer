@@ -94,7 +94,7 @@ export const SharedStartHint = ({
     );
   }
   return (
-    <p className="text-ink-muted text-xs">
+    <p className="text-ink-secondary text-xs">
       Adds star {shared.stars.length + 1} of {total} to {sharedTitle(shared)}
     </p>
   );

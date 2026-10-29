@@ -76,7 +76,7 @@ export const TimerScreen = ({
   );
 
   if (timer.status === 'loading' || !prefs.loaded) {
-    return <p className="text-ink-muted text-sm">Opening…</p>;
+    return <p className="text-ink-secondary text-sm">Opening…</p>;
   }
 
   if (timer.status === 'finished' && timer.result !== null) {
@@ -110,7 +110,7 @@ export const TimerScreen = ({
     return (
       <div className="flex w-full flex-col items-center gap-6">
         {block !== null && (
-          <p className="text-ink-muted text-xs tracking-widest uppercase">
+          <p className="text-ink-secondary text-xs tracking-widest uppercase">
             Block {block} · Pomodoro
           </p>
         )}
@@ -121,7 +121,7 @@ export const TimerScreen = ({
             progress={progress(session, now)}
           />
         </div>
-        <p className="text-ink-muted text-xs">
+        <p className="text-ink-secondary text-xs">
           {formatDuration(session.plannedDurationS)} · ends at{' '}
           {formatTimeOfDay(plannedEndAt(session))}
         </p>

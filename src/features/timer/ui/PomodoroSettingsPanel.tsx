@@ -63,7 +63,7 @@ export const PomodoroSettingsPanel = ({ settings, limits, onChange, disabled = f
       {field('shortBreakS', 'Short break', 'min')}
       {field('longBreakS', 'Long break', 'min')}
       {field('blocksPerLongBreak', 'Long break every', 'blocks')}
-      <p className="text-ink-muted text-xs">{describeSettings(settings)}</p>
+      <p className="text-ink-secondary text-xs">{describeSettings(settings)}</p>
     </div>
   );
 };
