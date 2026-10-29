@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -83,11 +83,49 @@ const timerSlots: TimerSlots = {
   ),
 };
 
+/** The views that scroll over the timer; each gets a footer for its Back button. */
+const PANEL_VIEWS: ReadonlySet<string> = new Set([
+  'stats',
+  'stardust',
+  'account',
+  'friends',
+  'together',
+]);
+
 /**
- * The scrolling layer behind every panel. `scroll-pb-24` keeps a focused
- * control scrolled clear of the floating "Back to timer" button.
+ * A panel over the dimmed sky: the content scrolls above a footer that holds
+ * the Back button, so the button never sits on top of the content.
  */
-const OVERLAY = 'bg-night-900/85 fixed inset-0 z-10 scroll-pb-24 overflow-y-auto backdrop-blur-sm';
+const PanelLayer = ({ children, back }: { children: ReactNode; back: ReactNode }) => (
+  <div className="bg-night-900/85 fixed inset-0 z-10 flex flex-col backdrop-blur-sm">
+    <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    <footer className="border-night-700 flex justify-center border-t py-3">{back}</footer>
+  </div>
+);
+
+/** "Back to timer" / "Back to friends": in a panel's footer, or floating over a view that doesn't scroll. */
+const BackButton = ({
+  label,
+  floating,
+  onClick,
+}: {
+  label: string;
+  floating: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    autoFocus
+    onClick={onClick}
+    className={`rounded-pill border-night-600 text-ink-secondary hover:text-ink-primary border px-5 py-2 text-xs transition-colors ${
+      floating
+        ? 'bg-night-800/80 fixed bottom-6 left-1/2 z-20 -translate-x-1/2 backdrop-blur'
+        : 'bg-night-800'
+    }`}
+  >
+    {label}
+  </button>
+);
 
 const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
@@ -152,6 +190,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
   useShareFocusStatus();
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
+  const inPanel = PANEL_VIEWS.has(view);
   const boughtTiers = useBoughtTiers() ?? NO_TIERS;
   const ownedPacks = useOwnedPacks() ?? NO_PACKS;
   const earnedTiers = useEarnedTiers();
@@ -265,6 +304,19 @@ const HomeScreen = ({ together }: { together: Together }) => {
     return () => document.removeEventListener('keydown', onKey);
   }, [view]);
 
+  const back = (
+    <BackButton
+      // Re-mounted per view, so autoFocus lands on it each time.
+      key={view}
+      label={view === 'friend' ? 'Back to friends' : 'Back to timer'}
+      floating={!inPanel}
+      onClick={() => {
+        if (view === 'friend') void friends.refresh();
+        setView(view === 'friend' ? 'friends' : 'timer');
+      }}
+    />
+  );
+
   return (
     <>
       <SkyBackdrop
@@ -331,13 +383,13 @@ const HomeScreen = ({ together }: { together: Together }) => {
       </main>
 
       {view === 'stats' && (
-        <div className={OVERLAY}>
+        <PanelLayer back={back}>
           <StatsView />
-        </div>
+        </PanelLayer>
       )}
 
       {view === 'stardust' && (
-        <div className={OVERLAY}>
+        <PanelLayer back={back}>
           <StardustPanel
             userId={account.userId}
             earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
@@ -345,11 +397,11 @@ const HomeScreen = ({ together }: { together: Together }) => {
             renderThemePreview={renderThemePreview}
             renderPackPreview={renderPackPreview}
           />
-        </div>
+        </PanelLayer>
       )}
 
       {view === 'account' && (
-        <div className={OVERLAY}>
+        <PanelLayer back={back}>
           <AccountPanel
             email={account.email}
             sync={sync}
@@ -357,11 +409,11 @@ const HomeScreen = ({ together }: { together: Together }) => {
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
           />
-        </div>
+        </PanelLayer>
       )}
 
       {view === 'friends' && (
-        <div className={OVERLAY}>
+        <PanelLayer back={back}>
           <FriendsPanel
             friends={friends}
             now={Date.now()}
@@ -371,18 +423,18 @@ const HomeScreen = ({ together }: { together: Together }) => {
               setView('friend');
             }}
           />
-        </div>
+        </PanelLayer>
       )}
 
       {view === 'together' && (
-        <div className={OVERLAY}>
+        <PanelLayer back={back}>
           <TogetherPanel
             together={together}
             friends={friends.friends}
             me={me}
             busy={timer.status !== 'idle'}
           />
-        </div>
+        </PanelLayer>
       )}
 
       {view === 'friend' && friend !== null && (
@@ -420,21 +472,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         </div>
       )}
 
-      {away && (
-        <button
-          // Re-mounted per view, so autoFocus lands on it each time.
-          key={view}
-          type="button"
-          autoFocus
-          onClick={() => {
-            if (view === 'friend') void friends.refresh();
-            setView(view === 'friend' ? 'friends' : 'timer');
-          }}
-          className="rounded-pill bg-night-800/80 border-night-600 text-ink-secondary hover:text-ink-primary fixed bottom-6 left-1/2 z-20 -translate-x-1/2 border px-5 py-2 text-xs backdrop-blur transition-colors"
-        >
-          {view === 'friend' ? 'Back to friends' : 'Back to timer'}
-        </button>
-      )}
+      {away && !inPanel && back}
     </>
   );
 };

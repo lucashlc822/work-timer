@@ -52,7 +52,7 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-32">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-10">
       <header className="flex flex-col items-center gap-1">
         <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Account</h2>
         <p className="text-ink-primary text-base">{email ?? 'Signed in'}</p>
