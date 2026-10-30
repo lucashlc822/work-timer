@@ -30,6 +30,12 @@
     -webkit-user-select: text;
   }
 
+  /* The ring's colour is set at rest, so a colour transition on a control never
+     animates the ring in from the control's text colour (Start's was dark). */
+  :where(a, button, input, select, textarea, summary, [tabindex]) {
+    outline-color: var(--color-lavender-300);
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-lavender-300);
     outline-offset: 2px;

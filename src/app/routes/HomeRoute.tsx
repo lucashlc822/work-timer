@@ -331,7 +331,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
       <main
         inert={away}
-        className={`relative z-10 flex min-h-dvh flex-col items-center gap-8 px-6 pt-10 pb-6 transition-opacity duration-500 ${
+        className={`relative z-10 flex min-h-dvh flex-col items-center gap-6 px-6 pt-8 pb-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 ${
           away ? 'pointer-events-none opacity-0' : ''
         }`}
       >

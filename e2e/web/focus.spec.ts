@@ -111,6 +111,23 @@ test('arrow keys move through the idle screen’s choices and nothing else moves
   expect(await toggleTop()).toBe(top);
 });
 
+test('a focus ring is lavender the moment a control gets focus', async ({ page }) => {
+  await signedIn(page, 'focus-ring');
+  // A keyboard move first, so the next focus counts as keyboard focus (:focus-visible).
+  await page.getByRole('radio', { name: '25 min', exact: true }).focus();
+  await page.keyboard.press('Tab');
+
+  // Read in the same task as the focus, before any transition has had a frame: a
+  // colour that animates in from the text colour is caught here, one that is
+  // already lavender is not.
+  const ring = await page.getByRole('button', { name: 'Start 25 min' }).evaluate((el) => {
+    (el as HTMLElement).focus();
+    return { visible: el.matches(':focus-visible'), colour: getComputedStyle(el).outlineColor };
+  });
+  expect(ring.visible).toBe(true);
+  expect(ring.colour).toBe('rgb(201, 184, 240)');
+});
+
 test('the delete account box takes focus when it opens and gives it back on Cancel', async ({
   page,
 }) => {

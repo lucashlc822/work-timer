@@ -119,7 +119,7 @@ export const AccountPanel = ({
       />
 
       {/* What to quote when asking for help, and what an update changes. */}
-      <p className="text-ink-muted text-center text-xs">
+      <p className="text-ink-secondary text-center text-xs">
         {APP_NAME} {APP_VERSION}
       </p>
     </div>

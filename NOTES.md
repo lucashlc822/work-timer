@@ -12,7 +12,69 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-30 (later) — Step 4 checks done; idle-screen polish PR open
+
+**Status: branch `fix/idle-screen-fit-and-focus`, PR open, not merged, not
+released.** Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. Steps 1
+to 4 of the order in the entry below are done (housekeeping: three worktrees
+and seven local `claude/*` branches removed, all merged, nothing lost).
+
+### Step 4 results (idle screen, no code)
+
+| Check | Result |
+|---|---|
+| Idle → running continuity | Pass: both 60px, weight 300, same family and letter-spacing (−1.5px), centred at x=640; hero 8px higher when idle (top 247 vs 255). |
+| Reduced motion | Pass: transitions 0.3s (segments) and 0.15s (others) normally, 0.00001s with `reduce`. |
+| Sky themes (`dusk`, `tide`, `bloom`, vs `night`) | Pass: worst 95th-percentile contrast over 21 text nodes: 7.31 / 6.16 / 6.04 / 6.11. |
+| "Working on" picker | Pass: shares a row with the tag button at 768 and 480; wraps to a tidy second row at 375. |
+| Desktop window sizes | **Found a problem:** the desktop window opens at 480×720 (min 380×560), and the idle page was 726px tall (748px with a friend), so it scrolled 6px / 28px. Not compared with 0.6.1. Fixed in this PR. |
+
+### What this PR does, and what it leaves out
+
+- Fits 480×720 below `sm` (`gap-6 pt-8` on `<main>`, `py-6` on the card): 748 → 720
+  (no scroll) with a friend, 726 → no scroll without. Unchanged from 640 up
+  (1024×768 card 148–654; 1280×800 card 148–654, footer 746; 1920×1032 card
+  228–734, footer 978). Residual: a start hint that wraps to two lines can bring
+  a small scroll back at exactly 480×720.
+- Start's dark focus-ring flash: a base rule sets `outline-color` at rest, so
+  `transition` never animates the ring in from the text colour.
+- Account's version line is `ink-secondary` (was `ink-muted`).
+- **Left out by decision:** focusing a panel's heading on open (reverses #110,
+  five panels, ~15 `focus.spec.ts` assertions: its own PR if wanted). **Dropped,
+  Lucas judged them fine:** the 12px hint lines, the faint slider track, the raw
+  `rem` in `.range-soft`.
+
+### Next
+
+1. Merge this PR (Lucas's call), then **release 0.6.2 with a short plan first**
+   (reuse the 0.6.1 plan's R-cases; `RELEASING.md`; Lucas clicks Publish).
+2. Lucas's installed app updating 0.6.1 → 0.6.2, the first real proof of the HTTPS
+   update path.
+3. Tell friends 0.6.2 is out (skip a separate 0.6.1 message).
+4. The two-person checks (a real shared constellation, focus together).
+
+### Things worth not rediscovering
+
+- **A layout test must wait for the async content before measuring.** The start
+  hint, goal line and constellation button arrive after first paint; measured
+  right after sign-in, the 480×720 page looked short enough and the test was
+  falsely green on the unfixed code. It now waits for them and fails at 726.
+- **A sky theme can be previewed without buying it** (each costs 1200 Stardust):
+  put `{key: 'skyTheme', value: 'dusk'}` in the account database's `meta` store
+  and reload. It skips the ownership check, so use it for looking only.
+- **Measure text contrast over the sky by sampling real pixels** (hide the text,
+  screenshot, read the pixels behind each text box) and use the 95th percentile:
+  the brightest pixel is a background star (≈1.5:1 behind "0 Stardust" on every
+  theme, `night` included) and says nothing about readability.
+- **The idle screen's focus-ring test reads the colour in the same task as the
+  `focus()` call;** read a few ms later the transition may already be done.
+
+---
+
 ## 2026-10-30 (end of session) — Idle screen finished and merged; 0.6.2 not cut
+
+**(Progress 2026-10-30 — steps 1 to 4 of the order below are done; see the entry
+above for what was found and what remains.)**
 
 **Status: everything is merged to `master` (#127–#131) and nothing is open.**
 `master` is `0eec739` and matches `origin/master`; the working tree is clean.
