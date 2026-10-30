@@ -12,6 +12,24 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-30 — Idle card offset on wide windows
+
+**Status: a one-line follow-up to #127 (branch `fix/idle-card-offset`).** #127
+anchored the idle card to the top, which at 1920×1032 left 80px above it and
+324px below (top-heavy). `2xl:pt-32` brings that to 160px above and 244px
+below. Measured: 1920×1032 fits including Pomodoro (no scroll); 1536×864 fits
+Countdown but Pomodoro now scrolls ~80px more than before (it already
+scrolled); 1280×800 is unchanged (80 above, 92 below).
+
+### Things worth not rediscovering
+
+- **Docker Desktop and the local stack don't survive a restart.** `StatusDbNotReadyError`
+  again; start Docker Desktop, then `npx supabase start`.
+- **The browser pane's sign-in doesn't survive either** ("Couldn't reach the
+  server" on the sign-in screen is the stack being down, not a bad password).
+
+---
+
 ## 2026-10-29 (evening) — Idle screen polish, PR open
 
 **Status: branch `feat/idle-screen-polish`, PR open, not merged, not released.**

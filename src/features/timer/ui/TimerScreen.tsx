@@ -169,8 +169,9 @@ export const TimerScreen = ({
   return (
     // Fills the section and anchors the card to its top, not its middle: the
     // card changes height with the mode and the Custom slider, and a centred
-    // one would move the controls out from under the pointer.
-    <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12">
+    // one would move the controls out from under the pointer. The extra top
+    // padding from 2xl up stops it sitting top-heavy on tall, wide windows.
+    <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12 2xl:pt-32">
       <div className="rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center gap-6 border px-8 py-8 backdrop-blur-md">
         <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
         <PlannedTime seconds={plannedS} />
