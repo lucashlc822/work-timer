@@ -12,6 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-29 (evening) — Idle screen polish, PR open
+
+**Status: branch `feat/idle-screen-polish`, PR open, not merged, not released.**
+Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. UI only: no server
+change, no migration.
+
+### What changed
+
+- Idle screen: the planned length is the hero (`PlannedTime`, same type as the
+  running countdown); mode and length are `SegmentedControl`s; everything sits
+  on one translucent card; Start has a soft glow; sliders use `.range-soft`.
+- Footer: progress (constellation, Stardust) and navigation (View sky, Stats,
+  Friends, Account) are separate groups; navigation has no outline.
+- "Launch at startup" moved from the footer to Account ("This computer"),
+  drawn as a switch over the same native checkbox (desktop only).
+- `e2e/desktop/native.spec.ts` now opens Account to reach it.
+
+### Next
+
+- **`ui-ux-reviewer` ran on the idle screen: no Blocker or High, axe clean on
+  9 views, contrast measured 8.45:1 or better over the card.** Fixed in this PR:
+  the card jumping between modes (the idle card is now anchored to the top of
+  its section, not centred), uneven wrapping and a left-aligned hint at 375px,
+  `rounded-pill` on the switch's knob. **Left for follow-ups:**
+  - Segmented controls are `role="radiogroup"` but arrow keys do nothing (the
+    old pills were the same). Honest fix is `role="group"` with `aria-pressed`
+    buttons, which breaks the tests that query `radio`: its own PR.
+  - Dark flash on Start's focus ring: `transition` animates outline-color, and
+    the obvious fix is an arbitrary value the UI rules forbid.
+  - `.range-soft` uses raw `rem` for slider sizes (pseudo-elements can't take
+    Tailwind classes); 12px hint lines are quiet; slider track is faint.
+  - Not seen: the "Working on" picker beside the tag picker (needs an accepted
+    friend), brighter sky themes, reduced motion, WebView2 at narrow widths.
+- `AccountPanel.tsx` hard-codes "Starkeep" for the version line instead of
+  `APP_NAME`; its own small PR.
+
+### Things worth not rediscovering
+
+- **A visually hidden (`sr-only`) checkbox can't be clicked by Playwright.** Its
+  label sits on top and "intercepts pointer events", so the autostart test hung
+  until its 10-minute timeout. The switch's input is now transparent
+  (`opacity-0`) and fills the track instead, so it is what a click lands on.
+  `e2e:desktop` is 5/5 after that (4 passed in the full run, the autostart test
+  alone after the fix).
+- Docker Desktop was off; `npx supabase start` says `StatusDbNotReadyError`
+  for a minute after the engine comes up. Wait, don't retry in a loop.
+
+---
+
 ## 2026-10-29 (R14 verified) — Installed app updated to 0.6.1
 
 **Status: R14 passed, so every 0.6.1 acceptance case (R1–R14) now has an observed

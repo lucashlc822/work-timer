@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { APP_VERSION } from '@/shared/config';
 import { db, hasWorkInFlight } from '@/shared/db';
@@ -14,6 +14,8 @@ interface Props {
   onSignOut: () => Promise<void>;
   /** Deletes the account everywhere it can; rejects if nothing was removed. */
   onDeleteAccount: () => Promise<void>;
+  /** Settings of this computer, supplied by the app; renders its own section or nothing. */
+  deviceSettings?: ReactNode;
 }
 
 /** Whether this device has a session or Pomodoro run in progress. */
@@ -33,7 +35,14 @@ const useSettledPhase = (phase: SyncStatusView['phase']): SyncStatusView['phase'
 };
 
 /** Who is signed in, what is stored about them, signing out, and leaving for good. */
-export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccount }: Props) => {
+export const AccountPanel = ({
+  email,
+  sync,
+  onSyncNow,
+  onSignOut,
+  onDeleteAccount,
+  deviceSettings = null,
+}: Props) => {
   const busy = useBusy();
   const settled = useSettledPhase(sync.phase);
   const [signingOut, setSigningOut] = useState(false);
@@ -59,6 +68,8 @@ export const AccountPanel = ({ email, sync, onSyncNow, onSignOut, onDeleteAccoun
       </header>
 
       <SyncStatus status={sync} onSyncNow={onSyncNow} />
+
+      {deviceSettings}
 
       <section className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-2 border p-4 text-sm">
         <h3 className="text-ink-primary">About your data</h3>

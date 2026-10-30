@@ -33,6 +33,20 @@ export const CountdownDisplay = ({
   </div>
 );
 
+/**
+ * The length a session is about to run, in the countdown's own type so the
+ * idle screen and the running one don't jump. Hidden from screen readers: the
+ * selected length control already says it.
+ */
+export const PlannedTime = ({ seconds }: { seconds: number }) => (
+  <p
+    aria-hidden
+    className="text-ink-primary font-mono text-6xl font-light tracking-tight tabular-nums"
+  >
+    {formatRemaining(seconds * 1000)}
+  </p>
+);
+
 export const ProgressBar = ({
   progress,
   label = 'Session progress',

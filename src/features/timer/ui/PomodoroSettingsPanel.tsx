@@ -50,7 +50,7 @@ export const PomodoroSettingsPanel = ({ settings, limits, onChange, disabled = f
           value={value}
           disabled={disabled}
           onChange={(e) => onChange({ ...settings, [key]: Number(e.target.value) * scale })}
-          className="accent-lavender-400 w-full"
+          className="range-soft w-full"
           aria-label={`${label}${unit === 'min' ? ' in minutes' : ''}`}
         />
       </label>
