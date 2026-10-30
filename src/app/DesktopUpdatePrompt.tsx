@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
+import { APP_NAME } from '@/shared/config';
 import { db, hasWorkInFlight, isAccountDbBound } from '@/shared/db';
 import { getRuntime, type AvailableUpdate, type UpdaterPort } from '@/shared/runtime';
 
@@ -95,7 +96,7 @@ export const DesktopUpdatePrompt = ({
           ? 'Updating…'
           : phase === 'failed'
             ? "Couldn't update. Try again later."
-            : `Starkeep ${update.version} is ready.`}
+            : `${APP_NAME} ${update.version} is ready.`}
       </p>
       <button
         type="button"

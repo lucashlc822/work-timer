@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '@/shared/config';
 import { bindAccountDb, db, META_KEYS, writeMeta } from '@/shared/db';
 import type { AvailableUpdate, UpdaterPort } from '@/shared/runtime';
 
@@ -38,7 +39,7 @@ const renderPrompt = (updater: UpdaterPort, enabled = true) =>
     />,
   );
 
-const NOTICE = 'Starkeep 0.2.0 is ready.';
+const NOTICE = `${APP_NAME} 0.2.0 is ready.`;
 
 describe('DesktopUpdatePrompt', () => {
   it('offers an update that exists when nothing is in progress', async () => {

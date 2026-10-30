@@ -2,6 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '@/shared/config';
 import { isAccountDbBound } from '@/shared/db';
 import type { UpdaterPort } from '@/shared/runtime';
 
@@ -27,6 +28,6 @@ describe('DesktopUpdatePrompt on the sign-in screen', () => {
     );
 
     // Reading `db` here would throw; reaching the notice proves it isn't read.
-    expect(await screen.findByText('Starkeep 0.2.0 is ready.')).toBeInTheDocument();
+    expect(await screen.findByText(`${APP_NAME} 0.2.0 is ready.`)).toBeInTheDocument();
   });
 });

@@ -65,11 +65,12 @@ change, no migration.
   - Not seen: the "Working on" picker beside the tag picker (needs an accepted
     friend), brighter sky themes, reduced motion, WebView2 at narrow widths.
 - **(Done 2026-10-30, `fix/app-name-and-notes-status`.)** `AccountPanel.tsx`
-  hard-coded "Starkeep" for the version line instead of `APP_NAME`. Two more
-  user-visible instances remain, deliberately not folded in: the update notice
-  in `DesktopUpdatePrompt.tsx` ("Starkeep X is ready") and the notification
-  title in `shared/runtime/desktop.ts`. The e2e specs assert those strings, so
-  changing them means changing the tests too: its own PR.
+  hard-coded "Starkeep" for the version line instead of `APP_NAME`. The two
+  other user-visible instances (the update notice in `DesktopUpdatePrompt.tsx`
+  and the mini window's title in `shared/runtime/desktop.ts`, which is a window
+  title, not a notification) were fixed in `fix/remaining-app-name`; only code
+  comments name the product in the frontend now. The native shell (`src-tauri`)
+  states the name itself and is not read from `brand.mjs`; CLAUDE.md says so.
 
 ### Things worth not rediscovering
 
