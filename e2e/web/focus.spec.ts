@@ -75,6 +75,42 @@ test('picking a tag keeps focus on the tag button', async ({ page }) => {
   await expect(pill).toBeFocused();
 });
 
+test('arrow keys move through the idle screen’s choices and nothing else moves', async ({
+  page,
+}) => {
+  await signedIn(page, 'focus-radios');
+  const radio = (name: string) => page.getByRole('radio', { name, exact: true });
+  const modeToggle = page.getByRole('radiogroup', { name: 'Session type' });
+  const toggleTop = async () => (await modeToggle.boundingBox())?.y;
+  const top = await toggleTop();
+
+  // Length: one Tab stop, and an arrow selects the next segment.
+  await radio('25 min').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(radio('50 min')).toBeFocused();
+  await expect(radio('50 min')).toBeChecked();
+  await expect(page.getByText('50:00')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start 50 min' })).toBeVisible();
+
+  // Through 90 min to Custom: the slider opens, focus stays, the toggle doesn't move.
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(radio('Custom')).toBeFocused();
+  await expect(radio('Custom')).toBeChecked();
+  await expect(
+    page.getByRole('slider', { name: 'Custom session length in minutes' }),
+  ).toBeVisible();
+  expect(await toggleTop()).toBe(top);
+
+  // Mode: Right from Countdown picks Pomodoro, focus stays, the toggle still doesn't move.
+  await radio('Countdown').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(radio('Pomodoro')).toBeFocused();
+  await expect(radio('Pomodoro')).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible();
+  expect(await toggleTop()).toBe(top);
+});
+
 test('the delete account box takes focus when it opens and gives it back on Cancel', async ({
   page,
 }) => {

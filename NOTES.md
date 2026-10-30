@@ -55,9 +55,13 @@ change, no migration.
   the card jumping between modes (the idle card is now anchored to the top of
   its section, not centred), uneven wrapping and a left-aligned hint at 375px,
   `rounded-pill` on the switch's knob. **Left for follow-ups:**
-  - Segmented controls are `role="radiogroup"` but arrow keys do nothing (the
-    old pills were the same). Honest fix is `role="group"` with `aria-pressed`
-    buttons, which breaks the tests that query `radio`: its own PR.
+  - **(Done 2026-10-30, `fix/radio-group-keyboard`.)** Segmented controls were
+    `role="radiogroup"` but arrow keys did nothing (the old pills were the
+    same). Fixed by giving them radio-group keyboard behaviour (selected item
+    is the one Tab stop; arrows, wrapping, move and select) rather than by
+    switching to `aria-pressed` buttons, so no test that queries `radio`
+    changed. `ColorSwatches` had the same defect and got the same fix;
+    `shared/ui/radioKeys.ts` is the shared helper.
   - Dark flash on Start's focus ring: `transition` animates outline-color, and
     the obvious fix is an arbitrary value the UI rules forbid.
   - `.range-soft` uses raw `rem` for slider sizes (pseudo-elements can't take
