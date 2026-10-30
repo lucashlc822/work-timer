@@ -31,16 +31,18 @@ change, no migration.
 
 ### Next
 
-- **`npm run e2e:desktop` has not been run** for this change. It refuses to
-  start while any `starkeep.exe` runs (an instance was running). Quit it from
-  the tray, free port 5173, then run it: the autostart test is the one that
-  matters.
 - The `ui-ux-reviewer` pass (acceptance case 8) has not been run either.
 - `AccountPanel.tsx` hard-codes "Starkeep" for the version line instead of
   `APP_NAME`; its own small PR.
 
 ### Things worth not rediscovering
 
+- **A visually hidden (`sr-only`) checkbox can't be clicked by Playwright.** Its
+  label sits on top and "intercepts pointer events", so the autostart test hung
+  until its 10-minute timeout. The switch's input is now transparent
+  (`opacity-0`) and fills the track instead, so it is what a click lands on.
+  `e2e:desktop` is 5/5 after that (4 passed in the full run, the autostart test
+  alone after the fix).
 - Docker Desktop was off; `npx supabase start` says `StatusDbNotReadyError`
   for a minute after the engine comes up. Wait, don't retry in a loop.
 

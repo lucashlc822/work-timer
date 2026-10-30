@@ -506,16 +506,20 @@ const AutostartToggle = () => {
       <h3 className="text-ink-primary">This computer</h3>
       <label className="text-ink-secondary hover:text-ink-primary flex cursor-pointer items-center justify-between gap-3 transition-colors">
         Launch at startup
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={() => void toggle()}
-          className="peer sr-only"
-        />
-        <span
-          aria-hidden
-          className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary relative h-5 w-9 shrink-0 transition-colors duration-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:transition-transform after:duration-300 peer-checked:after:translate-x-4"
-        />
+        {/* The input is transparent and fills the track, so it is what a click
+            lands on (a hidden input under the label can't be clicked directly). */}
+        <span className="relative h-5 w-9 shrink-0">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={() => void toggle()}
+            className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+          <span
+            aria-hidden
+            className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary pointer-events-none absolute inset-0 transition-colors duration-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:transition-transform after:duration-300 peer-checked:after:translate-x-4"
+          />
+        </span>
       </label>
     </section>
   );
