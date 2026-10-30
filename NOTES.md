@@ -12,11 +12,35 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-29 (end of session) — 0.6.1 released and logged; one check still Lucas's
+
+**Status: everything is merged to `master` (#121–#124) and nothing is open.**
+0.6.1 is the latest release (web and desktop). Local `master` matches
+`origin/master`, with nothing uncommitted.
+
+### Next
+
+- **Lucas's installed app still has to be seen updating to 0.6.1** (R14 in the
+  "Released 0.6.1" entry): "Starkeep 0.6.1 is ready" → "Restart to update" →
+  signed in on 0.6.1 → a short session shows "Backed up". Not observed yet.
+- **Tell friends 0.6.1 is out.** Polish only; nobody is blocked on it.
+- **Restart the dev server on 5173 if wanted.** It was stopped on 2026-10-29 to
+  free the port for `e2e:desktop`; it was another chat's, not part of any fix.
+- **Three session worktrees exist again** under `.claude/worktrees/` (branches
+  `claude/…`, made by other chats after the cleanup). Not touched. The ignore
+  lines from #121 keep them out of `prettier` and `eslint`; remove them with
+  the steps in the "Housekeeping" entry once those chats are done.
+- Unchanged and still open: the two-person checks (a real shared constellation,
+  focus together) and the optional UI follow-ups listed in the 2026-10-28
+  (final) entry.
+
+---
+
 ## 2026-10-29 (later) — Released 0.6.1: UI review polish
 
 **Status: 0.6.1 is published (tag `v0.6.1`, Latest; web deployed from the same
 commit, `7c7b64b`).** No migration; `min_client_version` is still null. Nothing
-else is open besides the PR carrying this entry. Plan:
+else is open (the PR carrying this entry, #124, has merged). Plan:
 `~/.claude/plans/please-proceed-with-planning-dazzling-parnas.md`.
 
 ### Next
