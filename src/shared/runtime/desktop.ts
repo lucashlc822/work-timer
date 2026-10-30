@@ -9,6 +9,7 @@ import {
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check as checkForUpdate } from '@tauri-apps/plugin-updater';
 
+import { APP_NAME } from '../config';
 import type {
   AutostartPort,
   CompletionNotice,
@@ -96,7 +97,7 @@ const desktopMiniWindow: MiniWindowPort = {
         // frontend over an asset protocol with no index.html fallback, so a
         // client-side path would 404 in production while working in dev.
         url: 'index.html?window=mini',
-        title: 'Starkeep',
+        title: APP_NAME,
         width: 240,
         height: 132,
         resizable: false,

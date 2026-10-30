@@ -11,7 +11,11 @@ as they're decided on.
 **The product name is provisional.** It lives in `brand.mjs` and is read from
 there by the PWA manifest, `index.html`, and the React app — so rename by
 editing that file alone, and never hard-code the name anywhere else. The
-repository stays `work-timer` regardless.
+repository stays `work-timer` regardless. **One exception the frontend can't
+read:** the native shell states the name itself (`productName` and window title
+in `src-tauri/tauri.conf.json`, tray and menu text in `src-tauri/src/lib.rs`),
+and the desktop e2e specs assert those strings — so a rename also touches
+those.
 
 **Stack:** TypeScript + React + Vite, shipped as a **Tauri desktop app** and
 also as a browser build from the same codebase. Local-first on IndexedDB via
