@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { APP_VERSION } from '@/shared/config';
+import { APP_NAME, APP_VERSION } from '@/shared/config';
 import { bindAccountDb, db, META_KEYS, writeMeta } from '@/shared/db';
 
 import { AccountPanel } from './AccountPanel';
@@ -46,7 +46,7 @@ describe('AccountPanel', () => {
   it('shows which version of the app this is', () => {
     renderPanel();
 
-    expect(screen.getByText(`Starkeep ${APP_VERSION}`)).toBeInTheDocument();
+    expect(screen.getByText(`${APP_NAME} ${APP_VERSION}`)).toBeInTheDocument();
   });
 
   it('lets the person sign out when nothing is running', () => {

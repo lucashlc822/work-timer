@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { APP_VERSION } from '@/shared/config';
+import { APP_NAME, APP_VERSION } from '@/shared/config';
 import { db, hasWorkInFlight } from '@/shared/db';
 import { useFocusIfLost } from '@/shared/ui';
 
@@ -119,7 +119,9 @@ export const AccountPanel = ({
       />
 
       {/* What to quote when asking for help, and what an update changes. */}
-      <p className="text-ink-muted text-center text-xs">Starkeep {APP_VERSION}</p>
+      <p className="text-ink-muted text-center text-xs">
+        {APP_NAME} {APP_VERSION}
+      </p>
     </div>
   );
 };
