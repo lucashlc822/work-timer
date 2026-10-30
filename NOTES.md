@@ -12,6 +12,23 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-29 (R14 verified) — Installed app updated to 0.6.1
+
+**Status: R14 passed, so every 0.6.1 acceptance case (R1–R14) now has an observed
+pass.** Lucas ran it on his installed app: fully quit from the tray, relaunched,
+saw "Starkeep 0.6.1 is ready", chose "Restart to update", landed signed in on
+0.6.1, and a short session showed "Backed up". Reported by Lucas in chat; I did
+not observe it myself. This closes the first "Next" item in the entries below.
+
+### Next
+
+- **Tell friends 0.6.1 is out.** Polish only; nobody is blocked.
+- Everything else under "Next" in the entry below is unchanged: the dev server on
+  5173, the three session worktrees, the two-person checks, the optional UI
+  follow-ups.
+
+---
+
 ## 2026-10-29 (end of session) — 0.6.1 released and logged; one check still Lucas's
 
 **Status: everything is merged to `master` (#121–#124) and nothing is open.**
