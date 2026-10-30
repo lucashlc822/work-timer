@@ -31,7 +31,20 @@ change, no migration.
 
 ### Next
 
-- The `ui-ux-reviewer` pass (acceptance case 8) has not been run either.
+- **`ui-ux-reviewer` ran on the idle screen: no Blocker or High, axe clean on
+  9 views, contrast measured 8.45:1 or better over the card.** Fixed in this PR:
+  the card jumping between modes (the idle card is now anchored to the top of
+  its section, not centred), uneven wrapping and a left-aligned hint at 375px,
+  `rounded-pill` on the switch's knob. **Left for follow-ups:**
+  - Segmented controls are `role="radiogroup"` but arrow keys do nothing (the
+    old pills were the same). Honest fix is `role="group"` with `aria-pressed`
+    buttons, which breaks the tests that query `radio`: its own PR.
+  - Dark flash on Start's focus ring: `transition` animates outline-color, and
+    the obvious fix is an arbitrary value the UI rules forbid.
+  - `.range-soft` uses raw `rem` for slider sizes (pseudo-elements can't take
+    Tailwind classes); 12px hint lines are quiet; slider track is faint.
+  - Not seen: the "Working on" picker beside the tag picker (needs an accepted
+    friend), brighter sky themes, reduced motion, WebView2 at narrow widths.
 - `AccountPanel.tsx` hard-codes "Starkeep" for the version line instead of
   `APP_NAME`; its own small PR.
 
