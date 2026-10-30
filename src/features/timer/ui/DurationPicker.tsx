@@ -23,6 +23,15 @@ const presets: readonly number[] = import.meta.env.DEV
   ? [...DEV_PRESET_MINUTES, ...PRESET_MINUTES]
   : PRESET_MINUTES;
 
+/**
+ * Even rows at any width: the dev presets make six segments (two rows of
+ * three); production's four are two rows of two until `sm`, then one row.
+ */
+const LENGTH_LAYOUT =
+  presets.length > 3
+    ? 'rounded-soft grid grid-cols-3'
+    : 'rounded-soft grid grid-cols-2 sm:grid-cols-4';
+
 interface Props {
   minutes: number;
   onChange: (minutes: number) => void;
@@ -44,6 +53,7 @@ export const DurationPicker = ({ minutes, onChange, disabled = false }: Props) =
     <div className="flex w-full max-w-xs flex-col items-center gap-4">
       <SegmentedControl
         label="Session length"
+        layout={LENGTH_LAYOUT}
         options={options}
         value={custom ? CUSTOM : minutes}
         disabled={disabled}

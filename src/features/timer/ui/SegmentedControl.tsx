@@ -8,6 +8,12 @@ interface Props<T extends string | number> {
   value: T | null;
   onChange: (value: T) => void;
   disabled?: boolean;
+  /**
+   * The track's layout and radius. The default is one pill-shaped row that
+   * wraps; a control with many segments passes a grid and `rounded-soft`, so a
+   * wrapped track keeps even rows instead of becoming a blob.
+   */
+  layout?: string;
 }
 
 /**
@@ -21,11 +27,12 @@ export const SegmentedControl = <T extends string | number>({
   value,
   onChange,
   disabled = false,
+  layout = 'rounded-pill flex flex-wrap justify-center',
 }: Props<T>) => (
   <div
     role="radiogroup"
     aria-label={label}
-    className="rounded-pill border-night-600 bg-night-900/60 flex flex-wrap justify-center gap-1 border p-1"
+    className={`border-night-600 bg-night-900/60 gap-1 border p-1 ${layout}`}
   >
     {options.map((option) => {
       const selected = option.value === value;

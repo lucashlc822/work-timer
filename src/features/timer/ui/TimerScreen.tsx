@@ -167,44 +167,49 @@ export const TimerScreen = ({
   const pomodoro = prefs.mode === 'pomodoro';
   const plannedS = pomodoro ? prefs.settings.focusS : minutesToSeconds(minutes);
   return (
-    <div className="rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center gap-6 border px-8 py-8 backdrop-blur-md">
-      <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
-      <PlannedTime seconds={plannedS} />
-      {pomodoro ? (
-        <PomodoroSettingsPanel
-          settings={prefs.settings}
-          limits={pomodoroLimits}
-          onChange={prefs.setSettings}
+    // Fills the section and anchors the card to its top, not its middle: the
+    // card changes height with the mode and the Custom slider, and a centred
+    // one would move the controls out from under the pointer.
+    <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12">
+      <div className="rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center gap-6 border px-8 py-8 backdrop-blur-md">
+        <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
+        <PlannedTime seconds={plannedS} />
+        {pomodoro ? (
+          <PomodoroSettingsPanel
+            settings={prefs.settings}
+            limits={pomodoroLimits}
+            onChange={prefs.setSettings}
+            disabled={starting}
+          />
+        ) : (
+          <DurationPicker minutes={minutes} onChange={setMinutes} disabled={starting} />
+        )}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
+          {slots.targetPicker?.({ disabled: starting })}
+        </div>
+        <button
+          ref={startRef}
+          type="button"
           disabled={starting}
-        />
-      ) : (
-        <DurationPicker minutes={minutes} onChange={setMinutes} disabled={starting} />
-      )}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
-        {slots.targetPicker?.({ disabled: starting })}
+          onClick={() => {
+            setLandOnStart(false);
+            timer.start(
+              pomodoro
+                ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId }
+                : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
+            );
+          }}
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 px-12 py-3.5 text-base font-medium shadow-lg transition disabled:opacity-60"
+        >
+          {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}
+        </button>
+        <div className="flex flex-col items-center gap-1 text-center">
+          {slots.startHint?.(plannedS)}
+          {slots.progressLine?.()}
+        </div>
+        {timer.error !== null && <p className="text-faded text-xs">{timer.error}</p>}
       </div>
-      <button
-        ref={startRef}
-        type="button"
-        disabled={starting}
-        onClick={() => {
-          setLandOnStart(false);
-          timer.start(
-            pomodoro
-              ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId }
-              : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
-          );
-        }}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 px-12 py-3.5 text-base font-medium shadow-lg transition disabled:opacity-60"
-      >
-        {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}
-      </button>
-      <div className="flex flex-col items-center gap-1">
-        {slots.startHint?.(plannedS)}
-        {slots.progressLine?.()}
-      </div>
-      {timer.error !== null && <p className="text-faded text-xs">{timer.error}</p>}
     </div>
   );
 };
