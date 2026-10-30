@@ -12,9 +12,62 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-29 (later) — Released 0.6.1: UI review polish
+
+**Status: 0.6.1 is published (tag `v0.6.1`, Latest; web deployed from the same
+commit, `7c7b64b`).** No migration; `min_client_version` is still null. Nothing
+else is open besides the PR carrying this entry. Plan:
+`~/.claude/plans/please-proceed-with-planning-dazzling-parnas.md`.
+
+### Next
+
+- **Lucas's installed app should offer "Starkeep 0.6.1 is ready"** (quit fully
+  from the tray and relaunch to force the check), then "Restart to update"
+  should land on 0.6.1 signed in, and a short session should show "Backed up".
+  Not yet observed at the time of writing.
+- **Tell friends 0.6.1 is out.** It is polish only, so no one is blocked on it.
+- Still unrun: the two-person checks (a real shared constellation, focus
+  together), which need a friend on 0.6.x. The optional UI follow-ups (focus
+  the panel heading on open; `ink-secondary` for the Account version line) are
+  in the 2026-10-28 (final) entry.
+
+### What was done, in order
+
+1. **Bump PR #123** (`version:set -- 0.6.1`: the five files, `package-lock.json`
+   two lines), version tests 22/22, CI green, merged as `7c7b64b`.
+2. **Pre-tag checks on that commit:** `e2e:desktop` 5/5 (3.2 min) and
+   `e2e:update` 1/1 (2.0 min).
+3. **Tagged `v0.6.1`;** `Release` green. The draft had 4 assets (installers
+   2,332,431 bytes); `latest.json` said 0.6.1 at `/download/v0.6.1/`, signed with
+   key `8E3AF18012526DA8`.
+4. **"What's new" line** (Lucas approved the wording): polish and accessibility,
+   smoother keyboard use, larger targets, easier-to-read text over the sky,
+   clearer sync and offline messages, tidier narrow panels.
+5. **Published by id with `tag_name` in the same call** (Lucas said "publish"):
+   Latest `v0.6.1`, no `untagged-` tag; `Deploy web` green on `7c7b64b`.
+6. **Live checks:** the web bundle (starkeep.vercel.app) reports 0.6.1;
+   `Starkeep-setup.exe` served (206 to a one-byte range request);
+   `min_client_version` null.
+
+### Acceptance results
+
+R1–R13 pass as run by me. R14 (the installed app updating) is Lucas's own
+observation and was not yet made. Not covered: 0.6.1's own HTTPS update check
+with the two patched TLS crates (`e2e:update` serves its fake release over
+HTTP); a future 0.6.2 is the first real proof.
+
+### Things worth not rediscovering
+
+- **`e2e:desktop` needs port 5173 free.** A dev server left running from another
+  chat held it (Vite on the main checkout); stopping it, then the test ran
+  clean. Same cause as the `tauri:dev` blank window noted in CLAUDE.md.
+
+---
+
 ## 2026-10-29 — Housekeeping: worktree ignores, finished worktrees, NOTES archive
 
-**Status: two small PRs open, neither merged; nothing released.** #121 makes
+**Status: #121 and #122 merged (see the 2026-10-29 (later) entry above for the
+release).** #121 makes
 Prettier and ESLint skip `.claude/worktrees`; the PR for this entry moves the
 2026-10-22 to 2026-10-26 entries out of `NOTES.md` (1,305 → ~500 lines) into
 `docs/notes-archive/2026-Q4.md`, byte for byte. Both close the two
@@ -64,7 +117,8 @@ app versions keep working. 0.6.1 fits: fixes and polish, no new features.
 
 ### Next
 
-- **Release 0.6.1: Lucas's call, not started.** Per `RELEASING.md`: open the
+- **(Done 2026-10-29, see the "(later)" entry above.)** **Release 0.6.1:
+  Lucas's call, not started.** Per `RELEASING.md`: open the
   version-bump PR (`npm run version:set -- 0.6.1`), merge it, tag `v0.6.1`, let CI
   build the draft, then Lucas reviews the draft and clicks Publish.
 - **(Done 2026-10-29, see the entry above.)** **Housekeeping, each its own
