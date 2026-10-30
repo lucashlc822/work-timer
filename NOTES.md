@@ -12,6 +12,70 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-30 (end of session) — Idle screen finished and merged; 0.6.2 not cut
+
+**Status: everything is merged to `master` (#127–#131) and nothing is open.**
+`master` is `0eec739` and matches `origin/master`; the working tree is clean.
+Nothing from this stretch is released: the latest release is still 0.6.1, so
+friends' apps and the web version have none of it. The entries below cover
+the individual changes; this one is the pointer and the order to work in.
+
+### What was decided, and why it isn't obvious from the diffs
+
+- **The idle card is anchored to the top, not centred** (#127, then #128). The
+  card changes height with the mode and the Custom slider, so a centred card
+  moved the controls out from under the pointer. Top anchoring then looked
+  top-heavy on tall windows, hence `2xl:pt-32` in #128.
+- **Radio keyboard behaviour instead of `aria-pressed` buttons** (#131). The
+  repo already had the pattern in `PeriodTabs`, and it kept every test that
+  queries `radio` unchanged.
+- **Read the code before trusting a plan's details.** The follow-up plan first
+  called the mini window's title a notification title and proposed
+  `aria-pressed` buttons; reading the code corrected both before anything was
+  built.
+
+### Next, in the order to work on it
+
+1. **Use the new idle screen for a few sessions** (Lucas): `npm run dev`, or
+   `npm run tauri:dev` for the desktop app. It gates steps 3 and 4.
+2. **Housekeeping:** remove the three stale session worktrees under
+   `.claude/worktrees/` (steps in the 2026-10-29 "Housekeeping" entry) once the
+   chats that made them are done; stop Docker Desktop and the local stack if
+   not needed.
+3. **Unrun checks, no code:** idle-to-running size continuity compared in
+   screenshots, reduced motion on the idle screen, a brighter sky theme, and
+   (needs an accepted friend) the "Working on" picker beside the tag picker.
+4. **One polish PR, with a short plan first** (acceptance tests written before
+   building), shaped by steps 1 and 3: Start's focus-ring flash (needs an
+   approach that avoids the arbitrary value the UI rules forbid), `.range-soft`'s
+   raw `rem` sizes and faint track, the 12px hint lines, focusing a panel's
+   heading when it opens, and `ink-secondary` for the Account version line.
+5. **Release 0.6.2, with a short plan first** (reuse the 0.6.1 plan's R-cases;
+   `RELEASING.md` is the checklist). Lucas clicks Publish.
+6. **Lucas's installed app updating 0.6.1 → 0.6.2**, which is also the first
+   real proof of the HTTPS update path (0.6.1's own check has never run
+   against the real server; `e2e:update` serves its fake release over HTTP).
+7. **Tell friends 0.6.2 is out.** Skip a separate 0.6.1 message; 0.6.2
+   supersedes it.
+8. **The two-person checks** (a real shared constellation, focus together):
+   need a friend on 0.6.x.
+
+### Things worth not rediscovering
+
+- **A browser-pane screenshot can show a stale frame.** After a keyboard action
+  it showed the focus ring on the previous control while the page's own state
+  (read with `javascript_tool`) was already correct; a second screenshot caught
+  up. Trust the DOM state, then re-screenshot. Same family as the stalled
+  transitions in CLAUDE.md.
+- **Merging while CI is still running:** `gh pr checks <n>` lists each job; the
+  state `UNSTABLE`/`UNKNOWN` means checks pending or GitHub recomputing, not
+  failure. Wait for the jobs, then merge.
+- **Port 5173 held by a Vite server** blocks `e2e:desktop` and `e2e:update`
+  again; the owner is visible with `Get-NetTCPConnection -LocalPort 5173`.
+  Ask before stopping one that isn't yours.
+
+---
+
 ## 2026-10-30 — Idle card offset on wide windows
 
 **Status: a one-line follow-up to #127 (branch `fix/idle-card-offset`).** #127
@@ -34,6 +98,9 @@ scrolled); 1280×800 is unchanged (80 above, 92 below).
 
 **Status: merged to `master` as #127 (and the follow-up #128, see the
 2026-10-30 entry above); not released.**
+**(Superseded 2026-10-30 — the "PR open" in this entry's title is out of date;
+#127 merged the same day. Later follow-ups: #128–#131, see the end-of-session
+entry above.)**
 Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. UI only: no server
 change, no migration.
 
