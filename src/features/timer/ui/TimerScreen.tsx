@@ -11,7 +11,7 @@ import { pomodoroLimits, useTimerPrefs } from '../hooks/useTimerPrefs';
 import { useTimer } from './timerContext';
 import { BreakScreen } from './BreakScreen';
 import { CancelDialog } from './CancelDialog';
-import { CountdownDisplay } from './CountdownDisplay';
+import { CountdownDisplay, PlannedTime } from './CountdownDisplay';
 import { DurationPicker } from './DurationPicker';
 import { ModeToggle } from './ModeToggle';
 import { PomodoroSettingsPanel } from './PomodoroSettingsPanel';
@@ -167,10 +167,9 @@ export const TimerScreen = ({
   const pomodoro = prefs.mode === 'pomodoro';
   const plannedS = pomodoro ? prefs.settings.focusS : minutesToSeconds(minutes);
   return (
-    <div className="flex w-full flex-col items-center gap-6">
+    <div className="rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center gap-6 border px-8 py-8 backdrop-blur-md">
       <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
-      {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
-      {slots.targetPicker?.({ disabled: starting })}
+      <PlannedTime seconds={plannedS} />
       {pomodoro ? (
         <PomodoroSettingsPanel
           settings={prefs.settings}
@@ -181,6 +180,10 @@ export const TimerScreen = ({
       ) : (
         <DurationPicker minutes={minutes} onChange={setMinutes} disabled={starting} />
       )}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {slots.tagPicker?.({ value: prefs.tagId, onChange: prefs.setTagId, disabled: starting })}
+        {slots.targetPicker?.({ disabled: starting })}
+      </div>
       <button
         ref={startRef}
         type="button"
@@ -193,12 +196,14 @@ export const TimerScreen = ({
               : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
           );
         }}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-10 py-3 text-base transition-colors disabled:opacity-60"
+        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 px-12 py-3.5 text-base font-medium shadow-lg transition disabled:opacity-60"
       >
         {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}
       </button>
-      {slots.startHint?.(plannedS)}
-      {slots.progressLine?.()}
+      <div className="flex flex-col items-center gap-1">
+        {slots.startHint?.(plannedS)}
+        {slots.progressLine?.()}
+      </div>
       {timer.error !== null && <p className="text-faded text-xs">{timer.error}</p>}
     </div>
   );

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectSignedIn, signIn, signOut } from '../support/app';
+import { expectSignedIn, openAccount, signIn, signOut } from '../support/app';
 import { settle } from '../support/devices';
 import { befriend, createRoom, setName } from '../support/friends';
 import { adminClient, createUser } from '../support/users';
@@ -146,6 +146,9 @@ test('"Launch at startup" adds and removes the per-user startup entry', async ()
   await signIn(page, user);
   await expectSignedIn(page);
 
+  // The switch lives in the Account panel, not on the timer screen.
+  await expect(page.getByRole('checkbox', { name: 'Launch at startup' })).toHaveCount(0);
+  await openAccount(page);
   const toggle = page.getByRole('checkbox', { name: 'Launch at startup' });
   await expect(toggle).not.toBeChecked();
   try {
@@ -165,6 +168,11 @@ test('"Launch at startup" adds and removes the per-user startup entry', async ()
     for (const [name, command] of addedSince(before)) {
       if (DEV_EXE.test(command)) removeRunEntry(name);
     }
+    // The panel makes the timer screen inert; leave it before signing out.
+    await page
+      .getByRole('button', { name: 'Back to timer' })
+      .click({ timeout: 5_000 })
+      .catch(() => undefined);
     await signOut(page).catch(() => undefined);
   }
 });

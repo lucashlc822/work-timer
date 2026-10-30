@@ -12,6 +12,40 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-10-29 (evening) — Idle screen polish, PR open
+
+**Status: branch `feat/idle-screen-polish`, PR open, not merged, not released.**
+Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. UI only: no server
+change, no migration.
+
+### What changed
+
+- Idle screen: the planned length is the hero (`PlannedTime`, same type as the
+  running countdown); mode and length are `SegmentedControl`s; everything sits
+  on one translucent card; Start has a soft glow; sliders use `.range-soft`.
+- Footer: progress (constellation, Stardust) and navigation (View sky, Stats,
+  Friends, Account) are separate groups; navigation has no outline.
+- "Launch at startup" moved from the footer to Account ("This computer"),
+  drawn as a switch over the same native checkbox (desktop only).
+- `e2e/desktop/native.spec.ts` now opens Account to reach it.
+
+### Next
+
+- **`npm run e2e:desktop` has not been run** for this change. It refuses to
+  start while any `starkeep.exe` runs (an instance was running). Quit it from
+  the tray, free port 5173, then run it: the autostart test is the one that
+  matters.
+- The `ui-ux-reviewer` pass (acceptance case 8) has not been run either.
+- `AccountPanel.tsx` hard-codes "Starkeep" for the version line instead of
+  `APP_NAME`; its own small PR.
+
+### Things worth not rediscovering
+
+- Docker Desktop was off; `npx supabase start` says `StatusDbNotReadyError`
+  for a minute after the engine comes up. Wait, don't retry in a loop.
+
+---
+
 ## 2026-10-29 (R14 verified) — Installed app updated to 0.6.1
 
 **Status: R14 passed, so every 0.6.1 acceptance case (R1–R14) now has an observed

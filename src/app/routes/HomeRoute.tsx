@@ -127,6 +127,10 @@ const BackButton = ({
   </button>
 );
 
+/** A footer navigation button: no outline, so the row reads as links, not choices. */
+const NAV_BUTTON =
+  'rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 px-3 py-1.5 text-xs transition-colors';
+
 const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
 
@@ -344,41 +348,33 @@ const HomeScreen = ({ together }: { together: Together }) => {
           />
         )}
 
-        <section className="flex w-full flex-1 flex-col items-center justify-center pt-24">
+        <section className="flex w-full flex-1 flex-col items-center justify-center">
           <TimerScreen slots={slots} sharedId={target} />
         </section>
 
-        <footer className="flex flex-col items-center gap-3">
+        <footer className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+          {/* Your progress: what you are building and what you have earned. */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />
             <StardustPill onOpen={() => openView('stardust')} />
-            <button
-              type="button"
-              onClick={() => openView('sky')}
-              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
-            >
+          </div>
+          <span aria-hidden className="bg-night-600 hidden h-4 w-px sm:block" />
+          {/* Navigation: quieter, no outline. */}
+          <nav aria-label="Main" className="flex flex-wrap items-center justify-center gap-1">
+            <button type="button" onClick={() => openView('sky')} className={NAV_BUTTON}>
               View sky
             </button>
-            <button
-              type="button"
-              onClick={() => openView('stats')}
-              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
-            >
+            <button type="button" onClick={() => openView('stats')} className={NAV_BUTTON}>
               Stats
             </button>
             <FriendsPill
               waiting={friends.incoming.length + incomingProposals(shared.rows, me).length}
               onOpen={() => openView('friends')}
             />
-            <button
-              type="button"
-              onClick={() => openView('account')}
-              className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
-            >
+            <button type="button" onClick={() => openView('account')} className={NAV_BUTTON}>
               Account
             </button>
-          </div>
-          <AutostartToggle />
+          </nav>
         </footer>
       </main>
 
@@ -408,6 +404,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
             onSyncNow={syncNow}
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
+            deviceSettings={<AutostartToggle />}
           />
         </PanelLayer>
       )}
@@ -502,15 +499,24 @@ const AutostartToggle = () => {
     setEnabled(await autostart.isEnabled());
   };
 
+  // A switch drawn over the native checkbox, which stays the control (so it is
+  // still a checkbox named "Launch at startup" to the keyboard and to tests).
   return (
-    <label className="text-ink-secondary hover:text-ink-primary flex cursor-pointer items-center gap-2 text-xs transition-colors">
-      <input
-        type="checkbox"
-        checked={enabled}
-        onChange={() => void toggle()}
-        className="accent-lavender-400"
-      />
-      Launch at startup
-    </label>
+    <section className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-3 border p-4 text-sm">
+      <h3 className="text-ink-primary">This computer</h3>
+      <label className="text-ink-secondary hover:text-ink-primary flex cursor-pointer items-center justify-between gap-3 transition-colors">
+        Launch at startup
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={() => void toggle()}
+          className="peer sr-only"
+        />
+        <span
+          aria-hidden
+          className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary relative h-5 w-9 shrink-0 transition-colors duration-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:transition-transform after:duration-300 peer-checked:after:translate-x-4"
+        />
+      </label>
+    </section>
   );
 };
