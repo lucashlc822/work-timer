@@ -32,7 +32,8 @@ scrolled); 1280×800 is unchanged (80 above, 92 below).
 
 ## 2026-10-29 (evening) — Idle screen polish, PR open
 
-**Status: branch `feat/idle-screen-polish`, PR open, not merged, not released.**
+**Status: merged to `master` as #127 (and the follow-up #128, see the
+2026-10-30 entry above); not released.**
 Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. UI only: no server
 change, no migration.
 
@@ -63,8 +64,12 @@ change, no migration.
     Tailwind classes); 12px hint lines are quiet; slider track is faint.
   - Not seen: the "Working on" picker beside the tag picker (needs an accepted
     friend), brighter sky themes, reduced motion, WebView2 at narrow widths.
-- `AccountPanel.tsx` hard-codes "Starkeep" for the version line instead of
-  `APP_NAME`; its own small PR.
+- **(Done 2026-10-30, `fix/app-name-and-notes-status`.)** `AccountPanel.tsx`
+  hard-coded "Starkeep" for the version line instead of `APP_NAME`. Two more
+  user-visible instances remain, deliberately not folded in: the update notice
+  in `DesktopUpdatePrompt.tsx` ("Starkeep X is ready") and the notification
+  title in `shared/runtime/desktop.ts`. The e2e specs assert those strings, so
+  changing them means changing the tests too: its own PR.
 
 ### Things worth not rediscovering
 
