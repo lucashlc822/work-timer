@@ -12,7 +12,102 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-02 — Released 0.6.2: the idle-screen redesign
+
+**Status: 0.6.2 is published (tag `v0.6.2`, Latest, commit `204b34f`; web
+deployed from the same commit), and Lucas's installed app updated to it.** No
+migration; `min_client_version` is still null. Nothing is open except the items
+under "Next". Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`.
+
+It ships the idle-screen redesign (#127, #128), the product-name fixes (#129,
+#130), arrow keys in the radio groups (#131) and the fit-the-480×720-window
+polish (#133). The first real use of the HTTPS update path (0.6.1's own check
+had only ever run over HTTP in `e2e:update`) worked.
+
+### Acceptance pass
+
+| Case | Result |
+|---|---|
+| R1 five version files | Pass: five files, 6 lines (the lockfile states it twice), all 0.6.1 → 0.6.2. |
+| R2 version test + CI | Pass: `version.test.ts` 12/12; CI on #134 green. |
+| R3 `e2e:desktop` 5/5 | **Passed on the second full run, after one unexplained failure; see below.** First run 4/5 (tracing off), then the failing test alone 1/1, then a full run 5/5, and later six more runs of that test with tracing off 6/6. |
+| R4 `e2e:update` | Pass: 1/1. |
+| R5 `Release` workflow | Pass, including its `version` job. |
+| R6 draft assets | Pass: the four expected. |
+| R7 `latest.json` | Pass: 0.6.2, URLs under `/download/v0.6.2/`, key id `8E3AF18012526DA8`. |
+| R8 "What's new" line | Wording approved by Lucas as written and saved on the draft. |
+| R9 published on the right tag | Pass: `v0.6.2` Latest, no `untagged-…` refs. The draft's tag had been flipped to an untagged name when the description was saved and was restored before publishing; see below. |
+| R10 `Deploy web` | Pass, on `204b34f`. |
+| R11 live bundle | Pass: contains `"0.6.2"`, not `"0.6.1"`. |
+| R12 downloads | Pass: `Starkeep-setup.exe` 206 to a one-byte range; the served `latest.json` says 0.6.2; the update file it points at downloads. |
+| R13 `min_client_version` | Pass: null on the hosted project. |
+| R14 installed app | Pass (Lucas): the update notice, "Restart to update", back signed in on 0.6.2. |
+
+Not covered: a first-time install of 0.6.2 (R12 proves the file is served, not
+that it was run), the update on anyone's machine but Lucas's, and the two-person
+checks.
+
+### Next
+
+1. **Tell friends 0.6.2 is out** (Lucas). R14 is done, so it is safe to.
+2. **Find out what stalls the desktop window** (see the first item below). Start by
+   running the cross-device test 10 to 15 times at the default config to get a
+   real failure rate, saving traces with `--output <folder outside the repo>`.
+   Candidate fix to try, not a conclusion: Chromium's flags against background
+   and occlusion throttling in `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
+   (`e2e/desktop/launch.ts`), such as `--disable-renderer-backgrounding` and
+   `--disable-backgrounding-occluded-windows`. Until it is understood a
+   release-time `e2e:desktop` can fail the same way again: re-run before
+   believing it, and keep the evidence.
+3. **The two-person checks** (a real shared constellation, focus together): need a
+   friend on 0.6.x.
+4. Optional, only if wanted: focusing a panel's heading on open (reverses #110,
+   five panels, ~15 `focus.spec.ts` assertions: its own PR).
+
+### Things worth not rediscovering
+
+- **The `e2e:desktop` stall is UNEXPLAINED, and it is not simply tracing.** The
+  cross-device test (`desktop.spec.ts:66`) hung 4 minutes at its "Done" click: in
+  the traces the window stopped producing frames 40 to 45 seconds into the
+  session, so the click's "visible, enabled and stable" wait (frame based) never
+  finished. 12 runs of that test on 2026-11-01/02: 3 failed. **The first failure
+  was with tracing off**: the `desktop` project already sets `trace: 'off'` in
+  `playwright.config.ts`. With tracing switched on by flag it failed 2 of 4 runs;
+  off, 1 of 8 (the first one, then 7 passes). That hints tracing makes it more
+  likely; it is not required. Six real sessions with the page counting frames
+  (three with Playwright attached, three detached) never stalled (steady 144 fps),
+  and covering or uncovering the window made no difference. It began after
+  WebView2 updated itself to 156.0.4314.58 (2026-11-01 00:18), when the same test
+  had passed every run on 2026-10-30. Not tried: the old runtime; not inspected:
+  anything inside WebView2. 0.6.2 shipped on R3 passing on re-runs and R14
+  passing on a real install; whether a user's window could ever stop painting like
+  this is not known.
+- **The visible error of that failure was the cleanup, not the cause.** The test's
+  `finally` calls `signOut`, whose click on "Account" hung until the 240 s timeout;
+  the test body's own failure is in the trace. Run a suspect test with
+  `--output <folder outside the repo>`: the next Playwright run wipes
+  `test-results`, which is how the first failure's evidence was lost.
+- **`--screenshot` is not a `playwright test` flag** (`error: unknown option`); the
+  run does nothing.
+- **Editing a draft release's description flips its tag to `untagged-…`** unless
+  `tag_name` is in the same call. Caught before publishing (the draft was never
+  public) and restored with `-f tag_name=v0.6.2`. Now in `RELEASING.md`.
+- **A draft's `latest.json` can be read through the API:**
+  `gh api -H "Accept: application/octet-stream" repos/<owner>/<repo>/releases/assets/<id>`.
+  The hosted `min_client_version` is readable with the publishable key
+  (`<url>/rest/v1/app_config?select=min_client_version`), as the keep-alive
+  workflow does; read the key from `.env.production.local` in a script so it is
+  never printed.
+- **Long one-liners with parentheses fail in the Bash tool** (a `syntax error near
+  unexpected token '('`); put the commands in a script file in the scratchpad and
+  run that.
+
+---
+
 ## 2026-10-30 (later) — Step 4 checks done; idle-screen polish PR open
+
+**(Progress 2026-11-02 — all of this is done: #133 merged and 0.6.2 released; see
+the entry above.)**
 
 **Status: branch `fix/idle-screen-fit-and-focus`, PR open, not merged, not
 released.** Plan: `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`. Steps 1

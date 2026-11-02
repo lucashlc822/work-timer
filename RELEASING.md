@@ -83,6 +83,16 @@ missing. `.env.example` lists every name.
    its `.sig`, `latest.json`, and `Starkeep-setup.exe`. The description is already
    written for friends (how to install); add a line about what changed above it.
 
+   **Editing the description from the command line flips the draft's tag to
+   `untagged-…`** unless `tag_name` is in the same call (0.6.2 hit this; caught
+   before publishing). Name it, then check it:
+   ```bash
+   gh api -X PATCH repos/lucashlc822/work-timer/releases/<id> -F body=@body.md -f tag_name=vX.Y.Z
+   gh api repos/lucashlc822/work-timer/releases/<id> --jq .tag_name   # must say vX.Y.Z
+   ```
+   If it says `untagged-…`, repeat the PATCH with only `-f tag_name=vX.Y.Z`. Editing
+   in the Releases page was not tried for this: check its tag box either way.
+
    Check that `latest.json` names `X.Y.Z` and points at `/download/vX.Y.Z/…`,
    and that the update was signed with **the** key: installed apps reject any
    other. A signature's key id is bytes 2–10, little-endian, of the
