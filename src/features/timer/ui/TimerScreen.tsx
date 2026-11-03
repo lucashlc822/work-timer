@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { systemClock } from '@/shared/lib';
 import { useFocusIfLost } from '@/shared/ui';
@@ -37,9 +37,12 @@ import type { TimerSlots } from './slots';
 export const TimerScreen = ({
   slots = {},
   sharedId = null,
+  refocusStart = 0,
 }: {
   slots?: TimerSlots;
   sharedId?: string | null;
+  /** Bumped by the app to hand a focus that fell to the page to Start. */
+  refocusStart?: number;
 }) => {
   const timer = useTimer();
   const prefs = useTimerPrefs();
@@ -63,6 +66,23 @@ export const TimerScreen = ({
     timer.dismiss();
   };
   const now = systemClock.now();
+
+  // What the app shows instead of the start controls, if anything. When it
+  // goes (a lobby left or closed), or the app asks (`refocusStart`, after a
+  // control of its own above the timer went), a focus that fell to the page
+  // lands on Start, so the keyboard isn't sent back to the top.
+  const override = slots.idleOverride?.() ?? null;
+  const overriding = override !== null;
+  const wasOverriding = useRef(overriding);
+  useEffect(() => {
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (lost && wasOverriding.current && !overriding) startRef.current?.focus();
+    wasOverriding.current = overriding;
+  }, [overriding]);
+  useEffect(() => {
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (lost && refocusStart > 0) startRef.current?.focus();
+  }, [refocusStart]);
 
   const keepGoing = useCallback(() => setConfirming(false), []);
 
@@ -165,7 +185,6 @@ export const TimerScreen = ({
     );
   }
 
-  const override = slots.idleOverride?.() ?? null;
   if (override !== null) {
     return (
       <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12 2xl:pt-32">

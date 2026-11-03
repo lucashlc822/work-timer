@@ -93,7 +93,7 @@ test('invite, join and start together; a friend’s end-early ends it for everyo
     await expect(adaLobby).toBeFocused();
     await expect(a.page.getByRole('button', { name: 'Back to timer' })).toBeHidden();
     await expect(a.page.getByRole('button', { name: /^Start \d+ min$/ })).toBeHidden();
-    await expect(a.page.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
+    await expect(a.page.getByRole('button', { name: 'Start together' })).toBeDisabled();
 
     // 3.1: Bea's banner arrives live, without a reload.
     const banner = b.page.getByRole('region', { name: 'Invitation' });
@@ -108,7 +108,7 @@ test('invite, join and start together; a friend’s end-early ends it for everyo
     await expect(b.page.getByRole('button', { name: /^Start/ })).toBeHidden();
 
     // Ada's lobby shows Bea in; Start opens.
-    const start = a.page.getByRole('button', { name: 'Start', exact: true });
+    const start = a.page.getByRole('button', { name: 'Start together' });
     await expect(start).toBeEnabled({ timeout: 10_000 });
     await start.click();
 
@@ -333,6 +333,9 @@ test('starting alone while invited asks first, and declines only on yes (A4, A5)
     await expect(banner).toBeHidden();
     expect(await memberState(room, bea!)).toBe('declined');
     await expect(a.page.getByText('Said no')).toBeVisible({ timeout: 10_000 });
+    // Ada gives the lobby up; the keyboard lands on her Start, not the page top.
+    await a.page.getByRole('button', { name: 'Cancel invite' }).click();
+    await expect(a.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
   } finally {
     await closeDevices(a, b);
   }
@@ -365,6 +368,134 @@ test('a room that starts while another of your devices runs a session says so th
     expect(await endsAtLine(b2.page).innerText()).toBe(soloEnds);
   } finally {
     await closeDevices(b1, b2);
+  }
+});
+
+/** The lobby's member list, and one member's entry in it. */
+const lobbyList = (page: Page) => page.getByRole('list', { name: 'Who’s coming' });
+const lobbyMember = (page: Page, name: string) =>
+  lobbyList(page)
+    .getByRole('listitem')
+    .filter({ has: page.getByText(name, { exact: true }) });
+
+/** Whether the page scrolls at its current size. */
+const scrolls = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
+
+test('the lobby shows who’s in, who’s invited and how long it waits; it fits small windows (B1, B2, B4, B7, B9)', async ({
+  browser,
+}, testInfo) => {
+  const [ada, bea, cy, dee] = await people('Ada', 'Bea', 'Cy', 'Dee');
+  await Promise.all([befriend(ada!, bea!), befriend(ada!, cy!), befriend(ada!, dee!)]);
+  const a = await openDevice(browser, BASE, ada!);
+  const b = await openDevice(browser, BASE, bea!);
+
+  try {
+    // B7: Ada's device asks for less motion.
+    await a.page.emulateMedia({ reducedMotion: 'reduce' });
+    await a.page.getByRole('button', { name: 'Focus with friends' }).click();
+    for (const name of ['Bea', 'Cy', 'Dee']) {
+      await a.page.getByRole('checkbox', { name }).check();
+    }
+    await a.page.getByRole('button', { name: 'Invite' }).click();
+
+    // B1: four stars, Ada's own marked as host, the rest invited, and the clock on the invite.
+    await expect(lobbyList(a.page).getByRole('listitem')).toHaveCount(4);
+    await expect(lobbyMember(a.page, 'You')).toContainText('Host');
+    for (const name of ['Bea', 'Cy', 'Dee']) {
+      await expect(lobbyMember(a.page, name)).toContainText('Invited');
+    }
+    await expect(a.page.getByText(/^Invite open for 10 more min\./)).toBeVisible();
+    await expect(a.page.getByText('Start opens once a friend has joined.')).toBeVisible();
+    // An invited star twinkles, except under reduced motion.
+    const invitedStar = lobbyMember(a.page, 'Bea').getByTestId('member-star');
+    expect(await invitedStar.evaluate((el) => getComputedStyle(el).animationName)).toBe(
+      'sky-twinkle',
+    );
+    const duration = await invitedStar.evaluate((el) => getComputedStyle(el).animationDuration);
+    expect(parseFloat(duration)).toBeLessThan(0.001);
+
+    // B2: Bea joins; Ada sees her star come in, and Bea sees the same lobby.
+    await b.page
+      .getByRole('region', { name: 'Invitation' })
+      .getByRole('button', { name: 'Join' })
+      .click({ timeout: 10_000 });
+    await expect(lobbyMember(a.page, 'Bea')).toContainText('In', { timeout: 5_000 });
+    await expect(a.page.getByText('Everyone who’s in is ready. Start when you are.')).toBeVisible();
+    await expect(lobbyMember(b.page, 'Ada')).toContainText('Host');
+    await expect(lobbyMember(b.page, 'You')).toContainText('In');
+    await expect(b.page.getByText('Waiting for Ada to start.')).toBeVisible();
+
+    // B9: the lobby fits the desktop window and a narrow window. (At 375×667
+    // the idle timer screen itself already scrolls, so that size isn't the bar.)
+    for (const [width, height] of [
+      [480, 720],
+      [375, 812],
+    ] as const) {
+      await a.page.setViewportSize({ width, height });
+      await b.page.setViewportSize({ width, height });
+      expect(await scrolls(a.page), `host lobby scrolls at ${width}×${height}`).toBe(false);
+      expect(await scrolls(b.page), `guest lobby scrolls at ${width}×${height}`).toBe(false);
+    }
+    await a.page.setViewportSize({ width: 480, height: 720 });
+    await b.page.setViewportSize({ width: 480, height: 720 });
+    await a.page.screenshot({ path: testInfo.outputPath('lobby-host.png') });
+    await b.page.screenshot({ path: testInfo.outputPath('lobby-guest.png') });
+
+    // B4: started, each sees the other under the clock.
+    await a.page.getByRole('button', { name: 'Start together' }).click();
+    await expect(a.page.getByText('Focusing together with Bea')).toBeVisible({ timeout: 10_000 });
+    await expect(b.page.getByText('Focusing together with Ada')).toBeVisible({ timeout: 10_000 });
+    await b.page.screenshot({ path: testInfo.outputPath('running-together.png') });
+  } finally {
+    await closeDevices(a, b);
+  }
+});
+
+test('a lobby that ends without starting says so gently, then the timer is back (B5, B6)', async ({
+  browser,
+}) => {
+  const [ada, bea] = await people('Ada', 'Bea');
+  await befriend(ada!, bea!);
+  const b = await openDevice(browser, BASE, bea!);
+
+  try {
+    const note = b.page.getByRole('region', { name: 'Friends session' });
+
+    // B6: a lobby nobody started runs out. (First: backdating it makes it the
+    // older room, which a newer one would then speak over.)
+    const lapsing = await createRoom(ada!, [bea!], 1500);
+    await rpc(bea!, 'respond_room', { room: lapsing, join_room: true });
+    await expect(b.page.getByText('Waiting for Ada to start.')).toBeVisible({ timeout: 15_000 });
+    const { error } = await adminClient()
+      .from('together_rooms')
+      .update({ created_at: new Date(Date.now() - 11 * 60_000).toISOString() })
+      .eq('id', lapsing);
+    expect(error).toBeNull();
+    await b.page.reload();
+    await expectSignedIn(b.page);
+    await expect(note).toContainText('The invite ran out before it started.', {
+      timeout: 10_000,
+    });
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
+    await note.getByRole('button', { name: 'OK' }).click();
+    await expect(note).toBeHidden();
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
+
+    // B5: Ada closes the lobby Bea is waiting in.
+    const closed = await createRoom(ada!, [bea!], 1500);
+    await rpc(bea!, 'respond_room', { room: closed, join_room: true });
+    await expect(b.page.getByText('Waiting for Ada to start.')).toBeVisible({ timeout: 15_000 });
+    await rpc(ada!, 'leave_room', { room: closed });
+    await expect(note).toContainText('Ada closed the lobby. Maybe next time.', {
+      timeout: 10_000,
+    });
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
+    await note.getByRole('button', { name: 'OK' }).click();
+    await expect(note).toBeHidden();
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
+  } finally {
+    await closeDevices(b);
   }
 });
 

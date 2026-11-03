@@ -7,7 +7,11 @@ import {
   friendCancel,
   isLobby,
   listNames,
+  lobbyEnded,
+  lobbyMinutesLeft,
+  lobbyOrder,
   missedStart,
+  nobodyComing,
   pendingInvite,
   shouldAutoStart,
   type Room,
@@ -109,6 +113,67 @@ describe('isLobby', () => {
     expect(isLobby(one())).toBe(false);
     expect(isLobby(one({ status: 'lapsed' }))).toBe(false);
     expect(isLobby(null)).toBe(false);
+  });
+});
+
+describe('the lobby', () => {
+  const lobby = (over: Record<string, unknown> = {}) =>
+    one({ status: 'lobby', starts_at: null, ends_at: null, ...over });
+
+  it('counts down the invitation’s ten minutes, rounded up', () => {
+    // Created 10:00, now 10:10 in the fixtures; move the creation to suit.
+    expect(lobbyMinutesLeft(lobby({ created_at: '2026-10-24T10:10:00Z' }), NOW)).toBe(10);
+    expect(lobbyMinutesLeft(lobby({ created_at: '2026-10-24T10:01:30Z' }), NOW)).toBe(2);
+    expect(lobbyMinutesLeft(lobby(), NOW)).toBe(0);
+  });
+
+  it('lists the host, then you, then the rest in the server’s order', () => {
+    // Fixture order: ada (host), me, bea, cy.
+    expect(lobbyOrder(lobby(), 'bea').map((m) => m.userId)).toEqual(['ada', 'bea', ME, 'cy']);
+    expect(lobbyOrder(lobby(), 'ada').map((m) => m.userId)).toEqual(['ada', ME, 'bea', 'cy']);
+  });
+
+  it('knows when nobody but the host is still coming', () => {
+    const members = (...states: string[]) =>
+      lobby({
+        members: [
+          { user_id: 'ada', display_name: 'Ada', state: 'joined' },
+          ...states.map((state, i) => ({ user_id: `f${i}`, display_name: `F${i}`, state })),
+        ],
+      });
+    expect(nobodyComing(members('declined', 'left'))).toBe(true);
+    expect(nobodyComing(members('declined', 'invited'))).toBe(false);
+    expect(nobodyComing(members('joined'))).toBe(false);
+  });
+});
+
+describe('lobbyEnded', () => {
+  const ended = (over: Record<string, unknown>) => one({ starts_at: null, ends_at: null, ...over });
+
+  it('a lobby the host closed, for the others, for five minutes', () => {
+    const closed = ended({
+      status: 'cancelled',
+      cancelled_by: 'ada',
+      cancelled_at: '2026-10-24T10:08:00Z',
+    });
+    expect(lobbyEnded([closed], ME, NOW)).toMatchObject({ why: 'closed', room: { id: 'room-1' } });
+    expect(lobbyEnded([closed], 'ada', NOW)).toBeNull();
+    expect(lobbyEnded([closed], ME, Date.parse('2026-10-24T10:13:00Z'))).toBeNull();
+  });
+
+  it('a lobby that ran out of time', () => {
+    const lapsed = ended({ status: 'lapsed', created_at: '2026-10-24T09:59:00Z' });
+    expect(lobbyEnded([lapsed], ME, NOW)).toMatchObject({ why: 'lapsed' });
+    expect(lobbyEnded([lapsed], ME, Date.parse('2026-10-24T10:15:00Z'))).toBeNull();
+  });
+
+  it('nothing for an open lobby, a room that started, or one you never joined', () => {
+    const lapsed = ended({ status: 'lapsed', created_at: '2026-10-24T09:59:00Z' });
+    expect(lobbyEnded([ended({ status: 'lobby' }), lapsed], ME, NOW)).toBeNull();
+    expect(
+      lobbyEnded([one({ status: 'cancelled', cancelled_by: 'ada' }), lapsed], ME, NOW),
+    ).toBeNull();
+    expect(lobbyEnded([lapsed], 'cy', NOW)).toBeNull();
   });
 });
 

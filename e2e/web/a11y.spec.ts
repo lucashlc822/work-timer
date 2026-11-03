@@ -167,7 +167,10 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   findings.push(...(await scan(page, 'focus together')));
   await page.keyboard.press('Escape');
 
-  await rpc(friend, 'create_room', { friends: [user.id], planned_duration_s: 1500 });
+  const firstRoom = (await rpc(friend, 'create_room', {
+    friends: [user.id],
+    planned_duration_s: 1500,
+  })) as string;
   const banner = page.getByRole('region', { name: 'Invitation' });
   await banner.waitFor({ timeout: 15_000 });
   await settleTransitions(page);
@@ -183,6 +186,25 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await page.getByRole('heading', { name: '25 min together' }).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'together lobby')));
+
+  // The host closes it: the gentle note over the timer.
+  await rpc(friend, 'leave_room', { room: firstRoom });
+  const ended = page.getByRole('region', { name: 'Friends session' });
+  await ended.waitFor({ timeout: 15_000 });
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'lobby ended note')));
+  await ended.getByRole('button', { name: 'OK' }).click();
+
+  // Running together: the companions under the clock.
+  const room = (await rpc(friend, 'create_room', {
+    friends: [user.id],
+    planned_duration_s: 1500,
+  })) as string;
+  await rpc(user, 'respond_room', { room, join_room: true });
+  await rpc(friend, 'start_room', { room });
+  await page.getByText(/^Focusing together with /).waitFor({ timeout: 15_000 });
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'running together')));
 
   await report(testInfo, findings);
 });
