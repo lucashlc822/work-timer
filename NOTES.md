@@ -12,6 +12,37 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-02 (end of session) — Nothing in flight; 0.6.2 is out
+
+**Status: everything is merged (#126 to #135) and nothing is open.** `master` is
+`8eab735`, clean, with no extra worktrees and no stray `claude/*` branches. 0.6.2
+is published and Lucas's install updated to it (the acceptance pass is in the
+entry below). Docker Desktop is stopped and so is the dev server on 5173;
+`npm run dev` and `npx supabase start` bring them back.
+
+### Next
+
+1. Tell friends 0.6.2 is out (Lucas).
+2. Find out what stalls the desktop test window: run the cross-device test 10 to
+   15 times at the default config to get a real failure rate, with traces saved
+   by `--output` to a folder outside the repo.
+3. The two-person checks (a shared constellation, focus together) once a friend
+   is on 0.6.x.
+4. Optional: focus a panel's heading on open (its own PR).
+
+### Things worth not rediscovering
+
+- **One plan file, `~/.claude/plans/i-feel-like-we-peaceful-hellman.md`, was
+  reused for every plan in this stretch,** so it now holds only the 0.6.2 release
+  plan. Entries that cite it for earlier work point at a file without that plan;
+  their substance is in the entries themselves.
+- **A `--trace=` flag on the command line overrides the desktop project's
+  `trace: 'off'`:** a run with the flag is a tracing-on run. The stall was first
+  blamed on tracing by counting a tracing-off failure as a tracing-on one; count
+  runs by their real settings.
+
+---
+
 ## 2026-11-02 — Released 0.6.2: the idle-screen redesign
 
 **Status: 0.6.2 is published (tag `v0.6.2`, Latest, commit `204b34f`; web
@@ -170,6 +201,9 @@ and seven local `claude/*` branches removed, all merged, nothing lost).
 
 **(Progress 2026-10-30 — steps 1 to 4 of the order below are done; see the entry
 above for what was found and what remains.)**
+**(Progress 2026-11-02 — steps 5 and 6 are done too: 0.6.2 is released and
+Lucas's install updated to it. Only telling friends and the two-person checks
+remain; see the two entries above.)**
 
 **Status: everything is merged to `master` (#127–#131) and nothing is open.**
 `master` is `0eec739` and matches `origin/master`; the working tree is clean.
