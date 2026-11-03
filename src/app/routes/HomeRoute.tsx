@@ -389,8 +389,8 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
       <main
         inert={away}
-        className={`relative z-10 flex min-h-dvh flex-col items-center px-6 pt-8 pb-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 ${
-          aboveTimer ? 'gap-4' : 'gap-6'
+        className={`relative z-10 flex min-h-dvh flex-col items-center px-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 sm:pb-6 ${
+          aboveTimer ? 'gap-4 pt-6 pb-4' : 'gap-6 pt-8 pb-6'
         } ${away ? 'pointer-events-none opacity-0' : ''}`}
       >
         <header className="flex items-center gap-2">
@@ -426,7 +426,11 @@ const HomeScreen = ({ together }: { together: Together }) => {
           />
         </section>
 
-        <footer className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+        <footer
+          className={`flex flex-col items-center justify-center sm:flex-row sm:gap-4 ${
+            aboveTimer ? 'gap-2' : 'gap-3'
+          }`}
+        >
           {/* Your progress: what you are building and what you have earned. */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />

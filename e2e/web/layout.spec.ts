@@ -93,6 +93,7 @@ test.describe('with something above the timer', () => {
     await note.getByRole('button', { name: 'OK' }).click();
     await expect(note).toBeHidden();
     await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
+    expect(await page.locator('main').evaluate((el) => getComputedStyle(el).rowGap)).toBe('24px');
   });
 });
 
