@@ -116,6 +116,12 @@ const ENDED_NOTE_MS = 5 * 60_000;
 export const lobbyMinutesLeft = (r: Room, now: number): number =>
   Math.max(0, Math.ceil((r.createdAt + LOBBY_LAPSE_MS - now) / 60_000));
 
+/** The members as every lobby shows them: the host, then you, then the rest as the server sent them. */
+export const lobbyOrder = (r: Room, me: string): RoomMember[] => {
+  const rank = (m: RoomMember) => (m.userId === r.host ? 0 : m.userId === me ? 1 : 2);
+  return [...r.members].sort((a, b) => rank(a) - rank(b));
+};
+
 /** Nobody but the host is still coming: everyone else said no, left or missed it. */
 export const nobodyComing = (r: Room): boolean =>
   r.members.every((m) => m.userId === r.host || (m.state !== 'invited' && m.state !== 'joined'));

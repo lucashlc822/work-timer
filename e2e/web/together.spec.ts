@@ -333,6 +333,9 @@ test('starting alone while invited asks first, and declines only on yes (A4, A5)
     await expect(banner).toBeHidden();
     expect(await memberState(room, bea!)).toBe('declined');
     await expect(a.page.getByText('Said no')).toBeVisible({ timeout: 10_000 });
+    // Ada gives the lobby up; the keyboard lands on her Start, not the page top.
+    await a.page.getByRole('button', { name: 'Cancel invite' }).click();
+    await expect(a.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
   } finally {
     await closeDevices(a, b);
   }
@@ -477,6 +480,7 @@ test('a lobby that ends without starting says so gently, then the timer is back 
     await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
     await note.getByRole('button', { name: 'OK' }).click();
     await expect(note).toBeHidden();
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
 
     // B5: Ada closes the lobby Bea is waiting in.
     const closed = await createRoom(ada!, [bea!], 1500);
@@ -489,6 +493,7 @@ test('a lobby that ends without starting says so gently, then the timer is back 
     await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
     await note.getByRole('button', { name: 'OK' }).click();
     await expect(note).toBeHidden();
+    await expect(b.page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
   } finally {
     await closeDevices(b);
   }

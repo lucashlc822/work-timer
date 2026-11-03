@@ -9,6 +9,7 @@ import {
   listNames,
   lobbyEnded,
   lobbyMinutesLeft,
+  lobbyOrder,
   missedStart,
   nobodyComing,
   pendingInvite,
@@ -124,6 +125,12 @@ describe('the lobby', () => {
     expect(lobbyMinutesLeft(lobby({ created_at: '2026-10-24T10:10:00Z' }), NOW)).toBe(10);
     expect(lobbyMinutesLeft(lobby({ created_at: '2026-10-24T10:01:30Z' }), NOW)).toBe(2);
     expect(lobbyMinutesLeft(lobby(), NOW)).toBe(0);
+  });
+
+  it('lists the host, then you, then the rest in the server’s order', () => {
+    // Fixture order: ada (host), me, bea, cy.
+    expect(lobbyOrder(lobby(), 'bea').map((m) => m.userId)).toEqual(['ada', 'bea', ME, 'cy']);
+    expect(lobbyOrder(lobby(), 'ada').map((m) => m.userId)).toEqual(['ada', ME, 'bea', 'cy']);
   });
 
   it('knows when nobody but the host is still coming', () => {

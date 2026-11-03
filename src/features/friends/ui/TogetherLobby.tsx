@@ -6,6 +6,7 @@ import { FriendsFailure } from '../data/friendsRepository';
 import { FRIENDS_MESSAGES } from '../domain/errors';
 import {
   lobbyMinutesLeft,
+  lobbyOrder,
   nameOf,
   nobodyComing,
   stateOf,
@@ -50,7 +51,7 @@ const useMinutesLeft = (room: Room): number => {
 const Member = ({ member, room, me }: { member: RoomMember; room: Room; me: string }) => (
   <li className="flex w-16 flex-col items-center gap-1 text-center">
     {/* The twinkle animates opacity, so it sits inside the dimming, not on it. */}
-    <span className={`ease-gentle transition duration-700 ${STAR_LOOK[member.state]}`}>
+    <span className={`ease-gentle transition duration-500 ${STAR_LOOK[member.state]}`}>
       <span
         data-testid="member-star"
         className="block"
@@ -62,7 +63,7 @@ const Member = ({ member, room, me }: { member: RoomMember; room: Room; me: stri
     <span className="text-ink-primary max-w-full truncate text-sm">
       {member.userId === me ? 'You' : (member.displayName ?? 'A friend')}
     </span>
-    <span className="text-ink-muted text-2xs">
+    <span className="text-ink-secondary text-2xs">
       {member.userId === room.host ? 'Host' : STATE_LABEL[member.state]}
     </span>
   </li>
@@ -132,16 +133,16 @@ export const TogetherLobby = ({
       </header>
 
       <ul aria-label="Who’s coming" className="flex flex-wrap justify-center gap-4">
-        {room.members.map((m) => (
+        {lobbyOrder(room, me).map((m) => (
           <Member key={m.userId} member={m} room={room} me={me} />
         ))}
       </ul>
 
       <div className="flex flex-col items-center gap-1 text-center">
-        <p className="text-ink-secondary text-sm" aria-live="polite">
+        <p className="text-ink-primary text-sm text-balance" aria-live="polite">
           {waiting}
         </p>
-        <p className="text-ink-muted text-xs">
+        <p className="text-ink-secondary text-xs text-balance">
           {minutesLeft > 0
             ? `Invite open for ${minutesLeft} more min.`
             : 'The invite is about to run out.'}{' '}

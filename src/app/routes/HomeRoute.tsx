@@ -269,6 +269,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
   const [dismissedEndings, setDismissedEndings] = useState<ReadonlySet<string>>(new Set());
   const ending = myRoom === null ? lobbyEnded(rooms, me, Date.now()) : null;
   const showEnding = ending !== null && !dismissedEndings.has(ending.room.id);
+  const [refocusStart, setRefocusStart] = useState(0);
   const slots = useMemo<TimerSlots>(() => {
     const roomOf = (id: string | null) =>
       id === null ? null : (rooms.find((r) => r.id === id) ?? null);
@@ -405,12 +406,16 @@ const HomeScreen = ({ together }: { together: Together }) => {
         {showEnding && (
           <LobbyEndedNote
             ending={ending}
-            onDismiss={() => setDismissedEndings((was) => new Set(was).add(ending.room.id))}
+            onDismiss={() => {
+              setDismissedEndings((was) => new Set(was).add(ending.room.id));
+              // The OK button goes with the note; land on Start, not the page.
+              setRefocusStart((n) => n + 1);
+            }}
           />
         )}
 
         <section className="flex w-full flex-1 flex-col items-center justify-center">
-          <TimerScreen slots={slots} sharedId={target} />
+          <TimerScreen slots={slots} sharedId={target} refocusStart={refocusStart} />
         </section>
 
         <footer className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
