@@ -222,7 +222,8 @@ test('a friend sees you focusing, then on a break, within about 15 seconds', asy
     const adaRow = b.page
       .getByRole('region', { name: 'Friends' })
       .getByRole('button', { name: /^Ada/ });
-    await expect(adaRow).toContainText('Not focused yet');
+    // Her app is open, so she shows as Online (M7 presence) until she starts.
+    await expect(adaRow).toContainText('Online', { timeout: 20_000 });
 
     // 3.1: Ada starts; Bea's open panel shows it on its next check.
     await a.page.getByRole('button', { name: 'Start 25 min' }).click();
@@ -238,7 +239,7 @@ test('a friend sees you focusing, then on a break, within about 15 seconds', asy
     await a.page.getByRole('button', { name: 'End early' }).click();
     await a.page.getByRole('button', { name: 'End session' }).click();
     await a.page.getByRole('button', { name: 'Done' }).click();
-    await expect(adaRow).toContainText('Not focused yet', { timeout: 20_000 });
+    await expect(adaRow).toContainText('Online', { timeout: 20_000 });
   } finally {
     await closeDevices(a, b);
   }

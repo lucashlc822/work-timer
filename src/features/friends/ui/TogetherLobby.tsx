@@ -4,6 +4,7 @@ import { StarMark, useFocusIfLost } from '@/shared/ui';
 
 import { FriendsFailure } from '../data/friendsRepository';
 import { FRIENDS_MESSAGES } from '../domain/errors';
+import type { Presence } from '../domain/presence';
 import {
   lobbyMinutesLeft,
   lobbyOrder,
@@ -48,7 +49,34 @@ const useMinutesLeft = (room: Room): number => {
   return lobbyMinutesLeft(room, now);
 };
 
-const Member = ({ member, room, me }: { member: RoomMember; room: Room; me: string }) => (
+const NO_PRESENCE: ReadonlyMap<string, Presence> = new Map();
+
+/** "Host", or how they stand: "Away" when they're in or invited but their app is out of sight. */
+const labelOf = (
+  member: RoomMember,
+  room: Room,
+  me: string,
+  presence: ReadonlyMap<string, Presence>,
+): string => {
+  if (member.userId === room.host) return 'Host';
+  const pending = member.state === 'joined' || member.state === 'invited';
+  if (pending && member.userId !== me && presence.get(member.userId)?.state === 'away') {
+    return 'Away';
+  }
+  return STATE_LABEL[member.state];
+};
+
+const Member = ({
+  member,
+  room,
+  me,
+  presence,
+}: {
+  member: RoomMember;
+  room: Room;
+  me: string;
+  presence: ReadonlyMap<string, Presence>;
+}) => (
   <li className="flex w-16 flex-col items-center gap-1 text-center">
     {/* The twinkle animates opacity, so it sits inside the dimming, not on it. */}
     <span className={`ease-gentle transition duration-500 ${STAR_LOOK[member.state]}`}>
@@ -63,9 +91,7 @@ const Member = ({ member, room, me }: { member: RoomMember; room: Room; me: stri
     <span className="text-ink-primary max-w-full truncate text-sm">
       {member.userId === me ? 'You' : (member.displayName ?? 'A friend')}
     </span>
-    <span className="text-ink-secondary text-2xs">
-      {member.userId === room.host ? 'Host' : STATE_LABEL[member.state]}
-    </span>
+    <span className="text-ink-secondary text-2xs">{labelOf(member, room, me, presence)}</span>
   </li>
 );
 
@@ -82,12 +108,15 @@ export const TogetherLobby = ({
   together,
   me,
   active,
+  presence = NO_PRESENCE,
 }: {
   room: Room;
   together: Together;
   me: string;
   /** Nothing covers it: it may take a focus that was lost. */
   active: boolean;
+  /** Friends' Online / Away, by id (M7 presence). */
+  presence?: ReadonlyMap<string, Presence>;
 }) => {
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +163,7 @@ export const TogetherLobby = ({
 
       <ul aria-label="Who’s coming" className="flex flex-wrap justify-center gap-4">
         {lobbyOrder(room, me).map((m) => (
-          <Member key={m.userId} member={m} room={room} me={me} />
+          <Member key={m.userId} member={m} room={room} me={me} presence={presence} />
         ))}
       </ul>
 
