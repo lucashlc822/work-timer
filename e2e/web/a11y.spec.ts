@@ -102,25 +102,38 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await backToTimer(page);
 
   await openView(page, 'Account');
+  // "Show when I'm online" (M7 presence) appears once the profile has loaded.
+  await page.getByRole('checkbox', { name: 'Show when I’m online' }).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'account')));
   await backToTimer(page);
 
-  // Friends (M7): a friend with a session, and a request waiting.
+  // Friends (M7): a friend with a session, one online and one away (presence),
+  // and a request waiting.
   const friend = await createUser('a11y-friend');
   const asker = await createUser('a11y-asker');
+  const online = await createUser('a11y-online');
+  const stepped = await createUser('a11y-away');
   await setName(user, 'Ada');
   await setName(friend, 'Bea');
   await setName(asker, 'Cy');
+  await setName(online, 'Dee');
+  await setName(stepped, 'Eve');
   await befriend(user, friend);
+  await befriend(user, online);
+  await befriend(user, stepped);
   await requestFriend(asker, user);
   await addCompletedSession(friend, 25);
   await shareFocus(friend, 20);
+  await rpc(online, 'set_presence', { state: 'online' });
+  await rpc(stepped, 'set_presence', { state: 'away' });
   await page.reload();
   await expectSignedIn(page);
   await openFriends(page);
   await page.getByText('Cy wants to be friends').waitFor();
   await page.getByText(/Focusing now/).waitFor();
+  await page.getByText('Online', { exact: true }).waitFor();
+  await page.getByText('Away', { exact: true }).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'friends')));
 

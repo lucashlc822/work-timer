@@ -36,10 +36,12 @@ import {
   TogetherCancelNote,
   TogetherCompanions,
   TogetherLobby,
+  OnlineToggle,
   TogetherPanel,
   TogetherResultNote,
   useFriends,
   useShareFocusStatus,
+  useSharePresence,
   useTogether,
   type FriendRow,
   type Room,
@@ -65,7 +67,7 @@ import {
 import { APP_NAME } from '@/shared/config';
 import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
-import { StarMark, useFocusIfLost } from '@/shared/ui';
+import { StarMark, Switch, useFocusIfLost } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
@@ -198,8 +200,14 @@ const HomeScreen = ({ together }: { together: Together }) => {
   useFocusIfLost(opener, view === 'timer');
   // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
   const [friend, setFriend] = useState<FriendRow | null>(null);
-  const friends = useFriends({ watching: view === 'friends' || view === 'friend' });
+  // Watched while a Friends screen, the Focus together setup, or a lobby is
+  // open: that is where statuses show.
+  const friends = useFriends({
+    watching:
+      view === 'friends' || view === 'friend' || view === 'together' || isLobby(together.room),
+  });
   useShareFocusStatus();
+  useSharePresence({ share: friends.profile?.shareOnline !== false });
   const { account, signOut, deleteAccount, sync, syncNow } = useAccount();
   const away = view !== 'timer';
   const inPanel = PANEL_VIEWS.has(view);
@@ -303,7 +311,13 @@ const HomeScreen = ({ together }: { together: Together }) => {
       ),
       idleOverride: () =>
         isLobby(myRoom) ? (
-          <TogetherLobby room={myRoom} together={together} me={me} active={!away} />
+          <TogetherLobby
+            room={myRoom}
+            together={together}
+            me={me}
+            active={!away}
+            presence={friends.presence}
+          />
         ) : null,
       beforeStart: () =>
         invite === null
@@ -343,6 +357,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
     invite,
     together,
     away,
+    friends.presence,
     hasFriends,
     inRoom,
     me,
@@ -470,6 +485,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
             onSyncNow={syncNow}
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
+            privacySettings={<OnlineToggle friends={friends} />}
             deviceSettings={<AutostartToggle />}
           />
         </PanelLayer>
@@ -495,6 +511,8 @@ const HomeScreen = ({ together }: { together: Together }) => {
             together={together}
             friends={friends.friends}
             busy={timer.status !== 'idle'}
+            focus={friends.focus}
+            presence={friends.presence}
           />
         </PanelLayer>
       )}
@@ -572,28 +590,10 @@ const AutostartToggle = () => {
     setEnabled(await autostart.isEnabled());
   };
 
-  // A switch drawn over the native checkbox, which stays the control (so it is
-  // still a checkbox named "Launch at startup" to the keyboard and to tests).
   return (
     <section className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-3 border p-4 text-sm">
       <h3 className="text-ink-primary">This computer</h3>
-      <label className="text-ink-secondary hover:text-ink-primary flex cursor-pointer items-center justify-between gap-3 transition-colors">
-        Launch at startup
-        {/* The input is transparent and fills the track, so it is what a click
-            lands on (a hidden input under the label can't be clicked directly). */}
-        <span className="relative h-5 w-9 shrink-0">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={() => void toggle()}
-            className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          />
-          <span
-            aria-hidden
-            className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary after:rounded-pill pointer-events-none absolute inset-0 transition-colors duration-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:transition-transform after:duration-300 peer-checked:after:translate-x-4"
-          />
-        </span>
-      </label>
+      <Switch label="Launch at startup" checked={enabled} onChange={() => void toggle()} />
     </section>
   );
 };

@@ -9,6 +9,8 @@ export { FriendSkyView } from './ui/FriendSkyView';
 export type { FriendSummary } from './ui/FriendSkyView';
 export { FOCUS_POLL_MS, useFriends } from './hooks/useFriends';
 export { useShareFocusStatus } from './hooks/useShareFocusStatus';
+export { useSharePresence } from './hooks/useSharePresence';
+export { OnlineToggle } from './ui/OnlineToggle';
 export type { Friends } from './hooks/useFriends';
 export type { FriendRow } from './data/friendsRepository';
 export type { FriendChoice, FriendSession, FriendSky } from './domain/friendSky';

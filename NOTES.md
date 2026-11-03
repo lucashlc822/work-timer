@@ -12,6 +12,40 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-03 — Focus together, premium pass: three stacked PRs open
+
+**Status: three PRs open, none merged; merge in order.** Prompted by Lucas
+testing focus together with mia on 0.6.2 (she could start a solo session while
+in his lobby). Plan: `~/.claude/plans/pasted-content-id-3e93-i-m-currently-merry-turtle.md`.
+
+1. #137 `fix/together-lobby-locks-timer`: a lobby replaces the timer's Start;
+   Start while invited asks first ("Start on your own?").
+2. #138 `feat/together-lobby-screen` (on #137): the lobby as a card of member
+   stars on the timer screen, companions under the clock, a gentle "lobby
+   ended" note.
+3. `feat/friend-presence` (on #138): Online / Away / Focusing / On a break /
+   Offline for friends, "Show when I'm online" in Account. New migration
+   `20261103055914_m7_presence.sql` (additive) — applied to the local stack
+   with `migration up`; **apply it to the hosted project before releasing.**
+
+After #137 merges, retarget #138 to `master`; likewise the presence PR after #138.
+
+### Next
+
+1. Lucas reviews and merges #137 → #138 → presence, in that order.
+2. A separate session works on "keep the footer on screen while a banner shows"
+   (branch `fix/idle-fits-with-banner`, its own worktree).
+3. Release, then a real two-person check with mia.
+
+### Things worth not rediscovering
+
+- **0.6.2 against the presence migration: its own `e2e:web` passes 45/45**
+  (a detached worktree of `v0.6.2` run against the migrated local stack).
+- **The desktop e2e serves the web build on 4174 too,** so `e2e:web` can't run
+  while it does ("4174 is already used").
+- **`page.clock.runFor` over minutes is very slow** (it runs every sky frame);
+  `fastForward` jumps and fires each due timer once.
+
 ## 2026-11-02 (end of session) — Nothing in flight; 0.6.2 is out
 
 **Status: everything is merged (#126 to #135) and nothing is open.** `master` is

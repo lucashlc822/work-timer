@@ -16,6 +16,8 @@ interface Props {
   onDeleteAccount: () => Promise<void>;
   /** Settings of this computer, supplied by the app; renders its own section or nothing. */
   deviceSettings?: ReactNode;
+  /** What friends can see of you, supplied by the app; renders its own section or nothing. */
+  privacySettings?: ReactNode;
 }
 
 /** Whether this device has a session or Pomodoro run in progress. */
@@ -42,6 +44,7 @@ export const AccountPanel = ({
   onSignOut,
   onDeleteAccount,
   deviceSettings = null,
+  privacySettings = null,
 }: Props) => {
   const busy = useBusy();
   const settled = useSettledPhase(sync.phase);
@@ -68,6 +71,8 @@ export const AccountPanel = ({
       </header>
 
       <SyncStatus status={sync} onSyncNow={onSyncNow} />
+
+      {privacySettings}
 
       {deviceSettings}
 
