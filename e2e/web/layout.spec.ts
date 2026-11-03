@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { expectSignedIn, openAccount, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
+import { befriend, createRoom, rpc, setName } from '../support/friends';
 import { createUser } from '../support/users';
 
 /**
@@ -35,6 +36,64 @@ test('the idle screen fits the desktop app’s default window without scrolling'
 
   expect(page_.scrollHeight).toBeLessThanOrEqual(page_.clientHeight);
   expect((start?.y ?? 0) + (start?.height ?? 0)).toBeLessThanOrEqual(720);
+});
+
+/** The page doesn't scroll and the footer's navigation is fully in the window. */
+const expectFitsWindow = async (page: Page) => {
+  const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox();
+  const { scrollHeight, innerHeight } = await page.evaluate(() => ({
+    scrollHeight: document.documentElement.scrollHeight,
+    innerHeight: window.innerHeight,
+  }));
+  expect(scrollHeight, `page is ${scrollHeight}px tall`).toBeLessThanOrEqual(innerHeight);
+  expect((nav?.y ?? 0) + (nav?.height ?? 0)).toBeLessThanOrEqual(innerHeight);
+};
+
+test.describe('with something above the timer', () => {
+  // Real clock, as in together.spec.ts: a room's times are the server's.
+  const withFriend = async (page: Page) => {
+    const [ada, bea] = await Promise.all([createUser('layout-ada'), createUser('layout-bea')]);
+    await Promise.all([setName(ada, 'Ada'), setName(bea, 'Bea')]);
+    await befriend(ada, bea);
+    await page.goto('/');
+    await signIn(page, bea);
+    await expectSignedIn(page);
+    // "Focus with friends" makes this the tallest everyday idle screen.
+    await expect(page.getByRole('button', { name: 'Focus with friends' })).toBeVisible();
+    await expect(page.getByText(/^Today \d+ of \d+ min/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /constellation/i })).toBeVisible();
+    return { ada, bea };
+  };
+
+  test('an invitation still leaves the footer in the window', async ({ page }, testInfo) => {
+    const { ada, bea } = await withFriend(page);
+    await createRoom(ada, [bea], 1500);
+    await expect(page.getByRole('region', { name: 'Invitation' })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.screenshot({ path: testInfo.outputPath('invite-480x720.png') });
+    await expectFitsWindow(page);
+  });
+
+  test('a lobby that ended still leaves the footer in the window', async ({ page }, testInfo) => {
+    const { ada, bea } = await withFriend(page);
+    const room = await createRoom(ada, [bea], 1500);
+    await rpc(bea, 'respond_room', { room, join_room: true });
+    await expect(page.getByText('Waiting for Ada to start.')).toBeVisible({ timeout: 15_000 });
+    await rpc(ada, 'leave_room', { room });
+    const note = page.getByRole('region', { name: 'Friends session' });
+    await expect(note).toContainText('Ada closed the lobby.', { timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
+
+    await page.screenshot({ path: testInfo.outputPath('lobby-ended-480x720.png') });
+    await expectFitsWindow(page);
+
+    // Once it's dismissed the screen is back to its everyday spacing.
+    await note.getByRole('button', { name: 'OK' }).click();
+    await expect(note).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeFocused();
+  });
 });
 
 test('Account’s version line is in the readable text colour', async ({ page }) => {
