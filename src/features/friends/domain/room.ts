@@ -107,6 +107,43 @@ const isOpen = (r: Room, now: number): boolean =>
 export const currentRoom = (rooms: readonly Room[], me: string, now: number): Room | null =>
   rooms.find((r) => stateOf(r, me) === 'joined' && isOpen(r, now)) ?? null;
 
+/** How long a lobby waits for its start, as the server judges it (`together_effective_status`). */
+export const LOBBY_LAPSE_MS = 10 * 60_000;
+/** How long after a lobby ends its "ended" note is still worth showing. */
+const ENDED_NOTE_MS = 5 * 60_000;
+
+/** Whole minutes the invitation stays open, rounded up; 0 once it has run out. */
+export const lobbyMinutesLeft = (r: Room, now: number): number =>
+  Math.max(0, Math.ceil((r.createdAt + LOBBY_LAPSE_MS - now) / 60_000));
+
+/** Nobody but the host is still coming: everyone else said no, left or missed it. */
+export const nobodyComing = (r: Room): boolean =>
+  r.members.every((m) => m.userId === r.host || (m.state !== 'invited' && m.state !== 'joined'));
+
+export interface LobbyEnding {
+  room: Room;
+  /** `closed`: the host gave it up; `lapsed`: it was never started. */
+  why: 'closed' | 'lapsed';
+}
+
+/**
+ * A lobby you were waiting in that ended without starting, recently enough to
+ * mention: the host closed it (unless that was you) or its time ran out.
+ */
+export const lobbyEnded = (rooms: readonly Room[], me: string, now: number): LobbyEnding | null => {
+  // Only the newest room you were in counts: one that started, or is still
+  // open, has nothing to say about an older one.
+  const r = rooms.find((room) => stateOf(room, me) === 'joined');
+  if (r === undefined || r.startsAt !== null) return null;
+  if (r.status === 'cancelled' && r.cancelledBy !== me) {
+    return now - (r.cancelledAt ?? r.createdAt) < ENDED_NOTE_MS ? { room: r, why: 'closed' } : null;
+  }
+  if (r.status === 'lapsed') {
+    return now - (r.createdAt + LOBBY_LAPSE_MS) < ENDED_NOTE_MS ? { room: r, why: 'lapsed' } : null;
+  }
+  return null;
+};
+
 /** A room still gathering people: no session can start on its own meanwhile. */
 export const isLobby = (r: Room | null): r is Room => r !== null && r.status === 'lobby';
 

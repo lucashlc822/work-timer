@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useDialogFocus } from '@/shared/ui';
+import { StarMark, useDialogFocus } from '@/shared/ui';
 
 import { FriendsFailure } from '../data/friendsRepository';
 import { FRIENDS_MESSAGES } from '../domain/errors';
-import { companions, listNames, nameOf, type Room } from '../domain/room';
+import { companions, listNames, nameOf, type LobbyEnding, type Room } from '../domain/room';
 
 /**
  * The small pieces of focus together (M7 phase 4) that `app/` places in the
- * timer: the invitation banner, the line under a running clock, the warning
- * in the end-early dialog, and the line on the result.
+ * timer: the invitation banner, "start on your own?", the companions under a
+ * running clock, a lobby that ended, the warning in the end-early dialog, and
+ * the line on the result.
  */
 
 /** "Ada invites you to focus 25 min together · Join / No thanks". */
@@ -177,13 +178,47 @@ export const MissedStartNote = ({ room, me }: { room: Room; me: string }) => {
   );
 };
 
-/** Under the running clock. */
-export const TogetherLine = ({ room, me }: { room: Room; me: string }) => {
+/** Under the running clock: a small star for each friend in it, then who they are. */
+export const TogetherCompanions = ({ room, me }: { room: Room; me: string }) => {
   const names = companions(room, me);
   return names.length === 0 ? null : (
-    <p className="text-lavender-200 text-xs">Focusing together with {listNames(names)}</p>
+    <div className="flex items-center gap-2">
+      <span aria-hidden className="flex -space-x-1.5">
+        {names.map((name, i) => (
+          <StarMark key={`${name}-${i}`} size={22} />
+        ))}
+      </span>
+      <p className="text-lavender-200 text-xs">Focusing together with {listNames(names)}</p>
+    </div>
   );
 };
+
+/** Over the timer, when a lobby you waited in ended without starting. Gentle: nobody did anything wrong. */
+export const LobbyEndedNote = ({
+  ending,
+  onDismiss,
+}: {
+  ending: LobbyEnding;
+  onDismiss: () => void;
+}) => (
+  <section
+    aria-label="Friends session"
+    className="bg-night-800/80 border-night-600 rounded-soft flex w-full max-w-md items-center justify-between gap-3 border px-4 py-3 text-sm"
+  >
+    <p className="text-ink-secondary" role="status">
+      {ending.why === 'closed'
+        ? `${nameOf(ending.room, ending.room.host)} closed the lobby. Maybe next time.`
+        : 'The invite ran out before it started. Maybe next time.'}
+    </p>
+    <button
+      type="button"
+      onClick={onDismiss}
+      className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs transition-colors"
+    >
+      OK
+    </button>
+  </section>
+);
 
 /** In the end-early dialog. */
 export const TogetherCancelNote = ({ room, me }: { room: Room; me: string }) => {

@@ -27,12 +27,14 @@ import {
   incomingProposals,
   InviteBanner,
   isLobby,
+  lobbyEnded,
+  LobbyEndedNote,
   missedStart,
   MissedStartNote,
   SharedWithFriend,
   StartAloneDialog,
   TogetherCancelNote,
-  TogetherLine,
+  TogetherCompanions,
   TogetherLobby,
   TogetherPanel,
   TogetherResultNote,
@@ -262,6 +264,11 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
   const hasFriends = friends.friends.length > 0;
   const { rooms, room: myRoom, invite } = together;
+
+  // A lobby you waited in that ended without starting: said once, until dismissed.
+  const [dismissedEndings, setDismissedEndings] = useState<ReadonlySet<string>>(new Set());
+  const ending = myRoom === null ? lobbyEnded(rooms, me, Date.now()) : null;
+  const showEnding = ending !== null && !dismissedEndings.has(ending.room.id);
   const slots = useMemo<TimerSlots>(() => {
     const roomOf = (id: string | null) =>
       id === null ? null : (rooms.find((r) => r.id === id) ?? null);
@@ -306,7 +313,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         const missed = missedStart(myRoom, me, session.togetherId, Date.now());
         return (
           <>
-            {room !== null && <TogetherLine room={room} me={me} />}
+            {room !== null && <TogetherCompanions room={room} me={me} />}
             {missed !== null && <MissedStartNote room={missed} me={me} />}
           </>
         );
@@ -392,6 +399,13 @@ const HomeScreen = ({ together }: { together: Together }) => {
             invite={together.invite}
             busy={timer.status !== 'idle'}
             onAnswer={together.respond}
+          />
+        )}
+
+        {showEnding && (
+          <LobbyEndedNote
+            ending={ending}
+            onDismiss={() => setDismissedEndings((was) => new Set(was).add(ending.room.id))}
           />
         )}
 
