@@ -45,6 +45,9 @@ test('the signed-out screens', async ({ page }, testInfo) => {
 });
 
 test('the signed-in screens', async ({ page }, testInfo) => {
+  // One long walk through every screen, with several waits on the friends
+  // poll (~15 s each): about 55 s locally, more on CI.
+  test.setTimeout(180_000);
   const user = await createUser('a11y');
   const findings: Finding[] = [];
   await startClockInThePast(page);
