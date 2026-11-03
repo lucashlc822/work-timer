@@ -91,6 +91,33 @@ test('a session keeps running hidden in the tray: tooltip counts down, the notic
   await signOut(desktop.page);
 });
 
+test('hidden in the tray reads as Away to friends, and Online again once back (M7 presence)', async () => {
+  test.setTimeout(120_000);
+  const page = desktop.page;
+  const user = await createUser('desktop-presence');
+  await signIn(page, user);
+  await expectSignedIn(page);
+  await settle(page);
+
+  const presence = async () =>
+    (await adminClient().from('presence').select('state').eq('user_id', user.id)).data;
+  await expect.poll(presence, { timeout: 15_000 }).toEqual([{ state: 'online' }]);
+
+  // As in the tray test above: Playwright steps away, or the page always
+  // reports itself visible.
+  await desktop.detach();
+  const visible = () => rawEvaluate('document.visibilityState');
+  await rawInvoke('plugin:window|close', { label: 'main' });
+  await expect.poll(visible, { timeout: 10_000 }).toBe('hidden');
+  await expect.poll(presence, { timeout: 10_000 }).toEqual([{ state: 'away' }]);
+
+  launchAgain();
+  await expect.poll(visible, { timeout: 15_000 }).toBe('visible');
+  await expect.poll(presence, { timeout: 10_000 }).toEqual([{ state: 'online' }]);
+  await desktop.attach();
+  await signOut(desktop.page);
+});
+
 test('an invitation to focus together raises a Windows notification (M7)', async () => {
   test.setTimeout(120_000);
   const page = desktop.page;

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { classifyFriendsError, type FriendsErrorKind } from '../domain/errors';
 import type { FocusStatus } from '../domain/focusStatus';
+import type { Presence, PresenceState } from '../domain/presence';
 import { decodeFriendSky, type FriendSky } from '../domain/friendSky';
 import { decodeRooms, type Room } from '../domain/room';
 import { decodeShared, type SharedDraft, type SharedRow } from '../domain/shared';
@@ -29,6 +30,8 @@ export interface MyProfile {
   displayName: string | null;
   /** Bare, as stored: "K7Q2MX". */
   friendCode: string;
+  /** "Show when I'm online": friends see Online / Away (on by default). */
+  shareOnline: boolean;
 }
 
 export interface FriendRow {
@@ -73,11 +76,17 @@ const ms = (iso: unknown): number | null => {
 };
 
 export const getMyProfile = async (client: SupabaseClient): Promise<MyProfile> => {
-  const row = await call<{ display_name: string | null; friend_code: string }>(() =>
-    client.from('profiles').select('display_name, friend_code').maybeSingle(),
-  );
+  const row = await call<{
+    display_name: string | null;
+    friend_code: string;
+    share_online: boolean | null;
+  }>(() => client.from('profiles').select('display_name, friend_code, share_online').maybeSingle());
   if (row === null) throw new FriendsFailure('unknown');
-  return { displayName: row.display_name, friendCode: row.friend_code };
+  return {
+    displayName: row.display_name,
+    friendCode: row.friend_code,
+    shareOnline: row.share_online !== false,
+  };
 };
 
 export const setDisplayName = async (client: SupabaseClient, name: string): Promise<void> => {
@@ -171,6 +180,36 @@ export const friendsFocus = async (client: SupabaseClient): Promise<Map<string, 
       continue;
     }
     byFriend.set(r.friend_id, { kind: r.kind, startedAt, until });
+  }
+  return byFriend;
+};
+
+// --- Presence: Online / Away --------------------------------------------------
+
+/** "I'm here" or "here but away". The server ignores it while sharing is off. */
+export const setPresence = async (client: SupabaseClient, state: PresenceState): Promise<void> => {
+  await call(() => client.rpc('set_presence', { state }));
+};
+
+/** The app is closing: Offline now rather than in three minutes. */
+export const clearPresence = async (client: SupabaseClient): Promise<void> => {
+  await call(() => client.rpc('clear_presence'));
+};
+
+/** "Show when I'm online". Off also forgets the current presence. */
+export const setShareOnline = async (client: SupabaseClient, share: boolean): Promise<void> => {
+  await call(() => client.rpc('set_share_online', { share }));
+};
+
+/** Your friends with the app open right now (fresh within three minutes), by friend id. */
+export const friendsPresence = async (client: SupabaseClient): Promise<Map<string, Presence>> => {
+  const rows = await call<Record<string, unknown>[]>(() => client.rpc('friends_presence'));
+  const byFriend = new Map<string, Presence>();
+  for (const r of rows ?? []) {
+    const seenAt = ms(r.seen_at);
+    if (typeof r.friend_id !== 'string' || (r.state !== 'online' && r.state !== 'away')) continue;
+    if (seenAt === null) continue;
+    byFriend.set(r.friend_id, { state: r.state, seenAt });
   }
   return byFriend;
 };

@@ -296,6 +296,10 @@ in `NOTES.md`.
   a hook or the sync engine the running app can be a mix of old and new code.
   Reload (`location.reload()`) before re-testing. Likewise, raw IndexedDB
   writes (from DevTools or a script) don't notify Dexie live queries: reload.
+- **"Online" can linger up to three minutes after a friend quits or signs
+  out.** The app clears its presence on `pagehide`, best effort; a clear that
+  never arrives (signed out first, network gone, a crash) is covered by the
+  server's three-minute staleness, not by a bug.
 - **Harmless noise, not bugs:**
   - `Failed to unregister class Chrome_WidgetWin_0. Error = 1412` on a tray
     Quit (routine WebView2 shutdown).
@@ -546,6 +550,15 @@ rejected). Don't pre-populate this with guesses.
   constellations are fetched, never stored on the device, so offline they
   simply aren't drawn. Supersedes the design doc's "every session either of
   you completes adds a star".
+- **Presence is opt-out, friends-only, and never touches a session** (M7,
+  2026-11-03). Friends see Online / Away / Focusing / On a break / Offline;
+  focusing and breaks (`focus_status`) always win. Online and Away come from
+  `presence`, refreshed every minute by each open app (`useSharePresence`) and
+  shown only while fresher than three minutes, by the server's clock. Away is
+  hidden, minimised, in the tray, or ten minutes without input. "Show when I'm
+  online" (`profiles.share_online`, on by default) is enforced by the server:
+  off deletes the row and `set_presence` writes nothing. There is no opt-out
+  for focusing, as before.
 - **Star style, sky theme and daily goal are their own `user_settings`
   columns, not keys inside `pomodoro`** (M6). A 0.1.x app rewrites that jsonb
   wholesale, while PostgREST's upsert leaves columns it isn't sent alone. A
