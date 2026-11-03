@@ -12,6 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-03 (later) — #137 to #140 all merged; next is the release
+
+**Status: #137, #138, #139 and #140 are merged into `master`, in that order.**
+The two entries below describe them as open; that is how they stood when written.
+#139 needed a longer timeout on the signed-in a11y walk (it ran past 60 s on
+CI); #140 was brought up to date with `master` after #139 (only this file
+conflicted).
+
+### Next
+
+1. **Apply `20261103055914_m7_presence.sql` to the hosted project, then
+   release** (`RELEASING.md`). A release without it breaks the Friends list.
+2. A real two-person check with mia on the new release.
+3. A `ui-ux-reviewer` pass on the presence statuses and the online switch.
+
+---
+
+## 2026-11-03 — The idle screen fits 480×720 with an invitation or lobby note (PR open)
+
+**Status: `fix/idle-fits-with-banner` is open as a PR against
+`feat/together-lobby-screen` (#138), not merged.** It fixes the ui-ux review's M2
+on #138. Retarget it to `master` once #138 merges.
+
+While an invitation (`InviteBanner`) or the lobby-ended note (`LobbyEndedNote`)
+shows, `HomeRoute` passes `compact` to `TimerScreen` and tightens its own
+spacing: page gap 24→16, page padding 32/24→24/16, footer gap 12→8; idle card
+gap 24→16, padding 24→16, top offset 16→0 (all below the `sm` breakpoint only).
+The banner's own padding went 12→8. Without either, nothing changes.
+
+Measured natural page heights at 480×720 (with a friend, so "Focus with
+friends" shows):
+
+| Screen | Before | After |
+| --- | --- | --- |
+| Plain idle | 706 | 706 |
+| Invitation | 838 | 710 |
+| Lobby-ended note | 786 | 670 |
+
+### Things worth not rediscovering
+
+- **The invitation has only ~10px to spare at 480×720 now.** Anything else added
+  above the timer (or a longer banner line) will scroll again; the
+  `layout.spec.ts` tests will catch it.
+- **Pomodoro mode already scrolls at 480×720 with no banner** (872px natural;
+  876 with the invitation). Pre-existing, not from this PR: the fix only changes
+  classes while a banner shows. Worth its own PR if the desktop window is to fit
+  Pomodoro too.
+
+---
 ## 2026-11-03 — Focus together, premium pass: three stacked PRs open
 
 **Status: three PRs open, none merged; merge in order.** Prompted by Lucas

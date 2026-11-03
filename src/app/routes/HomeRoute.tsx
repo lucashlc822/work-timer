@@ -277,6 +277,9 @@ const HomeScreen = ({ together }: { together: Together }) => {
   const [dismissedEndings, setDismissedEndings] = useState<ReadonlySet<string>>(new Set());
   const ending = myRoom === null ? lobbyEnded(rooms, me, Date.now()) : null;
   const showEnding = ending !== null && !dismissedEndings.has(ending.room.id);
+  // An invitation or that note sits above the timer: tighten the spacing so
+  // the footer stays in the 480×720 desktop window.
+  const aboveTimer = together.invite !== null || showEnding;
   const [refocusStart, setRefocusStart] = useState(0);
   const slots = useMemo<TimerSlots>(() => {
     const roomOf = (id: string | null) =>
@@ -401,9 +404,9 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
       <main
         inert={away}
-        className={`relative z-10 flex min-h-dvh flex-col items-center gap-6 px-6 pt-8 pb-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 ${
-          away ? 'pointer-events-none opacity-0' : ''
-        }`}
+        className={`relative z-10 flex min-h-dvh flex-col items-center px-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 sm:pb-6 ${
+          aboveTimer ? 'gap-4 pt-6 pb-4' : 'gap-6 pt-8 pb-6'
+        } ${away ? 'pointer-events-none opacity-0' : ''}`}
       >
         <header className="flex items-center gap-2">
           <StarMark size={28} />
@@ -430,10 +433,19 @@ const HomeScreen = ({ together }: { together: Together }) => {
         )}
 
         <section className="flex w-full flex-1 flex-col items-center justify-center">
-          <TimerScreen slots={slots} sharedId={target} refocusStart={refocusStart} />
+          <TimerScreen
+            slots={slots}
+            sharedId={target}
+            refocusStart={refocusStart}
+            compact={aboveTimer}
+          />
         </section>
 
-        <footer className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+        <footer
+          className={`flex flex-col items-center justify-center sm:flex-row sm:gap-4 ${
+            aboveTimer ? 'gap-2' : 'gap-3'
+          }`}
+        >
           {/* Your progress: what you are building and what you have earned. */}
           <div className="flex flex-wrap items-center justify-center gap-2">
             <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />

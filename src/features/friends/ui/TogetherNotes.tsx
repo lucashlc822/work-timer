@@ -42,7 +42,7 @@ export const InviteBanner = ({
   return (
     <section
       aria-label="Invitation"
-      className="bg-night-800/80 border-lavender-400/60 rounded-soft flex w-full max-w-md flex-col items-center gap-2 border px-4 py-3 text-center text-sm"
+      className="bg-night-800/80 border-lavender-400/60 rounded-soft flex w-full max-w-md flex-col items-center gap-1.5 border px-4 py-2 text-center text-sm"
     >
       <p className="text-ink-primary">
         {nameOf(invite, invite.host)} invites you to focus{' '}
