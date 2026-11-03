@@ -12,9 +12,11 @@ export { useShareFocusStatus } from './hooks/useShareFocusStatus';
 export type { Friends } from './hooks/useFriends';
 export type { FriendRow } from './data/friendsRepository';
 export type { FriendChoice, FriendSession, FriendSky } from './domain/friendSky';
-export { TogetherPanel } from './ui/TogetherPanel';
+export { TogetherLobby, TogetherPanel } from './ui/TogetherPanel';
 export {
   InviteBanner,
+  MissedStartNote,
+  StartAloneDialog,
   TogetherCancelNote,
   TogetherLine,
   TogetherResultNote,
@@ -22,7 +24,7 @@ export {
 export { useTogether } from './hooks/useTogether';
 export type { Together } from './hooks/useTogether';
 export { useTogetherWins } from './hooks/useTogetherWins';
-export { friendCancel, shouldAutoStart } from './domain/room';
+export { friendCancel, isLobby, missedStart, shouldAutoStart } from './domain/room';
 export type { Room } from './domain/room';
 export { useShared } from './hooks/useShared';
 export type { Shared } from './hooks/useShared';

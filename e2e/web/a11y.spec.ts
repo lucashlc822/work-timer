@@ -172,8 +172,14 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await banner.waitFor({ timeout: 15_000 });
   await settleTransitions(page);
   findings.push(...(await scan(page, 'invitation banner')));
+  // Start while invited asks first.
+  await page.getByRole('button', { name: /^Start \d+ min$/ }).click();
+  await page.getByRole('alertdialog', { name: 'Start on your own?' }).waitFor();
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'start on your own dialog')));
+  await page.keyboard.press('Escape');
+  // Joined, the lobby takes the place of Start on the timer screen.
   await banner.getByRole('button', { name: 'Join' }).click();
-  await page.getByRole('button', { name: 'Back to your friends session' }).click();
   await page.getByRole('heading', { name: '25 min together' }).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'together lobby')));

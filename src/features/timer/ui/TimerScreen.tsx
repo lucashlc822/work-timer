@@ -45,6 +45,8 @@ export const TimerScreen = ({
   const prefs = useTimerPrefs();
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
   const [confirming, setConfirming] = useState(false);
+  // Waiting on `slots.beforeStart`: the controls hold still until it answers.
+  const [asking, setAsking] = useState(false);
 
   const inFlight = timer.status === 'running' || timer.status === 'finishing';
   useTick(inFlight);
@@ -163,9 +165,31 @@ export const TimerScreen = ({
     );
   }
 
-  const starting = timer.status === 'starting';
+  const override = slots.idleOverride?.() ?? null;
+  if (override !== null) {
+    return (
+      <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12 2xl:pt-32">
+        <div className="flex w-full max-w-md flex-col gap-6">{override}</div>
+      </div>
+    );
+  }
+
+  const starting = timer.status === 'starting' || asking;
   const pomodoro = prefs.mode === 'pomodoro';
   const plannedS = pomodoro ? prefs.settings.focusS : minutesToSeconds(minutes);
+  const begin = async () => {
+    setLandOnStart(false);
+    // The draft is what was on screen when Start was pressed.
+    const draft = pomodoro
+      ? ({ mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId } as const)
+      : ({ mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId } as const);
+    if (slots.beforeStart !== undefined) {
+      setAsking(true);
+      const go = await slots.beforeStart().finally(() => setAsking(false));
+      if (!go) return;
+    }
+    timer.start(draft);
+  };
   return (
     // Fills the section and anchors the card to its top, not its middle: the
     // card changes height with the mode and the Custom slider, and a centred
@@ -193,14 +217,7 @@ export const TimerScreen = ({
           ref={startRef}
           type="button"
           disabled={starting}
-          onClick={() => {
-            setLandOnStart(false);
-            timer.start(
-              pomodoro
-                ? { mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId }
-                : { mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId },
-            );
-          }}
+          onClick={() => void begin()}
           className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 px-12 py-3.5 text-base font-medium shadow-lg transition disabled:opacity-60"
         >
           {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}

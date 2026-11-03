@@ -38,6 +38,28 @@ const serverSession = async (user: TestUser, roomId: string) => {
     { outcome: string; ended_at: string; actual_focus_s: number } | undefined;
 };
 
+/** The newest room this person hosts. */
+const roomOf = async (host: TestUser): Promise<string> => {
+  const { data } = await adminClient()
+    .from('together_rooms')
+    .select('id')
+    .eq('host', host.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return (data as { id: string }).id;
+};
+
+const memberState = async (roomId: string, user: TestUser) => {
+  const { data } = await adminClient()
+    .from('together_members')
+    .select('state')
+    .eq('room_id', roomId)
+    .eq('user_id', user.id)
+    .single();
+  return (data as { state: string }).state;
+};
+
 const roomRow = async (roomId: string) => {
   const { data } = await adminClient()
     .from('together_rooms')
@@ -64,7 +86,14 @@ test('invite, join and start together; a friend’s end-early ends it for everyo
       .getByRole('radio', { name: '25 min' })
       .check();
     await a.page.getByRole('button', { name: 'Invite' }).click();
-    await expect(a.page.getByRole('heading', { name: '25 min together' })).toBeVisible();
+    // The panel closes: the lobby is on the timer screen, in place of a solo
+    // Start (A2), and has the focus.
+    const adaLobby = a.page.getByRole('heading', { name: '25 min together' });
+    await expect(adaLobby).toBeVisible();
+    await expect(adaLobby).toBeFocused();
+    await expect(a.page.getByRole('button', { name: 'Back to timer' })).toBeHidden();
+    await expect(a.page.getByRole('button', { name: /^Start \d+ min$/ })).toBeHidden();
+    await expect(a.page.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
 
     // 3.1: Bea's banner arrives live, without a reload.
     const banner = b.page.getByRole('region', { name: 'Invitation' });
@@ -73,6 +102,10 @@ test('invite, join and start together; a friend’s end-early ends it for everyo
     });
     await banner.getByRole('button', { name: 'Join' }).click();
     await expect(banner).toBeHidden();
+    // A1: once joined, Bea waits in the lobby and can't start on her own.
+    await expect(b.page.getByRole('heading', { name: '25 min together' })).toBeVisible();
+    await expect(b.page.getByText('Waiting for Ada to start.')).toBeVisible();
+    await expect(b.page.getByRole('button', { name: /^Start/ })).toBeHidden();
 
     // Ada's lobby shows Bea in; Start opens.
     const start = a.page.getByRole('button', { name: 'Start', exact: true });
@@ -261,6 +294,77 @@ test('an invitation lapses after ten minutes, and nobody joins after the start (
     await expect(endsAtLine(c.page)).toBeHidden();
   } finally {
     await closeDevices(b, c);
+  }
+});
+
+test('starting alone while invited asks first, and declines only on yes (A4, A5)', async ({
+  browser,
+}) => {
+  const [ada, bea] = await people('Ada', 'Bea');
+  await befriend(ada!, bea!);
+  const a = await openDevice(browser, BASE, ada!);
+  const b = await openDevice(browser, BASE, bea!);
+
+  try {
+    await a.page.getByRole('button', { name: 'Focus with friends' }).click();
+    await a.page.getByRole('checkbox', { name: 'Bea' }).check();
+    await a.page.getByRole('button', { name: 'Invite' }).click();
+    const banner = b.page.getByRole('region', { name: 'Invitation' });
+    await expect(banner).toBeVisible({ timeout: 10_000 });
+    const room = await roomOf(ada!);
+
+    // A5: Bea presses Start, then thinks better of it.
+    const start = b.page.getByRole('button', { name: 'Start 25 min' });
+    await start.click();
+    const dialog = b.page.getByRole('alertdialog', { name: 'Start on your own?' });
+    await expect(dialog).toContainText('Ada invited you to focus together.');
+    await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused();
+    await b.page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(start).toBeFocused();
+    await expect(banner).toBeVisible();
+    await expect(endsAtLine(b.page)).toBeHidden();
+    expect(await memberState(room, bea!)).toBe('invited');
+
+    // A4: this time she starts on her own; that says no to Ada.
+    await start.click();
+    await dialog.getByRole('button', { name: 'Start on my own' }).click();
+    await expect(endsAtLine(b.page)).toBeVisible({ timeout: 10_000 });
+    await expect(banner).toBeHidden();
+    expect(await memberState(room, bea!)).toBe('declined');
+    await expect(a.page.getByText('Said no')).toBeVisible({ timeout: 10_000 });
+  } finally {
+    await closeDevices(a, b);
+  }
+});
+
+test('a room that starts while another of your devices runs a session says so there (A6)', async ({
+  browser,
+}) => {
+  const [ada, bea] = await people('Ada', 'Bea');
+  await befriend(ada!, bea!);
+  const b1 = await openDevice(browser, BASE, bea!);
+  const b2 = await openDevice(browser, BASE, bea!);
+
+  try {
+    // Bea's second device is already focusing on its own.
+    await b2.page.getByRole('button', { name: 'Start 25 min' }).click();
+    await expect(endsAtLine(b2.page)).toBeVisible();
+    const soloEnds = await endsAtLine(b2.page).innerText();
+
+    const room = await createRoom(ada!, [bea!], 1500);
+    await rpc(bea!, 'respond_room', { room, join_room: true });
+    await rpc(ada!, 'start_room', { room });
+
+    // The first device runs the room; the second keeps its own session and says so.
+    await expect(endsAtLine(b1.page)).toBeVisible({ timeout: 15_000 });
+    await expect(b1.page.getByText('Focusing together with Ada')).toBeVisible();
+    await expect(
+      b2.page.getByText('Your friends session with Ada started while this one was running.'),
+    ).toBeVisible({ timeout: 20_000 });
+    expect(await endsAtLine(b2.page).innerText()).toBe(soloEnds);
+  } finally {
+    await closeDevices(b1, b2);
   }
 });
 

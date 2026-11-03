@@ -26,15 +26,21 @@ import {
   FriendsPill,
   incomingProposals,
   InviteBanner,
+  isLobby,
+  missedStart,
+  MissedStartNote,
   SharedWithFriend,
+  StartAloneDialog,
   TogetherCancelNote,
   TogetherLine,
+  TogetherLobby,
   TogetherPanel,
   TogetherResultNote,
   useFriends,
   useShareFocusStatus,
   useTogether,
   type FriendRow,
+  type Room,
   type Together,
 } from '@/features/friends';
 import {
@@ -234,15 +240,28 @@ const HomeScreen = ({ together }: { together: Together }) => {
   useEffect(installDevTools, []);
   useEffect(installStatsDevTools, []);
 
-  // Once your friends session starts, the timer is where it is.
-  const roomRunning = together.room?.status === 'running';
+  // Once you're in a room, the timer screen is where it is: the lobby takes
+  // the place of Start there, then the shared countdown.
+  const inRoom = together.room !== null;
   useEffect(() => {
-    if (view === 'together' && roomRunning) setView('timer');
-  }, [view, roomRunning]);
+    if (view === 'together' && inRoom) setView('timer');
+  }, [view, inRoom]);
+
+  // Start pressed while an invitation waits: ask before saying no to it.
+  const [startAlone, setStartAlone] = useState<{
+    invite: Room;
+    resolve: (start: boolean) => void;
+  } | null>(null);
+  const closeStartAlone = useCallback(
+    (start: boolean) => {
+      startAlone?.resolve(start);
+      setStartAlone(null);
+    },
+    [startAlone],
+  );
 
   const hasFriends = friends.friends.length > 0;
-  const inRoom = together.room !== null;
-  const { rooms } = together;
+  const { rooms, room: myRoom, invite } = together;
   const slots = useMemo<TimerSlots>(() => {
     const roomOf = (id: string | null) =>
       id === null ? null : (rooms.find((r) => r.id === id) ?? null);
@@ -263,20 +282,34 @@ const HomeScreen = ({ together }: { together: Together }) => {
           ) : (
             <SharedStartHint shared={targetState} plannedS={plannedS} />
           )}
-          {hasFriends && (
+          {hasFriends && !inRoom && (
             <button
               type="button"
               onClick={() => openView('together')}
               className="text-lavender-200 hover:text-ink-primary text-xs underline-offset-4 transition-colors hover:underline"
             >
-              {inRoom ? 'Back to your friends session' : 'Focus with friends'}
+              Focus with friends
             </button>
           )}
         </>
       ),
+      idleOverride: () =>
+        isLobby(myRoom) ? (
+          <TogetherLobby room={myRoom} together={together} me={me} active={!away} />
+        ) : null,
+      beforeStart: () =>
+        invite === null
+          ? Promise.resolve(true)
+          : new Promise<boolean>((resolve) => setStartAlone({ invite, resolve })),
       running: (session) => {
         const room = roomOf(session.togetherId);
-        return room === null ? null : <TogetherLine room={room} me={me} />;
+        const missed = missedStart(myRoom, me, session.togetherId, Date.now());
+        return (
+          <>
+            {room !== null && <TogetherLine room={room} me={me} />}
+            {missed !== null && <MissedStartNote room={missed} me={me} />}
+          </>
+        );
       },
       cancelNote: (session) => {
         const room = roomOf(session.togetherId);
@@ -296,7 +329,21 @@ const HomeScreen = ({ together }: { together: Together }) => {
         </>
       ),
     };
-  }, [rooms, hasFriends, inRoom, me, sharedStates, target, targetState, setTarget, openView]);
+  }, [
+    rooms,
+    myRoom,
+    invite,
+    together,
+    away,
+    hasFriends,
+    inRoom,
+    me,
+    sharedStates,
+    target,
+    targetState,
+    setTarget,
+    openView,
+  ]);
 
   useEffect(() => {
     if (view === 'timer') return;
@@ -428,7 +475,6 @@ const HomeScreen = ({ together }: { together: Together }) => {
           <TogetherPanel
             together={together}
             friends={friends.friends}
-            me={me}
             busy={timer.status !== 'idle'}
           />
         </PanelLayer>
@@ -467,6 +513,14 @@ const HomeScreen = ({ together }: { together: Together }) => {
             }
           />
         </div>
+      )}
+
+      {startAlone !== null && (
+        <StartAloneDialog
+          invite={startAlone.invite}
+          onAnswer={together.respond}
+          onClose={closeStartAlone}
+        />
       )}
 
       {away && !inPanel && back}

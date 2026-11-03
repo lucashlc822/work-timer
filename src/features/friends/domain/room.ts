@@ -107,6 +107,22 @@ const isOpen = (r: Room, now: number): boolean =>
 export const currentRoom = (rooms: readonly Room[], me: string, now: number): Room | null =>
   rooms.find((r) => stateOf(r, me) === 'joined' && isOpen(r, now)) ?? null;
 
+/** A room still gathering people: no session can start on its own meanwhile. */
+export const isLobby = (r: Room | null): r is Room => r !== null && r.status === 'lobby';
+
+/**
+ * The room started, you're in it, and this device should be counting down for
+ * it, but is running `runningRoomId`'s session instead (another session that
+ * was already going here, e.g. started on this device while another of your
+ * devices joined). Null when there's nothing to say.
+ */
+export const missedStart = (
+  r: Room | null,
+  me: string,
+  runningRoomId: string | null,
+  now: number,
+): Room | null => (r !== null && runningRoomId !== r.id && shouldAutoStart(r, me, now) ? r : null);
+
 /** The newest invitation still waiting for your answer. */
 export const pendingInvite = (rooms: readonly Room[], me: string): Room | null =>
   rooms.find((r) => r.status === 'lobby' && stateOf(r, me) === 'invited') ?? null;

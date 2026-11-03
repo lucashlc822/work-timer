@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+
+import { useFocusIfLost } from '@/shared/ui';
 
 import { FriendsFailure, type FriendRow } from '../data/friendsRepository';
 import { FRIENDS_MESSAGES } from '../domain/errors';
@@ -26,20 +28,19 @@ const messageOf = (e: unknown): string =>
   FRIENDS_MESSAGES[e instanceof FriendsFailure ? e.kind : 'unknown'];
 
 /**
- * Focus together (M7 phase 4): pick up to three friends and a length, invite
- * them, and start once anyone has joined. Anyone's deliberate end-early ends
- * it for everyone; the panel says so before anything is sent.
+ * Focus together (M7 phase 4): pick up to three friends and a length and
+ * invite them. Anyone's deliberate end-early ends it for everyone; the panel
+ * says so before anything is sent. Once there is a room, the app closes this
+ * panel: the lobby (`TogetherLobby`) lives on the timer screen.
  */
 export const TogetherPanel = ({
   together,
   friends,
-  me,
   busy,
 }: {
   together: Together;
   /** Accepted friends. */
   friends: readonly FriendRow[];
-  me: string;
   /** A session is already running here: nothing new can start. */
   busy: boolean;
 }) => (
@@ -48,7 +49,9 @@ export const TogetherPanel = ({
       <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Focus together</h2>
     </header>
     {together.room !== null ? (
-      <Lobby room={together.room} together={together} me={me} />
+      <section className={CARD}>
+        <p className="text-ink-secondary">Your friends session is on the timer screen.</p>
+      </section>
     ) : (
       <Setup together={together} friends={friends} busy={busy} />
     )}
@@ -160,9 +163,28 @@ const Setup = ({
   );
 };
 
-const Lobby = ({ room, together, me }: { room: Room; together: Together; me: string }) => {
+/**
+ * The lobby you're in, shown by `app/` in place of the timer's start controls
+ * (no solo session can start while you wait). Takes focus when it appears in
+ * place of the control that had it (Join), or when the panel that covered it
+ * closes (Invite).
+ */
+export const TogetherLobby = ({
+  room,
+  together,
+  me,
+  active,
+}: {
+  room: Room;
+  together: Together;
+  me: string;
+  /** Nothing covers it: it may take a focus that was lost. */
+  active: boolean;
+}) => {
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useFocusIfLost(titleRef, active);
   const isHost = room.host === me;
   const someoneJoined = room.members.some((m) => m.userId !== me && m.state === 'joined');
 
@@ -190,9 +212,9 @@ const Lobby = ({ room, together, me }: { room: Room; together: Together; me: str
   return (
     <>
       <section className={CARD} aria-labelledby="lobby-title">
-        <h3 id="lobby-title" className="text-ink-primary">
+        <h2 id="lobby-title" ref={titleRef} tabIndex={-1} className="text-ink-primary outline-none">
           {Math.round(room.plannedDurationS / 60)} min together
-        </h3>
+        </h2>
         <ul className="flex flex-col gap-1">
           {room.members.map((m) => (
             <li key={m.userId} className="flex items-center justify-between">
