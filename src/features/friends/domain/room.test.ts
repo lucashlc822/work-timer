@@ -5,7 +5,9 @@ import {
   currentRoom,
   decodeRooms,
   friendCancel,
+  isLobby,
   listNames,
+  missedStart,
   pendingInvite,
   shouldAutoStart,
   type Room,
@@ -98,6 +100,29 @@ describe('shouldAutoStart', () => {
     expect(shouldAutoStart(one(), ME, Date.parse('2026-10-24T10:30:00Z'))).toBe(false);
     expect(shouldAutoStart(one({ status: 'lobby' }), ME, NOW)).toBe(false);
     expect(shouldAutoStart(one(), 'cy', NOW)).toBe(false);
+  });
+});
+
+describe('isLobby', () => {
+  it('only a room still gathering people', () => {
+    expect(isLobby(one({ status: 'lobby', starts_at: null, ends_at: null }))).toBe(true);
+    expect(isLobby(one())).toBe(false);
+    expect(isLobby(one({ status: 'lapsed' }))).toBe(false);
+    expect(isLobby(null)).toBe(false);
+  });
+});
+
+describe('missedStart', () => {
+  it('the room started but this device runs some other session', () => {
+    expect(missedStart(one(), ME, null, NOW)?.id).toBe('room-1');
+    expect(missedStart(one(), ME, 'other-room', NOW)?.id).toBe('room-1');
+  });
+  it('nothing when running the room itself, after its end, or not in it', () => {
+    expect(missedStart(one(), ME, 'room-1', NOW)).toBeNull();
+    expect(missedStart(one(), ME, null, Date.parse('2026-10-24T10:30:00Z'))).toBeNull();
+    expect(missedStart(one(), 'cy', null, NOW)).toBeNull();
+    expect(missedStart(one({ status: 'lobby' }), ME, null, NOW)).toBeNull();
+    expect(missedStart(null, ME, null, NOW)).toBeNull();
   });
 });
 

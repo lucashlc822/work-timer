@@ -52,4 +52,15 @@ export interface TimerSlots {
   running?: (session: RunningInfo) => ReactNode;
   /** Added to the end-early dialog (M7: that it ends the session for friends too). */
   cancelNote?: (session: RunningInfo) => ReactNode;
+  /**
+   * Idle only: something that takes the place of the start controls (M7: the
+   * focus-together lobby you're in). While it returns non-null, no session
+   * can be started from this screen.
+   */
+  idleOverride?: () => ReactNode;
+  /**
+   * Asked when Start is pressed; the session starts only if it resolves true
+   * (M7: "start on your own?" while an invitation waits for an answer).
+   */
+  beforeStart?: () => Promise<boolean>;
 }
