@@ -38,11 +38,18 @@ export const TimerScreen = ({
   slots = {},
   sharedId = null,
   refocusStart = 0,
+  compact = false,
 }: {
   slots?: TimerSlots;
   sharedId?: string | null;
   /** Bumped by the app to hand a focus that fell to the page to Start. */
   refocusStart?: number;
+  /**
+   * Something the app placed above the timer is taking room: the idle card
+   * tightens its vertical spacing so the page still fits the 480×720 desktop
+   * window. Spacing only; nothing is hidden.
+   */
+  compact?: boolean;
 }) => {
   const timer = useTimer();
   const prefs = useTimerPrefs();
@@ -214,8 +221,16 @@ export const TimerScreen = ({
     // card changes height with the mode and the Custom slider, and a centred
     // one would move the controls out from under the pointer. The extra top
     // padding from 2xl up stops it sitting top-heavy on tall, wide windows.
-    <div className="flex w-full flex-1 flex-col items-center justify-start pt-4 sm:pt-12 2xl:pt-32">
-      <div className="rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center gap-6 border px-8 py-6 backdrop-blur-md sm:py-8">
+    <div
+      className={`flex w-full flex-1 flex-col items-center justify-start sm:pt-12 2xl:pt-32 ${
+        compact ? 'pt-0' : 'pt-4'
+      }`}
+    >
+      <div
+        className={`rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center border px-8 backdrop-blur-md sm:gap-6 sm:py-8 ${
+          compact ? 'gap-4 py-4' : 'gap-6 py-6'
+        }`}
+      >
         <ModeToggle mode={prefs.mode} onChange={prefs.setMode} disabled={starting} />
         <PlannedTime seconds={plannedS} />
         {pomodoro ? (
