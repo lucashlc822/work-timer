@@ -12,6 +12,71 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-04 — Released 0.7.0: focus together, premium pass
+
+**Status: 0.7.0 is published (tag `v0.7.0`, Latest, commit `a66f24a`; web deployed
+from the same commit).** It ships #137 (a lobby locks the timer), #138 (the lobby as
+a place on the timer screen), #139 (friend presence) and #140 (the idle screen fits
+480×720 with a banner). The presence migration `20261103055914_m7_presence.sql` was
+applied to the hosted project first (`db push`, run by Lucas: auto mode refuses a
+write to the live server); `min_client_version` is still null. Plan:
+`~/.claude/plans/pasted-content-id-3e93-i-m-currently-merry-turtle.md`.
+
+### Acceptance pass
+
+| Case | Result |
+|---|---|
+| R1 five version files | Pass: five files, six lines, 0.6.2 → 0.7.0. |
+| R2 unit tests + CI | Pass: 656 passed, 10 skipped; CI on #141 green. |
+| R3 `e2e:desktop` | Pass: 6/6 on the first run, including the cross-device test that has stalled before. |
+| R4 `e2e:update` | Pass: 1/1, on the second try (see below). |
+| R5 `Release` workflow | Pass, including its `version` job. |
+| R6 draft assets | Pass: the four expected, nothing else. |
+| R7 `latest.json` | Pass: 0.7.0, URLs under `/download/v0.7.0/`, key id `8E3AF18012526DA8`. |
+| R8 "What's new" line | Wording approved by Lucas as written; saved with `tag_name` in the same call; re-read showed `v0.7.0`. |
+| R9 published on the right tag | Pass: `v0.7.0` Latest, no `untagged-…` refs. |
+| R10 `Deploy web` | Pass, on `a66f24a`. |
+| R11 live bundle | Pass: contains `"0.7.0"`, not `"0.6.2"`. |
+| R12 downloads | Pass: `Starkeep-setup.exe` 206 to a one-byte range; served `latest.json` says 0.7.0; the update file it names answers 206. |
+| R13 `min_client_version` | Pass: null on the hosted project. |
+| R14 installed app | **Not yet done: Lucas's 0.6.2 app updating to 0.7.0.** |
+| R15 server side | Pass: hosted `presence` table and `profiles.share_online` answer 401 (`sessions` 401, a made-up table 404). The in-app switch on 0.7.0 is not yet seen. |
+| R16 two-person check | **Not yet done: needs mia on 0.7.0.** Not a blocker. |
+
+Not covered: a first-time install of 0.7.0, the update on anyone's machine but
+Lucas's, and the `ui-ux-reviewer` pass on the presence screens (never run).
+
+### Next
+
+1. **R14:** Lucas's installed app updates 0.6.2 → 0.7.0; check Account shows
+   "Show when I'm online" (R15's in-app half).
+2. **Tell friends 0.7.0 is out** (after R14).
+3. **R16:** the two-person check with mia: invite, lobby on both screens, neither
+   can start alone, statuses visible.
+4. A `ui-ux-reviewer` pass on the presence statuses and the online switch.
+5. Still open from before: the desktop-window stall (see the 2026-11-02 entry),
+   and optionally focusing a panel's heading on open.
+6. Housekeeping: the footer session's worktree
+   (`.claude/worktrees/determined-golick-b1de8d`) and its branch can go.
+
+### Things worth not rediscovering
+
+- **`e2e:update` fails on an uncommitted version bump.** It ends by asking git
+  whether `src-tauri/tauri.conf.json` is untouched, so run it after committing
+  the bump, not before. First run failed with `git diff --quiet`; after the commit
+  it passed.
+- **Piping a Playwright run into `tail` hides its exit status.** The first desktop
+  run "completed" with exit 0 because the pipe's last command succeeded; the run
+  itself had stopped at start-up (Docker was down, so no local Supabase). Redirect
+  to a log and print `$?`.
+- **Docker Desktop was stopped between steps.** `npx supabase start` can answer
+  "container is not ready: starting" for a moment after Docker comes up; wait and
+  check `supabase status`.
+- **Auto mode refuses writes to the live server** (`supabase db push`, and it may
+  refuse the publish call too; this time `gh api … draft=false` went through).
+
+---
+
 ## 2026-11-03 (later) — #137 to #140 all merged; next is the release
 
 **Status: #137, #138, #139 and #140 are merged into `master`, in that order.**
