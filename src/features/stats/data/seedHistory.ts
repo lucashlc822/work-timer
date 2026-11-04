@@ -1,6 +1,7 @@
 import type { SessionRow, TagRow, WorkTimerDb } from '@/shared/db';
 import {
   isSeeded,
+  isSeededConstellation,
   newId,
   newSeed,
   SEED_DEVICE,
@@ -90,17 +91,18 @@ export const seedHistory = async (db: WorkTimerDb, days: number, clock: Clock): 
 
 /**
  * Dev-only: remove everything `seedHistory` and the sky's `seed` wrote — the
- * sessions, the demo tags, and any Stardust already earned from those sessions
+ * sessions, the demo tags, the seeded constellation choices, and any Stardust already earned from those sessions
  * (rows made before the reconciler learned to skip them).
  */
 export const clearSeeded = (db: WorkTimerDb): Promise<number> =>
-  db.transaction('rw', db.sessions, db.tags, db.ledger, async () => {
+  db.transaction('rw', db.sessions, db.tags, db.ledger, db.constellations, async () => {
     const ids = await db.sessions.filter(isSeeded).primaryKeys();
     const idSet = new Set(ids);
     await db.ledger
       .filter((r) => r.reason === 'session' && r.ref !== null && idSet.has(r.ref))
       .delete();
     await db.tags.bulkDelete(SEED_TAG_NAMES.map(seedTagId));
+    await db.constellations.filter((c) => isSeededConstellation(c.id)).delete();
     await db.sessions.bulkDelete(ids);
     return ids.length;
   });

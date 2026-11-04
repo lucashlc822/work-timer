@@ -13,6 +13,20 @@ export const seedTagId = (name: string): string => stableId(`${SEED_DEVICE}:tag:
 
 export const isSeeded = (row: { device: string }): boolean => row.device === SEED_DEVICE;
 
+/**
+ * Dev-only seeded constellation choices (`__starkeep.seedSky`). A choice row has
+ * no `device` field, so they are recognised by id instead. The server is
+ * insert-only for constellations, so like seeded sessions they are local-only:
+ * sync skips them, the reconciler pays no bonus for them, and `clearSeeded`
+ * removes them.
+ */
+const SEED_CONSTELLATION_PREFIX = `${SEED_DEVICE}:constellation:`;
+
+export const seedConstellationId = (name: string): string => `${SEED_CONSTELLATION_PREFIX}${name}`;
+
+export const isSeededConstellation = (id: string): boolean =>
+  id.startsWith(SEED_CONSTELLATION_PREFIX);
+
 export const SEED_TAG_NAMES = ['Writing', 'Reading', 'Admin'] as const;
 
 const SEED_TAG_IDS: ReadonlySet<string> = new Set(SEED_TAG_NAMES.map(seedTagId));

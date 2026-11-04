@@ -6,7 +6,15 @@ export type { FocusInterval } from './days';
 
 export { newId, newSeed, stableId } from './id';
 
-export { isSeeded, isSeededTag, SEED_DEVICE, SEED_TAG_NAMES, seedTagId } from './seed';
+export {
+  isSeeded,
+  isSeededConstellation,
+  isSeededTag,
+  SEED_DEVICE,
+  SEED_TAG_NAMES,
+  seedConstellationId,
+  seedTagId,
+} from './seed';
 
 export { isStandalone, onReducedMotionChange, prefersReducedMotion } from './platform';
 

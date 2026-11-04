@@ -1,7 +1,7 @@
 import { db } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
 
-import { seedCompletedSessions } from '../data/skyRepository';
+import { seedCompletedSessions, seedSky, type SeedSkyOptions } from '../data/skyRepository';
 import { frameCount } from '../hooks/useFrameLoop';
 
 /**
@@ -13,6 +13,9 @@ import { frameCount } from '../hooks/useFrameLoop';
  *
  * - `__starkeep.seed(n, minutes)` writes `n` completed sessions that land in
  *   the current constellation — for testing tiers and gating in seconds.
+ * - `__starkeep.seedSky({ shapes, generated, complete, styles })` builds a whole
+ *   reproducible sky — one constellation per catalogue shape, finished by
+ *   default. Local-only; `__starkeep.clearSeeded()` removes it exactly.
  * - `__starkeep.frames()` is the ambient sky's frame count: call it twice a
  *   few seconds apart while the window is hidden to confirm the loop stopped.
  */
@@ -22,6 +25,7 @@ export const install = (): void => {
   host.__starkeep = {
     ...host.__starkeep,
     seed: (count = 1, minutes = 25) => seedCompletedSessions(db, count, minutes, systemClock),
+    seedSky: (opts: SeedSkyOptions = {}) => seedSky(db, opts, systemClock),
     frames: frameCount,
   };
 };

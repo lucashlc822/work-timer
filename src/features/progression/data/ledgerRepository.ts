@@ -6,7 +6,7 @@ import {
   type LedgerRow,
   type WorkTimerDb,
 } from '@/shared/db';
-import { isSeeded, stableId } from '@/shared/lib';
+import { isSeeded, isSeededConstellation, stableId } from '@/shared/lib';
 
 import { DEFAULT_STYLE_KEY, DEFAULT_THEME_KEY, itemByKey, ownedKeys } from '../domain/catalogue';
 import { clampDailyGoal, DEFAULT_DAILY_GOAL_MIN } from '../domain/economy';
@@ -41,7 +41,8 @@ export const reconcile = (
     const expected = expectedRows({
       userId,
       sessions,
-      completions,
+      // Dev-seeded constellations pay no bonus, like dev-seeded sessions pay no Stardust.
+      completions: completions.filter((c) => !isSeededConstellation(c.choiceId)),
       togetherWins,
       sharedCompletions,
       goalMin,

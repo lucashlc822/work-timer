@@ -11,7 +11,7 @@ import {
   type PomodoroSettingsRow,
   type WorkTimerDb,
 } from '../db';
-import { isSeeded, isSeededTag, type Clock } from '../lib';
+import { isSeeded, isSeededConstellation, isSeededTag, type Clock } from '../lib';
 import { RemoteError, type RemoteErrorKind, type RemoteStore } from './remote';
 import {
   constellationFromWire,
@@ -398,7 +398,12 @@ export const createSyncEngine = ({ db, remote, clock, lock, appVersion }: Deps):
       );
 
       const choices = await db.constellations
-        .filter((c) => c.syncedAt === null && !rejected.constellations.has(c.id))
+        .filter(
+          (c) =>
+            c.syncedAt === null &&
+            !rejected.constellations.has(c.id) &&
+            !isSeededConstellation(c.id),
+        )
         .toArray();
       counts.pushed += await pushTable(
         'constellations',
@@ -608,7 +613,7 @@ export const countPending = async (
     row.syncedAt === null && !skip.has(row.id);
   const pending =
     (await db.tags.filter((t) => unsynced(t) && !isSeededTag(t.id)).count()) +
-    (await db.constellations.filter(unsynced).count()) +
+    (await db.constellations.filter((c) => unsynced(c) && !isSeededConstellation(c.id)).count()) +
     (await db.sessions.filter((s) => unsynced(s) && s.endedAt !== null && !isSeeded(s)).count()) +
     (await db.ledger.filter(unsynced).count()) +
     (settingsWaiting ? 1 : 0);
