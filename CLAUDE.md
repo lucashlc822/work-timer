@@ -323,8 +323,11 @@ in `NOTES.md`.
   `Get-Process starkeep`.
 - **Dev builds have test helpers on `window.__starkeep`:** `seed(n, minutes)`
   (completed sessions), `seedHistory(days)` and `clearSeeded()` (weeks of
-  history, removed exactly), and `frames()` (the sky's frame counter). The
-  object appears a moment after load; wait for it. None of it ships.
+  history, removed exactly), `seedSky({ shapes, generated, complete, styles })`
+  (one finished constellation per catalogue shape, the same stars every run;
+  local-only, so sync, Stardust and `clearSeeded()` all know it), and `frames()`
+  (the sky's frame counter). The object appears a moment after load; wait for
+  it. None of it ships.
 - **Running an older release locally (compatibility checks):**
   `git worktree add --detach <dir> vX.Y.Z`, copy `.env.development.local`,
   `npm ci`, `npm run dev`. It needs port 5173 and shares the browser store

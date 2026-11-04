@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, type SessionRow, type WorkTimerDb } from '@/shared/db';
-import { createTestClock, SEED_DEVICE } from '@/shared/lib';
+import { createTestClock, SEED_DEVICE, seedConstellationId } from '@/shared/lib';
 import { createSyncEngine } from '@/shared/sync';
 import { FakeRemote } from '@/shared/sync/fakeRemote';
 import { sessionToWire } from '@/shared/sync/wire';
@@ -63,6 +63,21 @@ describe('reconcile', () => {
     const rows = await db.ledger.toArray();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ ref: real.id, delta: 25 });
+  });
+
+  it('pays no bonus for a dev-seeded constellation, and still pays a real one', async () => {
+    const db = newDb();
+    const seeded = {
+      choiceId: seedConstellationId('kite'),
+      tier: 'easy',
+      completedAt: T0,
+    } as const;
+    expect(await reconcile(db, USER, [seeded])).toBe(0);
+    expect(await db.ledger.count()).toBe(0);
+
+    const real = { choiceId: crypto.randomUUID(), tier: 'easy', completedAt: T0 } as const;
+    expect(await reconcile(db, USER, [seeded, real])).toBe(1);
+    expect(await db.ledger.count()).toBe(1);
   });
 
   it('credits a completed session once, and an early ending not at all (case 1)', async () => {

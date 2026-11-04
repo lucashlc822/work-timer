@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createDb, type SessionRow, type WorkTimerDb } from '@/shared/db';
-import { createTestClock, SEED_DEVICE } from '@/shared/lib';
+import { createTestClock, SEED_DEVICE, seedConstellationId } from '@/shared/lib';
 import { clearSeeded, seedHistory } from './seedHistory';
 
 const opened: WorkTimerDb[] = [];
@@ -65,5 +65,25 @@ describe('clearSeeded', () => {
     const rows = await db.ledger.toArray();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ ref: keep.id });
+  });
+
+  it('removes dev-seeded constellation choices, and keeps a real one', async () => {
+    const db = newDb();
+    const choice = (id: string) => ({
+      id,
+      source: 'catalogue' as const,
+      shapeId: 'kite',
+      seed: null,
+      tier: 'easy' as const,
+      chosenAt: NOW,
+      clientCreatedAt: NOW,
+      syncedAt: null,
+    });
+    const realId = crypto.randomUUID();
+    await db.constellations.bulkAdd([choice(seedConstellationId('kite')), choice(realId)]);
+
+    await clearSeeded(db);
+
+    expect((await db.constellations.toArray()).map((c) => c.id)).toEqual([realId]);
   });
 });

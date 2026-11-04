@@ -12,7 +12,7 @@ import {
   type TagRow,
   type WorkTimerDb,
 } from '../db';
-import { createTestClock, SEED_DEVICE, seedTagId, stableId } from '../lib';
+import { createTestClock, SEED_DEVICE, seedConstellationId, seedTagId, stableId } from '../lib';
 import { countPending, createSyncEngine, PULL_PAGE, type SyncLock } from './engine';
 import { FakeRemote } from './fakeRemote';
 import { sessionToWire, settingsToWire, tagToWire } from './wire';
@@ -498,6 +498,22 @@ describe('settings', () => {
     expect((await countPending(db)).pending).toBe(1);
     await engine.syncNow();
     expect(remote.tables.sessions.size).toBe(1);
+  });
+
+  it('keeps dev-seeded constellation choices on the device: never pending, never uploaded', async () => {
+    const remote = new FakeRemote();
+    const { db, engine } = device(remote);
+    await db.constellations.add(choice({ id: seedConstellationId('kite') }));
+    expect(await countPending(db)).toEqual({ pending: 0, rejected: 0 });
+
+    await engine.syncNow();
+    expect(remote.tables.constellations.size).toBe(0);
+
+    // A real choice beside it still goes up.
+    await db.constellations.add(choice());
+    expect((await countPending(db)).pending).toBe(1);
+    await engine.syncNow();
+    expect(remote.tables.constellations.size).toBe(1);
   });
 
   // U2
