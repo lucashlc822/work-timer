@@ -12,6 +12,59 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-04 (end of session) — 0.7.0 is out and in use; repo is clean
+
+**Status: nothing in flight.** No open PRs. `master` (`aa62357`) is the only
+branch, locally and on GitHub. 0.7.0 is published, Lucas and mia are both on it,
+and the lobby came up on the real server. What's left is checks only people can
+do, plus a few optional items.
+
+### What happened after the release entry
+
+- **Lucas updated to 0.7.0** and reviewed the lobby with mia: the host view showed
+  "You · Host", "mia · In", "25 min together" and Start together. That covers R14
+  in effect (his report, not checked step by step) and the lobby half of R16. Not
+  seen: what Start together did on both screens, the Friends-list statuses on the
+  real server, and the Account switch (R15's in-app half).
+- **Decision (Lucas, 2026-11-04): the lobby's length stays fixed once invited.**
+  `create_room` stores `planned_duration_s` and no server function edits it; mia
+  has already joined *that* length. To change it: Cancel invite, then invite again.
+  Editing in the lobby would need a new server function plus resetting joined
+  friends to "invited"; not wanted now.
+- **Housekeeping done.** The footer session's worktree removed; 119 local and 125
+  GitHub branches deleted (all fully merged; Lucas ran the GitHub deletes himself).
+  All 11 version tags and the releases are intact.
+- **Lucas ran `/auto-mode-setup`.** It appended an environment description and
+  three `soft_deny` rules to `~/.claude/settings.json` (user-level, not in this
+  repo): `npx supabase db push`, `npx supabase config push`, and force-push to
+  `master`.
+
+### Next
+
+1. **Tell friends 0.7.0 is out** (Lucas).
+2. **Finish R16 with mia:** Start together gives the same end time on both
+   screens; each sees the other's status in Friends; a friend with the app hidden
+   shows "Away" in the lobby.
+3. **A `ui-ux-reviewer` pass on the presence screens** (status dots, the "Show
+   when I'm online" switch). Never run.
+4. **Issue #7** (five dev-dependency npm audit findings, open since 2026-10-03):
+   its own PR, from one machine.
+5. **Still open from before:** the unexplained desktop-window stall (it passed
+   first time for 0.7.0); optionally focusing a panel's heading on open.
+
+### Things worth not rediscovering
+
+- **Lucas's terminal is PowerShell.** A bash one-liner (`grep`, `sed`, `xargs`)
+  failed there with "not recognized"; give PowerShell versions.
+- **Auto mode refused** `supabase db push` and the bulk `git push origin --delete`,
+  but allowed the tag push, the `gh api` publish and the PR merges.
+- **Known small issues, left on purpose:** Pomodoro mode scrolls at 480×720 (it
+  did before these changes); a dismissed "lobby ended" note returns after a
+  reload for its remaining 5 minutes; a guest can see a closed lobby for 6–10 s;
+  "Online" can linger up to 3 minutes after someone quits.
+
+---
+
 ## 2026-11-04 — Released 0.7.0: focus together, premium pass
 
 **Status: 0.7.0 is published (tag `v0.7.0`, Latest, commit `a66f24a`; web deployed
@@ -39,7 +92,7 @@ write to the live server); `min_client_version` is still null. Plan:
 | R11 live bundle | Pass: contains `"0.7.0"`, not `"0.6.2"`. |
 | R12 downloads | Pass: `Starkeep-setup.exe` 206 to a one-byte range; served `latest.json` says 0.7.0; the update file it names answers 206. |
 | R13 `min_client_version` | Pass: null on the hosted project. |
-| R14 installed app | **Not yet done: Lucas's 0.6.2 app updating to 0.7.0.** |
+| R14 installed app | **Not yet done: Lucas's 0.6.2 app updating to 0.7.0.** **(Superseded 2026-11-04 — Lucas updated and is using 0.7.0; reported by him, not checked step by step. See the end-of-session entry.)** |
 | R15 server side | Pass: hosted `presence` table and `profiles.share_online` answer 401 (`sessions` 401, a made-up table 404). The in-app switch on 0.7.0 is not yet seen. |
 | R16 two-person check | **Not yet done: needs mia on 0.7.0.** Not a blocker. |
 
@@ -58,6 +111,7 @@ Lucas's, and the `ui-ux-reviewer` pass on the presence screens (never run).
    and optionally focusing a panel's heading on open.
 6. Housekeeping: the footer session's worktree
    (`.claude/worktrees/determined-golick-b1de8d`) and its branch can go.
+   **(Superseded 2026-11-04 — done: worktree, local and GitHub branches all removed.)**
 
 ### Things worth not rediscovering
 
@@ -98,7 +152,8 @@ conflicted).
 
 **Status: `fix/idle-fits-with-banner` is open as a PR against
 `feat/together-lobby-screen` (#138), not merged.** It fixes the ui-ux review's M2
-on #138. Retarget it to `master` once #138 merges.
+on #138. Retarget it to `master` once #138 merges. **(Superseded 2026-11-04 —
+merged as #140 and released in 0.7.0.)**
 
 While an invitation (`InviteBanner`) or the lobby-ended note (`LobbyEndedNote`)
 shows, `HomeRoute` passes `compact` to `TimerScreen` and tightens its own
@@ -128,9 +183,10 @@ friends" shows):
 ---
 ## 2026-11-03 — Focus together, premium pass: three stacked PRs open
 
-**Status: three PRs open, none merged; merge in order.** Prompted by Lucas
-testing focus together with mia on 0.6.2 (she could start a solo session while
-in his lobby). Plan: `~/.claude/plans/pasted-content-id-3e93-i-m-currently-merry-turtle.md`.
+**Status: three PRs open, none merged; merge in order.** **(Superseded
+2026-11-04 — all merged (#137 to #139, plus #140) and released in 0.7.0.)**
+Prompted by Lucas testing focus together with mia on 0.6.2 (she could start a
+solo session while in his lobby). Plan: `~/.claude/plans/pasted-content-id-3e93-i-m-currently-merry-turtle.md`.
 
 1. #137 `fix/together-lobby-locks-timer`: a lobby replaces the timer's Start;
    Start while invited asks first ("Start on your own?").
