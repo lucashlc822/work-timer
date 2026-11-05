@@ -21,6 +21,14 @@ export const minimumLabel = (minSessionS: number): string =>
 export const starLabel = (endedAt: number, focusS: number): string =>
   `Star from ${new Date(endedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${focusLabel(focusS)}`;
 
+/**
+ * `starLabel` for a star that belongs to no constellation. Only the leading
+ * "Star" is lowercased: lowercasing the whole label would also flatten the
+ * locale's month ("nov 3"), which a screen reader then mispronounces.
+ */
+export const wanderingStarLabel = (endedAt: number, focusS: number): string =>
+  `Wandering star${starLabel(endedAt, focusS).slice('Star'.length)}`;
+
 export const progressLabel = (c: ConstellationState): string => {
   if (isShared(c)) {
     const name = `${c.def.name} with ${c.partnerName}`;

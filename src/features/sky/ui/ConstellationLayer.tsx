@@ -16,7 +16,7 @@ import { starForm } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
 import type { ConstellationState, SkyState } from '../domain/types';
 import { AstroStar } from './AstroStar';
-import { figureCaption, progressLabel, starLabel } from './describe';
+import { figureCaption, progressLabel, starLabel, wanderingStarLabel } from './describe';
 
 export type SkyMode = 'hero' | 'full';
 
@@ -95,7 +95,7 @@ export const ConstellationLayer = ({
         const form = starForm(look, session.actualFocusS, session.starStyle, 1.3, 'plain', {
           spikeScale: 0.6,
         });
-        const label = `Wandering ${starLabel(session.endedAt, session.actualFocusS).toLowerCase()}`;
+        const label = wanderingStarLabel(session.endedAt, session.actualFocusS);
         return (
           <g
             key={session.id}
