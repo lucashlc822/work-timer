@@ -594,6 +594,24 @@ rejected). Don't pre-populate this with guesses.
   blur passes per repaint, so the corona is a radial gradient and a glowing
   figure blurs its edges once, not once per line. A test fails if a star
   carries a `filter`.
+- **A star's card replaces the browser tooltip, and Escape closes it first**
+  (View sky upgrade PR 3, 2026-11-04). Hovering or focusing a star in the full
+  sky shows a card: date and start–end time, length, tag, a context line
+  ("Pomodoro block 2 of 3", "Focused with mia", "Bea’s star") and the star in
+  its style. The card is `aria-hidden`; the same words are the star's `<desc>`,
+  so a screen reader never depends on the card being mounted in time, and the
+  star's accessible name stays the short `starLabel`. It stays 250 ms after
+  the pointer leaves and while the pointer is on it (WCAG 1.4.13). While a card
+  is open, `SkyView` listens for Escape on the window in the capture phase and
+  stops it: one press closes the card, the next leaves the sky (HomeRoute's
+  document listener). A friend's sky shows only time, length and style — never
+  their tags, runs or companions — and prefers cards below the star, clear of
+  its header. "Block N of M" counts the blocks the run *completed*; an open run
+  says "block N". Who you focused with is remembered per device in
+  `META_KEYS.togetherNames` (written by `app/togetherNames.ts` from rooms you
+  ran in, capped at 500, never synced); a device that wasn't there says
+  "Focused together". Style names come from the shop (`styleName` in
+  progression), passed in by `app/`.
 
 ## Plans include acceptance tests
 

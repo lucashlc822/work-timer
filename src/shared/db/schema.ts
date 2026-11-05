@@ -293,7 +293,17 @@ export const META_KEYS = {
   skyTheme: 'skyTheme',
   /** The daily focus goal in minutes (M6). Synced with the other settings. Absent means the default. */
   dailyGoalMin: 'dailyGoalMin',
+  /**
+   * Who you focused with, per focus-together room (`TogetherNamesMeta`), so a
+   * star from that session can say "Focused with mia" long after the room has
+   * gone from the server's recent list. Per device and never synced: another
+   * device that wasn't in the room says "Focused together".
+   */
+  togetherNames: 'togetherNames',
 } as const;
+
+/** `META_KEYS.togetherNames`: room id → the other members' names and when it started. */
+export type TogetherNamesMeta = Record<string, { names: string[]; startsAt: number }>;
 
 export type WorkTimerDb = Dexie & {
   sessions: EntityTable<SessionRow, 'id'>;

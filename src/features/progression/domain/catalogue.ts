@@ -138,3 +138,11 @@ export const boughtTiers = (owned: ReadonlySet<string>): ReadonlySet<BuyableTier
 export const SHOP_STYLE_KEYS: readonly string[] = itemsOfKind('star-style').flatMap((i) =>
   i.styleKey === undefined ? [] : [i.styleKey],
 );
+
+/**
+ * A star style's name as the shop sells it ("Ember"), for anything that shows
+ * which style a star has. An unknown key draws as classic, so it reads as one.
+ */
+export const styleName = (styleKey: string | undefined): string =>
+  itemByKey(`style.${styleKey ?? DEFAULT_STYLE_KEY}`)?.name ??
+  (itemByKey(`style.${DEFAULT_STYLE_KEY}`) as CatalogueItem).name;

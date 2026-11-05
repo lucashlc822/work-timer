@@ -4,7 +4,20 @@ import { deriveSky } from '../domain/derive';
 import { deriveShared } from '../domain/shared';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
-import { figureCaption, focusLabel, minimumLabel, progressLabel, starLabel } from './describe';
+import {
+  cardDate,
+  contextLines,
+  figureCaption,
+  focusLabel,
+  listNames,
+  minimumLabel,
+  progressLabel,
+  starCardModel,
+  starDescription,
+  starLabel,
+  timeRange,
+  type CardFacts,
+} from './describe';
 
 const T0 = 1_700_000_000_000;
 const rules = tierRules(false);
@@ -114,5 +127,82 @@ describe('figureCaption', () => {
     expect(figureCaption(shared(1, { stoppedAt: T0 + 5 * 3_600_000 }))).toBe(
       'The Kite · with Bea · stopped',
     );
+  });
+});
+
+describe('the star card words', () => {
+  const NOV_2 = new Date(2026, 10, 2, 21, 40).getTime();
+
+  it('dates a card by its start, adding the year only when it is not this one', () => {
+    const thisYear = cardDate(NOV_2, new Date(2026, 11, 31).getTime());
+    const lastYear = cardDate(NOV_2, new Date(2027, 0, 1).getTime());
+    expect(thisYear).not.toContain('2026');
+    expect(lastYear).toContain('2026');
+  });
+
+  it('shows the start and end time, in the reader’s own clock style', () => {
+    const end = NOV_2 + 25 * 60_000;
+    const range = timeRange(NOV_2, end);
+    const clock = (ms: number) =>
+      new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    expect(range).toBe(`${clock(NOV_2)}–${clock(end)}`);
+  });
+
+  it('runs a session over midnight from one day into the next', () => {
+    const start = new Date(2026, 10, 2, 23, 40).getTime();
+    const end = new Date(2026, 10, 3, 0, 5).getTime();
+    const [from, to] = timeRange(start, end).split('–');
+    expect(from).toMatch(/40/);
+    expect(to).toMatch(/05/);
+  });
+
+  it('lists names the way a person would', () => {
+    expect(listNames(['mia'])).toBe('mia');
+    expect(listNames(['mia', 'Bea'])).toBe('mia and Bea');
+    expect(listNames(['mia', 'Bea', 'Kai'])).toBe('mia, Bea and Kai');
+  });
+
+  const none: CardFacts = { tag: null, run: null, together: null, partnerName: null };
+
+  it('says nothing more for a plain solo session', () => {
+    expect(contextLines(none)).toEqual([]);
+  });
+
+  it('places a Pomodoro block in its run, or just numbers it while the run is going', () => {
+    expect(contextLines({ ...none, run: { index: 2, total: 3 } })).toEqual([
+      'Pomodoro block 2 of 3',
+    ]);
+    expect(contextLines({ ...none, run: { index: 2, total: null } })).toEqual(['Pomodoro block 2']);
+  });
+
+  it('names who you focused with, or says only that you did when this device never knew', () => {
+    expect(contextLines({ ...none, together: { names: ['mia', 'Bea'] } })).toEqual([
+      'Focused with mia and Bea',
+    ]);
+    expect(contextLines({ ...none, together: { names: null } })).toEqual(['Focused together']);
+    expect(contextLines({ ...none, together: { names: [] } })).toEqual(['Focused together']);
+  });
+
+  it('calls a friend’s star theirs and says nothing else about it', () => {
+    expect(contextLines({ ...none, partnerName: 'Bea', run: { index: 1, total: 1 } })).toEqual([
+      'Bea’s star',
+    ]);
+  });
+
+  it('puts the whole card into one sentence for a screen reader', () => {
+    const model = starCardModel(
+      { startedAt: NOV_2, endedAt: NOV_2 + 25 * 60_000, actualFocusS: 25 * 60 },
+      { ...none, tag: { name: 'Writing', color: 'mint' }, run: { index: 2, total: 3 } },
+      'Ember',
+      NOV_2,
+    );
+    expect(model.duration).toBe('25 minutes');
+    expect(model.styleName).toBe('Ember');
+
+    const sentence = starDescription(model);
+    expect(sentence.startsWith(`${model.date}, ${model.time}, 25 minutes.`)).toBe(true);
+    expect(sentence).toContain('Tagged Writing.');
+    expect(sentence).toContain('Pomodoro block 2 of 3.');
+    expect(sentence.endsWith('Ember star.')).toBe(true);
   });
 });
