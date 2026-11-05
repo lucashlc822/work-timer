@@ -13,7 +13,7 @@ import { frameCount } from '../hooks/useFrameLoop';
  *
  * - `__starkeep.seed(n, minutes)` writes `n` completed sessions that land in
  *   the current constellation — for testing tiers and gating in seconds.
- * - `__starkeep.seedSky({ shapes, generated, complete, styles })` builds a whole
+ * - `__starkeep.seedSky({ shapes, generated, tier, complete, styles })` builds a whole
  *   reproducible sky — one constellation per catalogue shape, finished by
  *   default. Local-only; `__starkeep.clearSeeded()` removes it exactly.
  * - `__starkeep.frames()` is the ambient sky's frame count: call it twice a

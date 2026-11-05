@@ -137,6 +137,15 @@ describe('skyRepository', () => {
       expect(sky.constellations.every((c) => c.complete)).toBe(true);
     });
 
+    it('gives every generated constellation the asked-for tier', async () => {
+      const db = withDb();
+      await seedSky(db, { shapes: [], generated: 4, tier: 'hard' }, createTestClock(T0));
+
+      const sky = await skyOf(db);
+      expect(sky.constellations).toHaveLength(4);
+      expect(sky.constellations.every((c) => c.def.tier === 'hard' && c.complete)).toBe(true);
+    });
+
     it('is reproducible: the same options draw the same stars in the same places', async () => {
       const a = withDb();
       const b = withDb();

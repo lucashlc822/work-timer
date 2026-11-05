@@ -579,6 +579,21 @@ rejected). Don't pre-populate this with guesses.
   measured once drawn and nudged back 8 px inside the window's edges
   (`Caption` in `ConstellationLayer.tsx`), because small capitals run wider
   than the figure's cell.
+- **A star is drawn as an astrophoto, and a style may shape its glow** (View
+  sky upgrade PR 2, 2026-11-04; widens the M6 rule that a style "recolours and
+  scales the glow only"). `starForm` (pure, `sky/domain/starForm.ts`) turns
+  what `starAppearance` decided into a corona, diffraction spikes, a body and
+  a core, and `AstroStar` draws it. A style (`STAR_FORMS`, same keys as
+  `STAR_STYLES`) may now choose the spike count, angle and tint and the
+  corona's form; every star of one style points the same way, as in a real
+  image. Size, brightness, twinkle and **spike length** still say only how long
+  the session was: within any style, length is a function of focus time alone
+  (ember's are shorter overall, but grow by the same factor). `starAppearance`
+  is untouched and its golden stands; `starForm` has its own golden for the
+  same four seeds. **No blur filter on a star:** a crowded sky was hundreds of
+  blur passes per repaint, so the corona is a radial gradient and a glowing
+  figure blurs its edges once, not once per line. A test fails if a star
+  carries a `filter`.
 
 ## Plans include acceptance tests
 

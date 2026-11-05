@@ -123,6 +123,86 @@ describe('ConstellationLayer', () => {
     expect(labels).toEqual(['The Kite, complete']);
   });
 
+  describe('stars', () => {
+    /** A finished Lantern (a medium tier, so it glows) next to a wandering star. */
+    const glowing = () =>
+      deriveSky(
+        [1, 2, 3, 4, 5, 6, 7].map((i) => star(i)).concat(star(40, T0 + 40 * HOUR)),
+        [choice('c-lantern', 'lantern', T0)],
+        rules,
+      );
+
+    it('draws every earned star with a corona, spikes, a body and a core, and no blur filter', () => {
+      const { container } = renderLayer('full');
+
+      const stars = [...container.querySelectorAll('[role="img"][tabindex="0"]')];
+      expect(stars).toHaveLength(6);
+      for (const s of stars) {
+        expect(s.querySelector('ellipse')).not.toBeNull();
+        expect(s.querySelectorAll('path').length).toBeGreaterThanOrEqual(1);
+        expect(s.querySelectorAll('circle').length).toBeGreaterThanOrEqual(3); // hit area, body, core
+        expect(s.querySelector('[filter]')).toBeNull();
+      }
+    });
+
+    it('blurs the edges of a glowing figure once for the whole figure, not once per line', () => {
+      const { container } = renderLayer('full', glowing());
+
+      const filtered = [...container.querySelectorAll('[filter]')];
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]!.tagName.toLowerCase()).toBe('g');
+      expect(filtered[0]!.querySelectorAll('line').length).toBeGreaterThanOrEqual(3);
+      // And never a star.
+      expect(container.querySelector('[role="img"] [filter]')).toBeNull();
+    });
+
+    it('gives a wandering star the same treatment, with no filter', () => {
+      const { container } = renderLayer('full', glowing());
+
+      const wandering = [...container.querySelectorAll('[role="img"]')].filter((el) =>
+        el.getAttribute('aria-label')?.startsWith('Wandering'),
+      );
+      expect(wandering).toHaveLength(1);
+      expect(wandering[0]!.querySelector('ellipse')).not.toBeNull();
+      expect(wandering[0]!.querySelector('[filter]')).toBeNull();
+    });
+
+    it('draws stars in hero mode too, still without a filter on any star', () => {
+      const { container } = renderLayer('hero');
+
+      expect(container.querySelectorAll('ellipse').length).toBeGreaterThanOrEqual(2);
+      expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(2);
+      for (const g of container.querySelectorAll('[filter]')) {
+        expect(g.querySelector('circle')).toBeNull();
+      }
+    });
+
+    it('gives every gradient its own id, safe inside url(#…), even for odd session ids', () => {
+      const odd = (id: string, i: number): CompletedSession => ({ ...star(i), id });
+      const state = deriveSky(
+        [
+          odd('dev/seed:constellation:kite:session:0', 1),
+          odd('dev/seed:constellation:kite:session:1', 2),
+        ],
+        [choice('dev/seed:constellation:kite', 'kite', T0)],
+        rules,
+      );
+      const { container } = renderLayer('full', state);
+
+      const ids = [...container.querySelectorAll('radialGradient')].map((g) =>
+        g.getAttribute('id')!,
+      );
+      expect(ids.length).toBeGreaterThanOrEqual(2);
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const id of ids) expect(id).toMatch(/^[A-Za-z][A-Za-z0-9_-]*$/);
+      // Every fill that points at one of them points at one that exists.
+      for (const el of container.querySelectorAll('[fill^="url(#"]')) {
+        const target = el.getAttribute('fill')!.slice(5, -1);
+        expect(ids).toContain(target);
+      }
+    });
+  });
+
   describe('captions at the window edge', () => {
     // jsdom has no text metrics, so give every caption a width to measure.
     const withTextLength = (length: number) => {
