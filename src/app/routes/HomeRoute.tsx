@@ -52,6 +52,7 @@ import {
   RewardNote,
   StardustPanel,
   StardustPill,
+  styleName,
   useBoughtTiers,
   useOwnedPacks,
 } from '@/features/progression';
@@ -72,6 +73,7 @@ import { StarMark, Switch, useFocusIfLost } from '@/shared/ui';
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
 import { useSharedSky } from '../sharedSkyContext';
+import { useRememberTogetherNames } from '../togetherNames';
 import { useTogetherTimer } from '../useTogetherTimer';
 
 /**
@@ -217,6 +219,8 @@ const HomeScreen = ({ together }: { together: Together }) => {
 
   const timer = useTimer();
   const me = account.userId;
+  // So a star from a focus-together session can say who you were with, later on.
+  useRememberTogetherNames(together.rooms, me);
   useTogetherTimer(together, timer, me);
 
   // Shared constellations (M7 phase 5): what the next session is for. The last
@@ -400,6 +404,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
         mode={view === 'sky' ? 'full' : 'hero'}
         shared={sharedStates}
         focusId={focusId}
+        styleName={styleName}
       />
 
       <main

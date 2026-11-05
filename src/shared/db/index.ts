@@ -22,6 +22,7 @@ export type {
   SessionRow,
   TagColor,
   TagRow,
+  TogetherNamesMeta,
   WorkTimerDb,
 } from './schema';
 
