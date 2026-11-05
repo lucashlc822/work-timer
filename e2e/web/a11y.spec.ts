@@ -91,6 +91,14 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await openView(page, 'View sky');
   await settleTransitions(page);
   findings.push(...(await scan(page, 'sky')));
+  // A star's card (View sky upgrade PR 3), opened from the keyboard.
+  await page
+    .getByRole('img', { name: /star from/i })
+    .first()
+    .focus();
+  await page.getByTestId('star-card').waitFor();
+  findings.push(...(await scan(page, 'sky with a star card')));
+  await page.keyboard.press('Escape');
   await backToTimer(page);
 
   await openView(page, 'Stats');

@@ -12,9 +12,9 @@ import {
 } from '../domain/layout';
 import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
-import { starForm } from '../domain/starForm';
+import { starForm, type TierStyle } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
-import type { ConstellationState, SkyState } from '../domain/types';
+import type { CompletedSession, ConstellationState, SkyState } from '../domain/types';
 import { AstroStar } from './AstroStar';
 import { figureCaption, progressLabel, starLabel, wanderingStarLabel } from './describe';
 
@@ -29,7 +29,45 @@ interface Props {
   shared?: readonly SharedState[];
   /** In hero mode, the shared constellation the next session is for, if any. */
   focusId?: string | null;
+  /**
+   * Full mode only: told when a star is hovered or focused, and when it stops
+   * being, so the sky can show a card about it.
+   */
+  onStar?: (event: StarEvent, target: StarTarget) => void;
+  /** Full mode only: the star's description (its `<desc>`), when there's one to give. */
+  describeStar?: (star: StarRef) => string | undefined;
 }
+
+export type StarEvent = 'enter' | 'leave' | 'focus' | 'blur';
+
+/** A star, and the constellation it belongs to (null for a wandering star). */
+export interface StarRef {
+  session: CompletedSession;
+  constellation: ConstellationState | null;
+  tier: TierStyle;
+}
+
+/** A star as it sits on screen, in the sky's own pixels. */
+export interface StarTarget extends StarRef {
+  x: number;
+  y: number;
+  /** Its visible radius. */
+  r: number;
+}
+
+/** Pointer and focus handlers that report a star upward. */
+const starHandlers = (
+  onStar: Props['onStar'],
+  target: StarTarget,
+): Partial<Record<'onPointerEnter' | 'onPointerLeave' | 'onFocus' | 'onBlur', () => void>> =>
+  onStar === undefined
+    ? {}
+    : {
+        onPointerEnter: () => onStar('enter', target),
+        onPointerLeave: () => onStar('leave', target),
+        onFocus: () => onStar('focus', target),
+        onBlur: () => onStar('blur', target),
+      };
 
 const NO_SHARED: readonly SharedState[] = [];
 
@@ -55,6 +93,8 @@ export const ConstellationLayer = ({
   height,
   shared = NO_SHARED,
   focusId = null,
+  onStar,
+  describeStar,
 }: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -96,6 +136,8 @@ export const ConstellationLayer = ({
           spikeScale: 0.6,
         });
         const label = wanderingStarLabel(session.endedAt, session.actualFocusS);
+        const ref: StarRef = { session, constellation: null, tier: 'plain' };
+        const description = full ? describeStar?.(ref) : undefined;
         return (
           <g
             key={session.id}
@@ -103,8 +145,9 @@ export const ConstellationLayer = ({
             role={full ? 'img' : undefined}
             aria-label={full ? label : undefined}
             className="group focus:outline-none"
+            {...(full ? starHandlers(onStar, { ...ref, x, y, r: form.radius }) : {})}
           >
-            {full && <title>{label}</title>}
+            {description !== undefined && <desc>{description}</desc>}
             {full && <HitArea x={x} y={y} />}
             <g opacity={full ? 0.8 : 0.5}>
               <AstroStar
@@ -129,6 +172,8 @@ export const ConstellationLayer = ({
           full={full}
           glowId={glowId}
           viewWidth={width}
+          onStar={onStar}
+          describeStar={describeStar}
         />
       ))}
     </svg>
@@ -245,12 +290,16 @@ const Figure = ({
   full,
   glowId,
   viewWidth,
+  onStar,
+  describeStar,
 }: {
   state: ConstellationState;
   box: Placement;
   full: boolean;
   glowId: string;
   viewWidth: number;
+  onStar: Props['onStar'];
+  describeStar: Props['describeStar'];
 }) => {
   const { def, stars, complete } = state;
   // A stopped shared constellation fades like an abandoned one of your own.
@@ -352,6 +401,8 @@ const Figure = ({
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         const form = starForm(look, session.actualFocusS, session.starStyle, starRadius, style);
         const label = starLabel(session.endedAt, session.actualFocusS);
+        const ref: StarRef = { session, constellation: state, tier: style };
+        const description = full ? describeStar?.(ref) : undefined;
         return (
           <g
             key={session.id}
@@ -359,8 +410,9 @@ const Figure = ({
             role={full ? 'img' : undefined}
             aria-label={full ? label : undefined}
             className={full ? 'group focus:outline-none' : undefined}
+            {...(full ? starHandlers(onStar, { ...ref, x, y, r: form.radius }) : {})}
           >
-            {full && <title>{label}</title>}
+            {description !== undefined && <desc>{description}</desc>}
             {full && <HitArea x={x} y={y} />}
             <g
               className={full ? 'sky-twinkle' : undefined}
