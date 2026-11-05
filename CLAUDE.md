@@ -568,6 +568,17 @@ rejected). Don't pre-populate this with guesses.
   settings row at the same version as this device's still hands over its M6
   columns (a pre-M6 app may have written that version), and the Dexie v4
   upgrade forgets the settings cursor once so they are re-read.
+- **Type is bundled, never fetched; the sky's captions are Alegreya SC**
+  (View sky upgrade PR 1, 2026-11-04). Fonts come from `@fontsource/*` (OFL, so
+  free), imported in `src/styles/index.css`, so the desktop app and the offline
+  web build need no network and the CSP (`default-src 'self'`) stays closed. A
+  font file under 4 KB is inlined by Vite as a `data:` URL, which that CSP
+  blocks. The face is the `--font-atlas` token, spacing `--tracking-atlas`.
+  Cormorant SC was compared and rejected: its hairlines go faint at the 11 px
+  captions use, and it has no italic for the hard tier's names. A caption is
+  measured once drawn and nudged back 8 px inside the window's edges
+  (`Caption` in `ConstellationLayer.tsx`), because small capitals run wider
+  than the figure's cell.
 
 ## Plans include acceptance tests
 

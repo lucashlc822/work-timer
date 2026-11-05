@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { deriveSky } from '../domain/derive';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
 import { ConstellationLayer } from './ConstellationLayer';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const T0 = 1_700_000_000_000;
 const HOUR = 3_600_000;
@@ -39,8 +42,18 @@ const sky = () =>
     rules,
   );
 
-const renderLayer = (mode: 'hero' | 'full', state = sky()) =>
-  render(<ConstellationLayer sky={state} mode={mode} width={1200} height={800} />);
+/** Six constellations with a star each, so the full sky lays out in several columns. */
+const crowdedSky = () => {
+  const shapes = ['kite', 'arrow', 'teacup', 'lantern', 'swan', 'harp'];
+  return deriveSky(
+    shapes.map((_, i) => star(100 + i, T0 + (i * 10 + 5) * HOUR)),
+    shapes.map((shape, i) => choice(`k${i}`, shape, T0 + i * 10 * HOUR)),
+    rules,
+  );
+};
+
+const renderLayer = (mode: 'hero' | 'full', state = sky(), width = 1200) =>
+  render(<ConstellationLayer sky={state} mode={mode} width={width} height={800} />);
 
 describe('ConstellationLayer', () => {
   it('in full mode, is a labelled group holding every earned star as a focusable image', () => {
@@ -108,5 +121,56 @@ describe('ConstellationLayer', () => {
       g.getAttribute('aria-label'),
     );
     expect(labels).toEqual(['The Kite, complete']);
+  });
+
+  describe('captions at the window edge', () => {
+    // jsdom has no text metrics, so give every caption a width to measure.
+    const withTextLength = (length: number) => {
+      Object.defineProperty(SVGElement.prototype, 'getComputedTextLength', {
+        configurable: true,
+        value: () => length,
+      });
+    };
+    afterEach(() => {
+      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
+    });
+
+    const captionXs = (container: HTMLElement) =>
+      [...container.querySelectorAll('text')].map((t) => Number(t.getAttribute('x')));
+
+    it('pulls a caption wider than its room back inside the window, 8 px from each edge', () => {
+      const natural = captionXs(renderLayer('full', crowdedSky(), 480).container);
+      cleanup();
+      withTextLength(300);
+      const clamped = captionXs(renderLayer('full', crowdedSky(), 480).container);
+
+      expect(clamped.length).toBe(6);
+      // Some caption was too wide where its figure put it, so something had to move.
+      expect(clamped).not.toEqual(natural);
+      for (const x of clamped) {
+        expect(x - 150).toBeGreaterThanOrEqual(8);
+        expect(x + 150).toBeLessThanOrEqual(480 - 8);
+      }
+    });
+
+    it('leaves captions that already fit exactly where the figure puts them', () => {
+      withTextLength(20);
+      const measured = captionXs(renderLayer('full', crowdedSky(), 480).container);
+      cleanup();
+      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
+      const unmeasured = captionXs(renderLayer('full', crowdedSky(), 480).container);
+
+      expect(measured).toEqual(unmeasured);
+    });
+
+    it('keeps a caption centred when it is wider than the whole window', () => {
+      withTextLength(900);
+      const clamped = captionXs(renderLayer('full', crowdedSky(), 480).container);
+      cleanup();
+      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
+      const natural = captionXs(renderLayer('full', crowdedSky(), 480).container);
+
+      expect(clamped).toEqual(natural);
+    });
   });
 });

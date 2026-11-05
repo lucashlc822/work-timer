@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 @import './tokens.css';
+/* Atlas captions in the sky (--font-atlas). Latin subset, one weight: self-hosted
+   so the desktop app and the offline web build need no network for type. */
+@import '@fontsource/alegreya-sc/latin-500.css';
+@import '@fontsource/alegreya-sc/latin-500-italic.css';
 
 @layer base {
   html {
