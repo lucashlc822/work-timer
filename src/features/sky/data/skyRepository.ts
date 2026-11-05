@@ -129,6 +129,8 @@ export interface SeedSkyOptions {
   shapes?: 'all' | readonly CatalogueKey[];
   /** How many generated (non-catalogue) constellations to add after the catalogue ones. */
   generated?: number;
+  /** Give every generated constellation this tier, instead of cycling easy, medium, hard. */
+  tier?: Tier;
   /** Finish every constellation (default), or leave each one star short. */
   complete?: boolean;
   /** Stamp each star with a style, cycling through all of them in order. */
@@ -178,7 +180,7 @@ export const seedSky = async (
     const name = fromCatalogue ? (keys[n] as CatalogueKey) : `generated-${n - keys.length}`;
     const tier: Tier = fromCatalogue
       ? CATALOGUE[name as CatalogueKey].tier
-      : (TIER_ORDER[(n - keys.length) % TIER_ORDER.length] as Tier);
+      : (opts.tier ?? (TIER_ORDER[(n - keys.length) % TIER_ORDER.length] as Tier));
     const chosenAt = now - (total - n + 1) * 2 * DAY_MS;
     const draft: ChoiceDraft = fromCatalogue
       ? { source: 'catalogue', shapeId: name, seed: null, tier }

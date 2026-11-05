@@ -1,12 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
-import {
-  LAVENDER_300,
-  LAVENDER_400,
-  MINT_300,
-  ROSE_300,
-  STAR_WHITE,
-} from '../../../../design-tokens.mjs';
+import { LAVENDER_300, LAVENDER_400, MINT_300, ROSE_300 } from '../../../../design-tokens.mjs';
 import { hashSeed } from '@/shared/lib';
 
 import {
@@ -18,8 +12,10 @@ import {
 } from '../domain/layout';
 import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
+import { starForm } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
 import type { ConstellationState, SkyState } from '../domain/types';
+import { AstroStar } from './AstroStar';
 import { figureCaption, progressLabel, starLabel } from './describe';
 
 export type SkyMode = 'hero' | 'full';
@@ -95,7 +91,10 @@ export const ConstellationLayer = ({
       {sky.wandering.map(({ session }) => {
         const [x, y] = wanderingPosition(session.seed, width, height);
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
-        const r = Math.max(1, look.radius * 1.3);
+        // Smaller than a star in a constellation, with shorter spikes: it belongs to nothing.
+        const form = starForm(look, session.actualFocusS, session.starStyle, 1.3, 'plain', {
+          spikeScale: 0.6,
+        });
         const label = `Wandering ${starLabel(session.endedAt, session.actualFocusS).toLowerCase()}`;
         return (
           <g
@@ -107,14 +106,17 @@ export const ConstellationLayer = ({
           >
             {full && <title>{label}</title>}
             {full && <HitArea x={x} y={y} />}
-            <circle
-              cx={x}
-              cy={y}
-              r={r}
-              fill={look.color}
-              opacity={(full ? 0.8 : 0.5) * look.brightness}
-            />
-            {full && <FocusRing x={x} y={y} r={r} />}
+            <g opacity={full ? 0.8 : 0.5}>
+              <AstroStar
+                x={x}
+                y={y}
+                form={form}
+                color={look.color}
+                brightness={look.brightness}
+                id={`${glowId}-w-${session.id}`}
+              />
+            </g>
+            {full && <FocusRing x={x} y={y} r={Math.max(1, form.radius)} />}
           </g>
         );
       })}
@@ -256,6 +258,7 @@ const Figure = ({
   const style = TIERS[def.tier].style;
   const points = def.shape.points.map((p) => toPixels(p, box));
   const filled = (i: number) => i < stars.length;
+  const earnedEdges = def.shape.edges.filter(([a, b]) => filled(a) && filled(b));
   const starRadius = Math.max(2, box.size * 0.016);
   const nebulaHue = NEBULA_HUES[hashSeed(state.choice.id) % NEBULA_HUES.length]!;
   const gradientId = `${glowId}-nebula-${state.choice.id}`;
@@ -304,39 +307,37 @@ const Figure = ({
             />
           ))}
 
-      {/* Earned edges. Glow tiers get a blurred underlay; the hardest shimmers. */}
-      {def.shape.edges
-        .filter(([a, b]) => filled(a) && filled(b))
-        .map(([a, b]) => {
-          const [x1, y1] = points[a]!;
-          const [x2, y2] = points[b]!;
-          return (
-            <g key={`edge-${a}-${b}`}>
-              {style !== 'plain' && (
-                <line
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={LAVENDER_300}
-                  strokeOpacity={style === 'nebula' ? 0.55 : 0.4}
-                  strokeWidth={style === 'nebula' ? 4 : 3}
-                  filter={`url(#${glowId})`}
-                />
-              )}
-              <line
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={LAVENDER_300}
-                strokeOpacity={0.7}
-                strokeWidth={style === 'plain' ? 1 : 1.25}
-                className={full && style === 'nebula' ? 'sky-shimmer' : undefined}
-              />
-            </g>
-          );
-        })}
+      {/* Earned edges. Glow tiers get a blurred underlay, blurred once for the whole
+          figure (not once per line); the hardest tier shimmers. */}
+      {style !== 'plain' && (
+        <g filter={`url(#${glowId})`}>
+          {earnedEdges.map(([a, b]) => (
+            <line
+              key={`glow-${a}-${b}`}
+              x1={points[a]![0]}
+              y1={points[a]![1]}
+              x2={points[b]![0]}
+              y2={points[b]![1]}
+              stroke={LAVENDER_300}
+              strokeOpacity={style === 'nebula' ? 0.55 : 0.4}
+              strokeWidth={style === 'nebula' ? 4 : 3}
+            />
+          ))}
+        </g>
+      )}
+      {earnedEdges.map(([a, b]) => (
+        <line
+          key={`edge-${a}-${b}`}
+          x1={points[a]![0]}
+          y1={points[a]![1]}
+          x2={points[b]![0]}
+          y2={points[b]![1]}
+          stroke={LAVENDER_300}
+          strokeOpacity={0.7}
+          strokeWidth={style === 'plain' ? 1 : 1.25}
+          className={full && style === 'nebula' ? 'sky-shimmer' : undefined}
+        />
+      ))}
 
       {/* Empty slots. */}
       {!complete &&
@@ -349,8 +350,7 @@ const Figure = ({
       {stars.map((session, i) => {
         const [x, y] = points[i]!;
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
-        const r = starRadius * look.radius;
-        const halo = (style === 'plain' ? 2.2 : style === 'glow' ? 2.8 : 3.3) * look.glow;
+        const form = starForm(look, session.actualFocusS, session.starStyle, starRadius, style);
         const label = starLabel(session.endedAt, session.actualFocusS);
         return (
           <g
@@ -373,19 +373,17 @@ const Figure = ({
                   : undefined
               }
             >
-              <circle
-                cx={x}
-                cy={y}
-                r={r * halo}
-                fill={look.color}
-                opacity={(style === 'plain' ? 0.22 : 0.26) * look.brightness}
-                filter={`url(#${glowId})`}
+              <AstroStar
+                x={x}
+                y={y}
+                form={form}
+                color={look.color}
+                brightness={look.brightness}
+                id={`${glowId}-${session.id}`}
               />
-              <circle cx={x} cy={y} r={r} fill={look.color} opacity={look.brightness} />
-              <circle cx={x} cy={y} r={r * 0.45} fill={STAR_WHITE} opacity={0.9} />
             </g>
             {/* Outside the twinkle, so the ring never fades with the star. */}
-            {full && <FocusRing x={x} y={y} r={r} />}
+            {full && <FocusRing x={x} y={y} r={form.radius} />}
           </g>
         );
       })}
