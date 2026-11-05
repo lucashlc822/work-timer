@@ -182,6 +182,11 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await page.getByText('The Kite · with Bea · 0/4').waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'sky with a shared constellation')));
+  // A constellation's card (View sky upgrade PR 4), opened from its caption.
+  await page.getByRole('img', { name: /^The Kite with Bea/ }).focus();
+  await page.getByTestId('constellation-card').waitFor();
+  findings.push(...(await scan(page, 'sky with a constellation card')));
+  await page.keyboard.press('Escape');
   await backToTimer(page);
 
   // Focus together (M7 phase 4): the panel, an invitation, and a lobby.

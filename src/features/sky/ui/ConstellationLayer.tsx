@@ -36,7 +36,28 @@ interface Props {
   onStar?: (event: StarEvent, target: StarTarget) => void;
   /** Full mode only: the star's description (its `<desc>`), when there's one to give. */
   describeStar?: (star: StarRef) => string | undefined;
+  /**
+   * Full mode only: told when a constellation is hovered (anywhere on it, its
+   * stars included) or its caption focused, and when it stops being. Captions
+   * become keyboard stops only when this is given.
+   */
+  onFigure?: (event: StarEvent, target: FigureTarget) => void;
+  /** Full mode only: the constellation's description (its caption's `<desc>`). */
+  describeFigure?: (constellation: ConstellationState) => string | undefined;
+  /** The constellation being looked at: it stays bright while the others dim. */
+  activeFigureId?: string | null;
 }
+
+/** A constellation as it sits on screen: its centre and half its box. */
+export interface FigureTarget {
+  constellation: ConstellationState;
+  x: number;
+  y: number;
+  r: number;
+}
+
+/** How far the other constellations fade while one is being looked at. */
+export const DIMMED = 0.35;
 
 export type StarEvent = 'enter' | 'leave' | 'focus' | 'blur';
 
@@ -95,6 +116,9 @@ export const ConstellationLayer = ({
   focusId = null,
   onStar,
   describeStar,
+  onFigure,
+  describeFigure,
+  activeFigureId = null,
 }: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -121,6 +145,7 @@ export const ConstellationLayer = ({
       aria-hidden={full ? undefined : true}
       role={full ? 'group' : undefined}
       aria-label={full ? 'Your sky' : undefined}
+      data-active={full && activeFigureId !== null ? activeFigureId : undefined}
     >
       <defs>
         <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
@@ -174,6 +199,16 @@ export const ConstellationLayer = ({
           viewWidth={width}
           onStar={onStar}
           describeStar={describeStar}
+          onFigure={full ? onFigure : undefined}
+          describeFigure={describeFigure}
+          // With one constellation there is nothing to set it apart from.
+          dimmed={
+            full &&
+            shown.length > 1 &&
+            activeFigureId !== null &&
+            state.choice.id !== activeFigureId
+          }
+          active={full && state.choice.id === activeFigureId}
         />
       ))}
     </svg>
@@ -228,6 +263,7 @@ const Caption = ({
   fontSize,
   nebula,
   viewWidth,
+  focus,
 }: {
   text: string;
   cx: number;
@@ -235,9 +271,18 @@ const Caption = ({
   fontSize: number;
   nebula: boolean;
   viewWidth: number;
+  /** Makes the caption the constellation's keyboard stop (View sky upgrade PR 4). */
+  focus?: {
+    label: string;
+    description: string | undefined;
+    onFocus: () => void;
+    onBlur: () => void;
+  };
 }) => {
   const ref = useRef<SVGTextElement>(null);
   const [dx, setDx] = useState(0);
+  // Until measured (and always in jsdom), a fair guess at small capitals' width.
+  const [width, setWidth] = useState(text.length * fontSize * 0.62);
   const [fontEpoch, setFontEpoch] = useState(0);
 
   useEffect(() => {
@@ -252,7 +297,9 @@ const Caption = ({
     const el = ref.current;
     // jsdom has no text metrics: leave the caption centred there.
     if (el === null || typeof el.getComputedTextLength !== 'function') return;
-    const half = el.getComputedTextLength() / 2;
+    const measured = el.getComputedTextLength();
+    setWidth(measured);
+    const half = measured / 2;
     const lowest = CAPTION_EDGE + half;
     const highest = viewWidth - CAPTION_EDGE - half;
     // A caption wider than the window itself stays centred rather than flip-flopping.
@@ -260,7 +307,7 @@ const Caption = ({
     setDx(x - cx);
   }, [text, cx, fontSize, nebula, viewWidth, fontEpoch]);
 
-  return (
+  const words = (
     <text
       ref={ref}
       x={cx + dx}
@@ -280,6 +327,38 @@ const Caption = ({
       {text}
     </text>
   );
+  if (focus === undefined) return words;
+
+  // A target at least 24 px tall (WCAG 2.5.8) around the words, and a ring on it
+  // for the keyboard (2.4.7): the global outline would box the SVG oddly.
+  const height = Math.max(24, fontSize + 12);
+  const box = {
+    x: cx + dx - width / 2 - 6,
+    y: y - fontSize - (height - fontSize) / 2 + 3,
+    width: width + 12,
+    height,
+  };
+  return (
+    <g
+      tabIndex={0}
+      role="img"
+      aria-label={focus.label}
+      className="group focus:outline-none"
+      onFocus={focus.onFocus}
+      onBlur={focus.onBlur}
+    >
+      {focus.description !== undefined && <desc>{focus.description}</desc>}
+      <rect {...box} fill="transparent" />
+      <rect
+        {...box}
+        rx={6}
+        fill="none"
+        strokeWidth={1.5}
+        className="stroke-lavender-300 opacity-0 group-focus-visible:opacity-100"
+      />
+      {words}
+    </g>
+  );
 };
 
 const NEBULA_HUES = [LAVENDER_400, ROSE_300, MINT_300];
@@ -292,6 +371,10 @@ const Figure = ({
   viewWidth,
   onStar,
   describeStar,
+  onFigure,
+  describeFigure,
+  dimmed,
+  active,
 }: {
   state: ConstellationState;
   box: Placement;
@@ -300,6 +383,10 @@ const Figure = ({
   viewWidth: number;
   onStar: Props['onStar'];
   describeStar: Props['describeStar'];
+  onFigure: Props['onFigure'];
+  describeFigure: Props['describeFigure'];
+  dimmed: boolean;
+  active: boolean;
 }) => {
   const { def, stars, complete } = state;
   // A stopped shared constellation fades like an abandoned one of your own.
@@ -311,13 +398,52 @@ const Figure = ({
   const starRadius = Math.max(2, box.size * 0.016);
   const nebulaHue = NEBULA_HUES[hashSeed(state.choice.id) % NEBULA_HUES.length]!;
   const gradientId = `${glowId}-nebula-${state.choice.id}`;
+  const figure: FigureTarget = {
+    constellation: state,
+    x: box.x + box.size / 2,
+    y: box.y + box.size / 2,
+    r: box.size / 2,
+  };
+  // Faded (abandoned, or a stopped shared one) unless it is the one looked at.
+  const base = faded && !active ? 0.45 : 1;
 
   return (
     <g
-      opacity={faded ? 0.45 : 1}
+      data-figure={full ? state.choice.id : undefined}
       role={full ? 'group' : undefined}
       aria-label={full ? progressLabel(state) : undefined}
+      style={full ? { opacity: base * (dimmed ? DIMMED : 1) } : { opacity: base }}
+      className={full ? 'ease-gentle transition-opacity duration-500' : undefined}
+      {...(onFigure !== undefined && {
+        onPointerEnter: () => onFigure('enter', figure),
+        onPointerLeave: () => onFigure('leave', figure),
+      })}
     >
+      {/* The whole box answers the pointer, not just the thin lines and stars. */}
+      {onFigure !== undefined && (
+        <rect x={box.x} y={box.y} width={box.size} height={box.size} fill="transparent" />
+      )}
+
+      {/* First in the figure, so a keyboard reaches the constellation before its stars. */}
+      {full && (
+        <Caption
+          text={figureCaption(state)}
+          cx={box.x + box.size / 2}
+          y={box.y + box.size + Math.max(14, box.size * 0.1)}
+          fontSize={Math.max(11, Math.min(14, box.size * 0.07))}
+          nebula={style === 'nebula'}
+          viewWidth={viewWidth}
+          {...(onFigure !== undefined && {
+            focus: {
+              label: progressLabel(state),
+              description: describeFigure?.(state),
+              onFocus: () => onFigure('focus', figure),
+              onBlur: () => onFigure('blur', figure),
+            },
+          })}
+        />
+      )}
+
       {style === 'nebula' && (
         <>
           <defs>
@@ -439,17 +565,6 @@ const Figure = ({
           </g>
         );
       })}
-
-      {full && (
-        <Caption
-          text={figureCaption(state)}
-          cx={box.x + box.size / 2}
-          y={box.y + box.size + Math.max(14, box.size * 0.1)}
-          fontSize={Math.max(11, Math.min(14, box.size * 0.07))}
-          nebula={style === 'nebula'}
-          viewWidth={viewWidth}
-        />
-      )}
     </g>
   );
 };

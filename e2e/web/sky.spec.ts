@@ -18,7 +18,7 @@ const card = (page: Page) => page.getByTestId('star-card');
 /** No constellation was chosen, so the session's star wanders. */
 const theStar = (page: Page) => page.getByRole('img', { name: /star from/i }).first();
 
-const finishTaggedSession = async (page: Page, tagName: string) => {
+const finishTaggedSession = async (page: Page, tagName: string, constellation?: string) => {
   const user = await createUser('sky-card');
   await startClockInThePast(page);
   await page.goto('/');
@@ -30,6 +30,14 @@ const finishTaggedSession = async (page: Page, tagName: string) => {
   await panel.getByRole('button', { name: 'Add' }).click();
   if (await panel.isVisible()) await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: tagName, exact: true })).toBeVisible();
+
+  if (constellation !== undefined) {
+    await page.getByRole('button', { name: 'Choose a constellation' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: new RegExp(`^${constellation}`) })
+      .click();
+  }
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   // Wait until it is really running before moving the clock on.
@@ -98,4 +106,40 @@ test('a focused star shows its card; Escape closes it, and only a second Escape 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
   await expect(page.getByRole('button', { name: 'View sky', exact: true })).toBeFocused();
+});
+
+test('a constellation’s caption opens its card from the keyboard, and is a big enough target (4.2, 4.6)', async ({
+  page,
+}) => {
+  await finishTaggedSession(page, 'Writing', 'The Arrow');
+
+  const caption = page.getByRole('img', { name: /^The Arrow, 1 of / });
+  await expect(caption).toBeVisible();
+
+  // 4.6: a target at least 24 by 24 CSS pixels.
+  const box = await caption.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThanOrEqual(24);
+  expect(box!.height).toBeGreaterThanOrEqual(24);
+
+  // 4.2: reached with the keyboard. From Back, the Arrow's star is one stop back
+  // and its caption, the figure's first stop, one more.
+  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(theStar(page)).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(caption).toBeFocused();
+  const card = page.getByTestId('constellation-card');
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('The Arrow');
+  await expect(card).toContainText(/1 of \d+ stars/);
+  await expect(card).toContainText('Started ');
+  await expect(card).toContainText('25 minutes of focus');
+
+  // First Escape closes the card, second leaves the sky.
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
 });
