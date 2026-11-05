@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   LAVENDER_300,
@@ -120,7 +120,14 @@ export const ConstellationLayer = ({
       })}
 
       {shown.map(({ state, box }) => (
-        <Figure key={state.choice.id} state={state} box={box} full={full} glowId={glowId} />
+        <Figure
+          key={state.choice.id}
+          state={state}
+          box={box}
+          full={full}
+          glowId={glowId}
+          viewWidth={width}
+        />
       ))}
     </svg>
   );
@@ -156,6 +163,78 @@ const heroShown = (sky: SkyState, width: number, height: number) => {
   return state === undefined ? [] : [{ state, box: heroPlacement(width, height) }];
 };
 
+/** Keep a caption this far from the window's left and right edges. */
+const CAPTION_EDGE = 8;
+
+/**
+ * The words under a figure, in the atlas type. Small capitals with wide
+ * tracking run wider than the figure's own cell, and the last column's caption
+ * (a shared constellation's "The Kite · with Bea · 1/4" is the longest) would be
+ * clipped by the window at narrow widths. So it is measured once drawn and nudged
+ * back inside the edges. Re-measured when the web font arrives, since the
+ * fallback face has different widths.
+ */
+const Caption = ({
+  text,
+  cx,
+  y,
+  fontSize,
+  nebula,
+  viewWidth,
+}: {
+  text: string;
+  cx: number;
+  y: number;
+  fontSize: number;
+  nebula: boolean;
+  viewWidth: number;
+}) => {
+  const ref = useRef<SVGTextElement>(null);
+  const [dx, setDx] = useState(0);
+  const [fontEpoch, setFontEpoch] = useState(0);
+
+  useEffect(() => {
+    const fonts = typeof document === 'undefined' ? undefined : document.fonts;
+    if (fonts === undefined) return;
+    const bump = () => setFontEpoch((n) => n + 1);
+    fonts.addEventListener('loadingdone', bump);
+    return () => fonts.removeEventListener('loadingdone', bump);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    // jsdom has no text metrics: leave the caption centred there.
+    if (el === null || typeof el.getComputedTextLength !== 'function') return;
+    const half = el.getComputedTextLength() / 2;
+    const lowest = CAPTION_EDGE + half;
+    const highest = viewWidth - CAPTION_EDGE - half;
+    // A caption wider than the window itself stays centred rather than flip-flopping.
+    const x = highest < lowest ? cx : Math.min(Math.max(cx, lowest), highest);
+    setDx(x - cx);
+  }, [text, cx, fontSize, nebula, viewWidth, fontEpoch]);
+
+  return (
+    <text
+      ref={ref}
+      x={cx + dx}
+      y={y}
+      textAnchor="middle"
+      fill={LAVENDER_300}
+      fillOpacity={0.75}
+      fontSize={fontSize}
+      className="font-atlas"
+      fontWeight={500}
+      fontStyle={nebula ? 'italic' : undefined}
+      style={{
+        letterSpacing: nebula ? 'calc(var(--tracking-atlas) * 2)' : 'var(--tracking-atlas)',
+        fontVariantNumeric: 'oldstyle-nums',
+      }}
+    >
+      {text}
+    </text>
+  );
+};
+
 const NEBULA_HUES = [LAVENDER_400, ROSE_300, MINT_300];
 
 const Figure = ({
@@ -163,11 +242,13 @@ const Figure = ({
   box,
   full,
   glowId,
+  viewWidth,
 }: {
   state: ConstellationState;
   box: Placement;
   full: boolean;
   glowId: string;
+  viewWidth: number;
 }) => {
   const { def, stars, complete } = state;
   // A stopped shared constellation fades like an abandoned one of your own.
@@ -310,18 +391,14 @@ const Figure = ({
       })}
 
       {full && (
-        <text
-          x={box.x + box.size / 2}
+        <Caption
+          text={figureCaption(state)}
+          cx={box.x + box.size / 2}
           y={box.y + box.size + Math.max(14, box.size * 0.1)}
-          textAnchor="middle"
-          fill={LAVENDER_300}
-          fillOpacity={0.75}
-          fontSize={Math.max(10, Math.min(14, box.size * 0.07))}
-          letterSpacing={style === 'nebula' ? '0.18em' : '0.06em'}
-          fontStyle={style === 'nebula' ? 'italic' : undefined}
-        >
-          {figureCaption(state)}
-        </text>
+          fontSize={Math.max(11, Math.min(14, box.size * 0.07))}
+          nebula={style === 'nebula'}
+          viewWidth={viewWidth}
+        />
       )}
     </g>
   );

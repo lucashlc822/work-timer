@@ -88,6 +88,12 @@
      or urgent. All of these are neutralised under prefers-reduced-motion. */
   --ease-gentle: cubic-bezier(0.33, 0.9, 0.35, 1);
 
+  /* --- Atlas type: constellation captions in the sky --------------------- */
+  /* A small-caps serif, like the lettering on an old star chart. Bundled, not
+     fetched, so the offline web build and the desktop app render it too. */
+  --font-atlas: 'Alegreya SC', 'Palatino Linotype', Georgia, serif;
+  --tracking-atlas: 0.04em;
+
   /* Letter-spacing for the 6-digit code field. */
   --tracking-code: 0.4em;
   --duration-drift: 40s;
