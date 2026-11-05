@@ -15,6 +15,7 @@ import {
   starCardModel,
   starDescription,
   starLabel,
+  wanderingStarLabel,
   timeRange,
   type CardFacts,
 } from './describe';
@@ -84,6 +85,19 @@ describe('starLabel', () => {
     const label = starLabel(T0, 25 * 60);
     expect(label.startsWith('Star from ')).toBe(true);
     expect(label.endsWith(', 25 minutes')).toBe(true);
+  });
+});
+
+describe('wanderingStarLabel', () => {
+  it('lowercases only the leading "Star", keeping the date exactly as starLabel writes it', () => {
+    const plain = starLabel(T0, 25 * 60);
+    const label = wanderingStarLabel(T0, 25 * 60);
+    expect(label.startsWith('Wandering star from ')).toBe(true);
+    // Everything after "Star" (month, day, length) is untouched.
+    expect(label).toBe(`Wandering star${plain.slice('Star'.length)}`);
+    expect(label.endsWith(', 25 minutes')).toBe(true);
+    const month = new Date(T0).toLocaleDateString(undefined, { month: 'short' });
+    expect(label).toContain(month);
   });
 });
 
