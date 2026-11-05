@@ -139,3 +139,46 @@ export const starDescription = (m: StarCardModel): string =>
     ...m.context.map((line) => `${line}.`),
     `${m.styleName} star.`,
   ].join(' ');
+
+// --- The constellation card (View sky upgrade PR 4) ---------------------------
+
+/** Everything the constellation card shows, already in words. */
+export interface ConstellationCardModel {
+  /** "The Kite", or "The Kite with Bea" for a shared one. */
+  name: string;
+  /** "3 of 7 stars", "Complete on Mon 2 Nov", "2 of 5 stars · unfinished". */
+  progress: string;
+  /** "Started Mon 2 Nov": when it was chosen, or when the friend accepted it. */
+  started: string;
+  /** "3 h 20 min of focus", or "No stars yet". */
+  totalFocus: string;
+}
+
+export const constellationCardModel = (
+  c: ConstellationState,
+  now: number,
+): ConstellationCardModel => {
+  const shared = isShared(c);
+  const name = shared ? `${c.def.name} with ${c.partnerName}` : c.def.name;
+  const needed = shared ? c.starsNeeded : c.def.shape.points.length;
+  const count = `${c.stars.length} of ${needed} stars`;
+  const progress =
+    c.complete && c.completedAt !== null
+      ? `Complete on ${cardDate(c.completedAt, now)}`
+      : shared && c.status === 'stopped'
+        ? `${count} · stopped`
+        : c.abandoned
+          ? `${count} · unfinished`
+          : count;
+  const focusS = c.stars.reduce((sum, s) => sum + s.actualFocusS, 0);
+  return {
+    name,
+    progress,
+    started: `Started ${cardDate(c.choice.chosenAt, now)}`,
+    totalFocus: c.stars.length === 0 ? 'No stars yet' : `${focusLabel(focusS)} of focus`,
+  };
+};
+
+/** The constellation card as one sentence: its caption's `<desc>`. */
+export const constellationDescription = (m: ConstellationCardModel): string =>
+  `${m.progress}. ${m.started}. ${m.totalFocus}.`;

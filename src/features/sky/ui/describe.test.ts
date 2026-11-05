@@ -6,6 +6,8 @@ import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
 import {
   cardDate,
+  constellationCardModel,
+  constellationDescription,
   contextLines,
   figureCaption,
   focusLabel,
@@ -204,5 +206,44 @@ describe('the star card words', () => {
     expect(sentence).toContain('Tagged Writing.');
     expect(sentence).toContain('Pomodoro block 2 of 3.');
     expect(sentence.endsWith('Ember star.')).toBe(true);
+  });
+});
+
+describe('the constellation card words', () => {
+  const NOW = T0 + 40 * 3_600_000;
+
+  it('counts stars, says when it began and how much focus it holds', () => {
+    const m = constellationCardModel(solo(3), NOW);
+    expect(m.name).toBe('The Kite');
+    expect(m.progress).toBe('3 of 4 stars');
+    expect(m.started).toBe(`Started ${cardDate(kite.chosenAt, NOW)}`);
+    expect(m.totalFocus).toBe('1 h 15 min of focus');
+  });
+
+  it('says when a finished one was completed', () => {
+    const done = solo(4);
+    expect(constellationCardModel(done, NOW).progress).toBe(
+      `Complete on ${cardDate(done.completedAt!, NOW)}`,
+    );
+  });
+
+  it('marks one left unfinished, and says so when it has no stars', () => {
+    const next: ConstellationChoice = { ...kite, id: 'c-two', chosenAt: T0 + 10 * 3_600_000 };
+    const first = deriveSky([star(1), star(2)], [kite, next], rules).constellations;
+    expect(constellationCardModel(first[0]!, NOW).progress).toBe('2 of 4 stars · unfinished');
+    expect(constellationCardModel(first[1]!, NOW).totalFocus).toBe('No stars yet');
+  });
+
+  it('names the friend on a shared one, counts toward what it needs, and says when it stopped', () => {
+    expect(constellationCardModel(shared(1), NOW).name).toBe('The Kite with Bea');
+    expect(constellationCardModel(shared(1), NOW).progress).toBe('1 of 4 stars');
+    expect(constellationCardModel(shared(1, { stoppedAt: T0 + 5 * 3_600_000 }), NOW).progress).toBe(
+      '1 of 4 stars · stopped',
+    );
+  });
+
+  it('puts the card into one sentence for a screen reader', () => {
+    const m = constellationCardModel(solo(3), NOW);
+    expect(constellationDescription(m)).toBe(`3 of 4 stars. ${m.started}. 1 h 15 min of focus.`);
   });
 });

@@ -69,7 +69,11 @@ const details = new Map<string, StarDetails>([
 
 const styleName = (key: string | undefined) => (key === 'ember' ? 'Ember' : 'Classic');
 
-const stars = () => screen.getAllByRole('img');
+const stars = () => screen.getAllByRole('img', { name: /star from/i });
+const captions = () => screen.getAllByRole('img', { name: /^The / });
+const constellationCard = () => screen.queryByTestId('constellation-card');
+const figureOpacity = (id: string) =>
+  document.querySelector<SVGElement>(`[data-figure="${id}"]`)?.style.opacity;
 const card = () => screen.queryByTestId('star-card');
 
 type ViewProps = Parameters<typeof SkyView>[0];
@@ -221,5 +225,115 @@ describe('the star card', () => {
     const { container } = renderSky({ mode: 'hero' });
     expect(screen.queryAllByRole('img')).toHaveLength(0);
     expect(container.querySelector('desc')).toBeNull();
+  });
+});
+
+describe('the constellation card', () => {
+  const arrow: ConstellationChoice = {
+    ...kite,
+    id: 'c-arrow',
+    shapeId: 'arrow',
+    chosenAt: T0 + 10 * HOUR,
+  };
+  /** A finished Kite, then an Arrow with one star. */
+  const twoFigures = () =>
+    deriveSky([star(1), star(2), star(3), star(4), star(11)], [kite, arrow], rules);
+  const figure = (id: string) => document.querySelector(`[data-figure="${id}"]`)!;
+
+  it('shows when a constellation is hovered, and dims the others', () => {
+    renderSky({ sky: twoFigures() });
+
+    fireEvent.pointerEnter(figure('c-kite'));
+
+    expect(constellationCard()!.textContent).toContain('The Kite');
+    expect(constellationCard()!.textContent).toMatch(/Complete on /);
+    expect(constellationCard()!.textContent).toContain('Started ');
+    expect(constellationCard()!.textContent).toContain('1 h 40 min of focus');
+    expect(figureOpacity('c-kite')).toBe('1');
+    expect(figureOpacity('c-arrow')).toBe('0.35');
+  });
+
+  it('does not dim anything when there is only one constellation', () => {
+    renderSky();
+    fireEvent.pointerEnter(figure('c-kite'));
+    expect(constellationCard()).not.toBeNull();
+    expect(figureOpacity('c-kite')).toBe('1');
+  });
+
+  it('opens from its caption on the keyboard, a stop before its stars', () => {
+    renderSky({ sky: twoFigures() });
+
+    const caption = captions()[0]!;
+    expect(caption.getAttribute('tabindex')).toBe('0');
+    // The caption is the figure's first stop: it comes before the stars in the page.
+    const firstStar = figure('c-kite').querySelector('[role="img"][aria-label^="Star"]')!;
+    expect(
+      caption.compareDocumentPosition(firstStar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(caption.querySelector('desc')?.textContent).toMatch(
+      /^Complete on .+\. Started .+\. 1 h 40 min of focus\.$/,
+    );
+
+    fireEvent.focus(caption);
+    expect(constellationCard()!.textContent).toContain('The Kite');
+    expect(figureOpacity('c-arrow')).toBe('0.35');
+
+    fireEvent.blur(caption);
+    expect(constellationCard()).toBeNull();
+    expect(figureOpacity('c-arrow')).toBe('1');
+  });
+
+  it('gives way to the card of a star inside it, and stays bright meanwhile', () => {
+    renderSky({ sky: twoFigures() });
+
+    fireEvent.pointerEnter(figure('c-kite'));
+    fireEvent.pointerEnter(stars()[0]!);
+
+    expect(card()).not.toBeNull();
+    expect(constellationCard()).toBeNull();
+    expect(figureOpacity('c-arrow')).toBe('0.35');
+  });
+
+  it('keeps the constellation of a focused star bright too', () => {
+    renderSky({ sky: twoFigures() });
+    fireEvent.focus(stars()[4]!); // the Arrow's star
+    expect(figureOpacity('c-kite')).toBe('0.35');
+    expect(figureOpacity('c-arrow')).toBe('1');
+  });
+
+  it('closes on the first Escape and undims, and lets the second one leave', () => {
+    const leaveSky = vi.fn();
+    document.addEventListener('keydown', leaveSky);
+    try {
+      renderSky({ sky: twoFigures() });
+      fireEvent.focus(captions()[0]!);
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      expect(constellationCard()).toBeNull();
+      expect(figureOpacity('c-arrow')).toBe('1');
+      expect(leaveSky).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      expect(leaveSky).toHaveBeenCalledTimes(1);
+    } finally {
+      document.removeEventListener('keydown', leaveSky);
+    }
+  });
+
+  it('lingers after the pointer leaves the figure, like the star card', () => {
+    vi.useFakeTimers();
+    renderSky({ sky: twoFigures() });
+
+    fireEvent.pointerEnter(figure('c-kite'));
+    fireEvent.pointerLeave(figure('c-kite'));
+    act(() => {
+      vi.advanceTimersByTime(CARD_GRACE_MS - 50);
+    });
+    expect(constellationCard()).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(constellationCard()).toBeNull();
+    expect(figureOpacity('c-arrow')).toBe('1');
   });
 });

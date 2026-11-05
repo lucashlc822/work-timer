@@ -1,22 +1,39 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 
 import type { StarDetails } from '../data/starDetails';
 import { isShared, type SharedState } from '../domain/shared';
-import type { SkyState } from '../domain/types';
+import type { ConstellationState, SkyState } from '../domain/types';
 import { useElementSize } from '../hooks/useElementSize';
 import { useEquippedTheme } from '../hooks/useEquippedTheme';
 import { useSky } from '../hooks/useSky';
 import { useStarDetails } from '../hooks/useStarDetails';
 import { AmbientCanvas } from './AmbientCanvas';
-import { cardPosition, type CardInsets } from './cardPosition';
+import { cardPosition, type CardAnchor, type CardInsets } from './cardPosition';
+import { ConstellationCard } from './ConstellationCard';
 import {
   ConstellationLayer,
+  type FigureTarget,
   type SkyMode,
   type StarEvent,
   type StarRef,
   type StarTarget,
 } from './ConstellationLayer';
-import { starCardModel, starDescription, type CardFacts } from './describe';
+import {
+  constellationCardModel,
+  constellationDescription,
+  starCardModel,
+  starDescription,
+  type CardFacts,
+} from './describe';
 import { StarCard } from './StarCard';
 
 /** How long a card stays after the pointer leaves its star, so it can be reached (WCAG 1.4.13). */
@@ -28,6 +45,11 @@ const DEFAULT_INSETS: CardInsets = { top: 0, bottom: 88 };
 /** A style key as words, until `app/` hands over the shop's names. */
 const fallbackStyleName = (key: string | undefined): string =>
   key === undefined || key === '' ? 'Classic' : key[0]!.toUpperCase() + key.slice(1);
+
+interface ActiveFigure {
+  target: FigureTarget;
+  via: 'pointer' | 'focus';
+}
 
 interface Active {
   target: StarTarget;
@@ -43,8 +65,9 @@ interface Active {
  * In `hero` mode it is pure backdrop and ignores the pointer, so the timer
  * above it stays fully clickable. In `full` mode the earned stars become
  * hoverable and focusable, and hovering or focusing one shows a card about it
- * (View sky upgrade PR 3). Escape closes an open card first and only then
- * reaches whoever leaves the sky.
+ * (View sky upgrade PR 3); so does a constellation, whose caption is its
+ * keyboard stop, and the others dim while it is looked at (PR 4). Escape closes
+ * an open card first and only then reaches whoever leaves the sky.
  */
 export const SkyView = ({
   sky,
@@ -83,28 +106,49 @@ export const SkyView = ({
   const { width, height } = useElementSize(ref);
   const full = mode === 'full';
 
+  // What is being looked at: a star (its card wins), and the constellation the
+  // pointer is over or whose caption has focus (it stays bright, the rest dim).
   const [active, setActive] = useState<Active | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const cancelClose = useCallback(() => clearTimeout(closeTimer.current), []);
-  const closeSoon = useCallback(() => {
-    clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setActive(null), CARD_GRACE_MS);
+  const [figure, setFigure] = useState<ActiveFigure | null>(null);
+  const starTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const figureTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelClose = useCallback(() => {
+    clearTimeout(starTimer.current);
+    clearTimeout(figureTimer.current);
   }, []);
-  useEffect(() => () => clearTimeout(closeTimer.current), []);
+  const closeStarSoon = useCallback(() => {
+    clearTimeout(starTimer.current);
+    starTimer.current = setTimeout(() => setActive(null), CARD_GRACE_MS);
+  }, []);
+  const closeFigureSoon = useCallback(() => {
+    clearTimeout(figureTimer.current);
+    figureTimer.current = setTimeout(() => setFigure(null), CARD_GRACE_MS);
+  }, []);
+  /** The pointer left a card: whatever it was about goes after the grace. */
+  const closeSoon = useCallback(() => {
+    closeStarSoon();
+    closeFigureSoon();
+  }, [closeStarSoon, closeFigureSoon]);
+  const closeAll = useCallback(() => {
+    cancelClose();
+    setActive(null);
+    setFigure(null);
+  }, [cancelClose]);
+  useEffect(() => cancelClose, [cancelClose]);
 
   const onStar = useCallback(
     (event: StarEvent, target: StarTarget) => {
       switch (event) {
         case 'enter':
-          cancelClose();
+          clearTimeout(starTimer.current);
           setActive({ target, via: 'pointer' });
           break;
         case 'focus':
-          cancelClose();
+          clearTimeout(starTimer.current);
           setActive({ target, via: 'focus' });
           break;
         case 'leave':
-          closeSoon();
+          closeStarSoon();
           break;
         case 'blur':
           setActive((now) =>
@@ -115,30 +159,55 @@ export const SkyView = ({
           break;
       }
     },
-    [cancelClose, closeSoon],
+    [closeStarSoon],
   );
 
-  // Leaving the full sky, or the window changing size, takes the card away.
-  useEffect(() => {
-    cancelClose();
-    setActive(null);
-  }, [full, width, height, cancelClose]);
+  const onFigure = useCallback(
+    (event: StarEvent, target: FigureTarget) => {
+      const id = target.constellation.choice.id;
+      switch (event) {
+        case 'enter':
+          clearTimeout(figureTimer.current);
+          setFigure({ target, via: 'pointer' });
+          break;
+        case 'focus':
+          clearTimeout(figureTimer.current);
+          setFigure({ target, via: 'focus' });
+          break;
+        case 'leave':
+          closeFigureSoon();
+          break;
+        case 'blur':
+          setFigure((now) =>
+            now !== null && now.via === 'focus' && now.target.constellation.choice.id === id
+              ? null
+              : now,
+          );
+          break;
+      }
+    },
+    [closeFigureSoon],
+  );
 
-  // Escape closes the card before anything else hears it: listening on the
+  // Leaving the full sky, or the window changing size, takes the cards away.
+  useEffect(() => {
+    closeAll();
+  }, [full, width, height, closeAll]);
+
+  // Escape closes the cards before anything else hears it: listening on the
   // window in the capture phase runs ahead of the document listener that
   // leaves the sky, and stopping it there means one press does one thing.
-  const open = active !== null;
+  const open = active !== null || figure !== null;
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
-      cancelClose();
-      setActive(null);
+      closeAll();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, cancelClose]);
+  }, [open, closeAll]);
 
   const factsFor = useCallback(
     (star: StarRef): CardFacts => {
@@ -167,7 +236,17 @@ export const SkyView = ({
     [factsFor, styleName],
   );
   const describeStar = useCallback((star: StarRef) => starDescription(modelFor(star)), [modelFor]);
+  const describeFigure = useCallback(
+    (c: ConstellationState) => constellationDescription(constellationCardModel(c, Date.now())),
+    [],
+  );
 
+  // The constellation set apart: the one looked at, else the one a focused or
+  // hovered star belongs to.
+  const activeFigureId =
+    figure?.target.constellation.choice.id ?? active?.target.constellation?.choice.id ?? null;
+
+  const view = { w: width, h: height };
   return (
     <div ref={ref} className={`fixed inset-0 ${full ? '' : 'pointer-events-none'}`}>
       <AmbientCanvas themeKey={themeKey} />
@@ -179,69 +258,89 @@ export const SkyView = ({
           height={height}
           {...(shared !== undefined && { shared })}
           {...(focusId !== undefined && { focusId })}
-          {...(full && { onStar, describeStar })}
+          {...(full && { onStar, describeStar, onFigure, describeFigure, activeFigureId })}
         />
       )}
-      {full && active !== null && (
+      {full && active !== null ? (
         <PlacedCard
-          key={active.target.session.id}
-          target={active.target}
-          model={modelFor(active.target)}
-          view={{ w: width, h: height }}
+          key={`star-${active.target.session.id}`}
+          anchor={active.target}
+          measureKey={active.target.session.id}
+          view={view}
           insets={insets}
           prefer={cardSide}
-          onPointerEnter={cancelClose}
-          onPointerLeave={closeSoon}
+          render={(cardRef, style) => (
+            <StarCard
+              ref={cardRef}
+              model={modelFor(active.target)}
+              star={active.target.session}
+              tier={active.target.tier}
+              style={style}
+              onPointerEnter={cancelClose}
+              onPointerLeave={closeSoon}
+            />
+          )}
         />
+      ) : (
+        full &&
+        figure !== null && (
+          <PlacedCard
+            key={`figure-${figure.target.constellation.choice.id}`}
+            anchor={figure.target}
+            measureKey={figure.target.constellation.choice.id}
+            view={view}
+            insets={insets}
+            prefer={cardSide}
+            render={(cardRef, style) => (
+              <ConstellationCard
+                ref={cardRef}
+                model={constellationCardModel(figure.target.constellation, Date.now())}
+                style={style}
+                onPointerEnter={cancelClose}
+                onPointerLeave={closeSoon}
+              />
+            )}
+          />
+        )
       )}
     </div>
   );
 };
 
-/** The card, measured once drawn and then placed beside its star. */
+/** A card, measured once drawn and then placed beside what it is about. */
 const PlacedCard = ({
-  target,
-  model,
+  anchor,
+  measureKey,
   view,
   insets,
   prefer,
-  onPointerEnter,
-  onPointerLeave,
+  render,
 }: {
-  target: StarTarget;
-  model: ReturnType<typeof starCardModel>;
+  anchor: CardAnchor;
+  /** Re-measure when this changes. */
+  measureKey: string;
   view: { w: number; h: number };
   insets: CardInsets;
   prefer: 'above' | 'below';
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
+  render: (ref: RefObject<HTMLDivElement | null>, style: CSSProperties) => ReactNode;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
     const box = ref.current?.getBoundingClientRect();
     if (box !== undefined) setSize({ w: box.width, h: box.height });
-  }, [model]);
+  }, [measureKey]);
 
   const place =
     size === null
       ? null
-      : cardPosition({ x: target.x, y: target.y, r: target.r }, size, view, insets, prefer);
-  return (
-    <StarCard
-      ref={ref}
-      model={model}
-      star={target.session}
-      tier={target.tier}
-      // Hidden for the one layout pass it takes to measure it.
-      style={
-        place === null
-          ? { left: 0, top: 0, visibility: 'hidden' }
-          : { left: place.left, top: place.top }
-      }
-      onPointerEnter={onPointerEnter}
-      onPointerLeave={onPointerLeave}
-    />
+      : cardPosition({ x: anchor.x, y: anchor.y, r: anchor.r }, size, view, insets, prefer);
+  // Hidden for the one layout pass it takes to measure it.
+  return render(
+    ref,
+    place === null
+      ? { left: 0, top: 0, visibility: 'hidden' }
+      : { left: place.left, top: place.top },
   );
 };
 

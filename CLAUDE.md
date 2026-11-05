@@ -612,6 +612,16 @@ rejected). Don't pre-populate this with guesses.
   ran in, capped at 500, never synced); a device that wasn't there says
   "Focused together". Style names come from the shop (`styleName` in
   progression), passed in by `app/`.
+- **A constellation has a card too, and its caption is its keyboard stop**
+  (View sky upgrade PR 4, 2026-11-04). Hovering anywhere in a figure's box, or
+  focusing its caption, shows its name, progress, start date and total focus,
+  and the other figures fade to `DIMMED` (0.35); one alone never dims. A star's
+  card wins over its constellation's, and the constellation stays bright while
+  one of its stars is hovered or focused. The caption is the figure's first
+  stop (before its stars), at least 24 px tall, with its own focus ring and
+  `<desc>`; it becomes focusable only when the sky is interactive. Escape
+  closes both cards and undims in one press. A shared constellation's start
+  date is when it was accepted.
 
 ## Plans include acceptance tests
 
