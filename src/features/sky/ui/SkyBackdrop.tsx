@@ -274,7 +274,7 @@ export const SkyView = ({
           {announcement}
         </p>
       )}
-      <AmbientCanvas themeKey={themeKey} />
+      <AmbientCanvas themeKey={themeKey} motion={full ? 'living' : 'calm'} />
       {sky !== undefined && width > 0 && (
         <ConstellationLayer
           sky={sky}
