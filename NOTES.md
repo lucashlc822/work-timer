@@ -12,6 +12,73 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-06 (end of session) — View sky upgrade fully merged (PRs 0–8); not released; reviewer findings open
+
+**Status: merged, nothing in flight, not released.** `master` (`8c78057`) holds the
+whole "premium View sky" plan from the 2026-11-05/06 sessions. `package.json` is
+still 0.7.0, so friends and the web version still have the old sky. A
+`ui-ux-reviewer` pass was run afterwards and found two High and three Medium
+issues; none are fixed yet.
+
+### What landed (all merged by Lucas's "merge PR N", CI green each time)
+
+#144 dev fixture (`__starkeep.seedSky`, local-only so it never syncs, earns
+Stardust or survives `clearSeeded()`) · #145 atlas captions in Alegreya SC ·
+#146 astrophoto stars (`starForm` + `AstroStar`, no per-star filters) · #147 star
+card on hover/focus · #148 side fix, wandering-star label · #149 constellation
+card + dimming · #150 and #151 engraved figures for all 15 catalogue shapes ·
+#152 once-per-device completion moment · #153 living sky (Milky Way, shooting
+stars, parallax) · #154 shop previews use the sky's own star (`StylePreview`;
+the result screen deliberately keeps `StarGlyph`).
+
+Each decision is recorded in CLAUDE.md "Decisions already made"; each PR body has
+its acceptance table and what was not verified. Not repeated here.
+
+### Things learned that aren't in the code
+
+- **A scaled full-screen blit costs real CPU.** The first parallax stretched the
+  nebula each frame (~5 CPU points more than `master`); the fix is a canvas one
+  pixel larger each way, copied unscaled at a whole-pixel offset. Measure before
+  and after any change to what a frame draws (headless Chromium, CDP CPU deltas).
+- **The completion record must exist even behind the timer**, or a constellation
+  finished before the sky is first opened gets swallowed into the first-run
+  baseline. Found by writing the e2e, not by review.
+- **CI e2e can fail on a runner port clash (54324) before any test runs.**
+  Re-running the failed job passed; it is not a test failure.
+- **Browser pane can't verify animation** (no frames while hidden); animation
+  numbers came from headless Chromium via Playwright scripts, not the pane.
+
+### Reviewer findings (2026-11-06, `ui-ux-reviewer`, Night theme only)
+
+No Blockers. Passed: both cards, Escape order, no card over Back at 480×720 across
+154 stars, all styles/figures, completion moment, reduced motion, shop previews,
+friend's sky leaks no tags, axe 0 violations on 8 scans.
+
+- **High:** unfinished-figure captions ~2.2–2.7:1 contrast (needs 4.5:1): keep the
+  caption near full opacity, dim only lines and stars (`ConstellationLayer.tsx`
+  caption `fillOpacity` and the figure-level opacity).
+- **High:** a friend's sky is laid out for the full window and its own header
+  covers the top (4 of 9 stars unreachable by mouse, still keyboard stops; fails
+  2.4.11). Seen with one figure only; likely worse with several.
+- **Medium:** friend's sky announced as "Your sky" (`ConstellationLayer.tsx:157`);
+  captions overlap at 375 px with 18 figures; "The Great Heron" caption
+  borderline on its own glow.
+- **Low:** "25 / minutes" wraps in the card; "Equipped" label faint; "Focus with
+  friends" is 16 px tall (predates the upgrade); 154 tab stops in a crowded sky.
+- **Not covered:** meteors and parallax by eye, timer states, mini window, themes
+  other than Night, a friend with several figures, the packaged desktop app, a
+  screen reader, a true two-device run.
+
+### Next
+
+1. **Decide which reviewer fixes go before a release.** Suggested split: one PR for
+   caption contrast, "Ada's sky" label and the Heron halo; a separate PR for the
+   friend-sky layout; narrow-width caption overlap with either.
+2. **Release** (Lucas's call; `RELEASING.md`) once the above is decided. Desktop
+   app check and a two-device run of the completion moment are still unverified.
+
+---
+
 ## 2026-11-04 (end of session) — 0.7.0 is out and in use; repo is clean
 
 **Status: nothing in flight.** No open PRs. `master` (`aa62357`) is the only
