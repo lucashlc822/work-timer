@@ -34,6 +34,8 @@ const REFUSALS: Record<string, string> = {
 const button =
   'rounded-pill border px-4 py-1.5 text-xs transition-colors disabled:cursor-default disabled:opacity-60';
 const primary = `${button} border-lavender-400 bg-lavender-400/15 text-ink-primary hover:bg-lavender-400/25`;
+const status =
+  'text-ink-secondary inline-flex items-center gap-1.5 border border-transparent px-4 py-1.5 text-xs';
 const quiet = `${button} border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary`;
 
 /**
@@ -69,10 +71,27 @@ export const Shop = ({
     setNotice(result.ok ? null : (REFUSALS[result.reason] ?? 'That did not work.'));
   };
 
+  /**
+   * What is already so (Equipped, Owned, Unlocked): a status, not a disabled
+   * button, so it reads at full ink-secondary instead of a faded 60%.
+   */
   const done = (label: string) => (
-    <button type="button" disabled className={quiet}>
+    <span className={status}>
+      <svg
+        aria-hidden
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2.5 6.5l2.5 2.5 4.5-5.5" />
+      </svg>
       {label}
-    </button>
+    </span>
   );
 
   /** Equipped / Equip for something you can wear, and nothing for the rest. */

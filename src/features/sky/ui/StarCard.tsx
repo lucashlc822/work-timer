@@ -64,7 +64,10 @@ export const StarCard = forwardRef<HTMLDivElement, StarCardProps>(
         <div className="flex min-w-0 flex-col gap-0.5 text-sm">
           <p className="text-ink-primary font-medium">{model.date}</p>
           <p className="text-ink-secondary">
-            {model.time} · {model.duration}
+            {/* A break may fall at the dot, never inside "25 minutes". */}
+            <span className="whitespace-nowrap">{model.time}</span>
+            {' · '}
+            <span className="whitespace-nowrap">{model.duration}</span>
           </p>
           {model.tag !== null && (
             <p className="text-ink-secondary flex items-center gap-1.5">

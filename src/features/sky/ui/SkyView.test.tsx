@@ -370,3 +370,15 @@ describe('the sky’s name', () => {
     expect(screen.queryByRole('group', { name: 'Your sky' })).toBeNull();
   });
 });
+
+describe('the star card’s time line', () => {
+  it('keeps "25 minutes" and the clock times each in one piece, so a break can fall only at the dot', () => {
+    renderSky();
+    fireEvent.pointerEnter(stars()[0]!);
+
+    const pieces = [...card()!.querySelectorAll('.whitespace-nowrap')].map((el) => el.textContent);
+    expect(pieces).toHaveLength(2);
+    expect(pieces[0]).toMatch(/\d.*[–-].*\d/);
+    expect(pieces[1]).toBe('25 minutes');
+  });
+});

@@ -65,6 +65,13 @@ test.describe('with something above the timer', () => {
     return { ada, bea };
   };
 
+  test('"Focus with friends" is at least 24 CSS pixels tall (2.5.8)', async ({ page }) => {
+    await withFriend(page);
+    const box = await page.getByRole('button', { name: 'Focus with friends' }).boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(24);
+  });
+
   test('an invitation still leaves the footer in the window', async ({ page }, testInfo) => {
     const { ada, bea } = await withFriend(page);
     await createRoom(ada, [bea], 1500);

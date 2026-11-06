@@ -307,7 +307,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
             <button
               type="button"
               onClick={() => openView('together')}
-              className="text-lavender-200 hover:text-ink-primary text-xs underline-offset-4 transition-colors hover:underline"
+              className="text-lavender-200 hover:text-ink-primary inline-flex min-h-6 items-center px-1 text-xs underline-offset-4 transition-colors hover:underline"
             >
               Focus with friends
             </button>
