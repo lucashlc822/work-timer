@@ -659,6 +659,26 @@ rejected). Don't pre-populate this with guesses.
   shared constellation finished before the update whose data arrives after the
   first-run record may play once.
 
+- **The ambient sky lives, in layers that cost nothing behind a timer** (View
+  sky upgrade PR 7, 2026-11-06). A faint Milky Way is painted into the same
+  offscreen nebula canvas as the clouds (`sky/domain/livingSky.ts`, own seed
+  `starkeep-milkyway-v1`): once per resize, so it shows behind the timer too and
+  adds no work to a frame. Its geometry is the same in every theme and only the
+  colour follows the theme, like the field. Never add a draw to
+  `ambientField`'s stream: its golden fingerprint pins the starfield. In the
+  **full sky only** (`motion: 'living'`) a shooting star crosses now and then
+  (`meteorAt`, own seed, the first no sooner than 20 s after the sky opened,
+  then 45–120 s apart, falling 20–40 degrees, under a second) and the layers
+  glide a few pixels against the pointer (1.5, 4 and 8 px for the three star
+  layers; the nebula at most one whole pixel). Behind a running timer
+  (`calm`) there are no meteors, no pointer listener and no per-frame work
+  beyond the stars. Reduced motion switches the extras off (no listener).
+  Meteors are timed from when the sky opened, not from page load, and a hidden
+  window stops the loop, so none can pile up. **The nebula canvas is a pixel
+  larger each way and is copied unscaled at a whole-pixel offset:** the first
+  version stretched it each frame and cost about 5 points of CPU in the full
+  sky. Measure before and after any change to what a frame draws.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
