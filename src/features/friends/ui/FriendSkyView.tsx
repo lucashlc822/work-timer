@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import { FRIENDS_MESSAGES } from '../domain/errors';
 import { statusLine, type FocusStatus } from '../domain/focusStatus';
@@ -13,6 +13,12 @@ export interface FriendSummary {
   starsThisWeek: number;
   streakDays: number;
   constellations: number;
+}
+
+/** What `renderSky` is told about the header laid over the sky. */
+export interface SkyLayout {
+  /** Pixels the header covers from the top of the window. */
+  reserveTop: number;
 }
 
 /**
@@ -32,7 +38,8 @@ export const FriendSkyView = ({
   friendId: string;
   /** From the friend list, shown while the sky loads. */
   name: string | null;
-  renderSky: (sky: FriendSky) => ReactNode;
+  /** Draws the sky; lay it out below `layout.reserveTop`, where the header is. */
+  renderSky: (sky: FriendSky, layout: SkyLayout) => ReactNode;
   summarize: (sky: FriendSky) => FriendSummary;
   /** What they're doing right now, if anything (M7 phase 3). */
   status: FocusStatus | null;
@@ -41,14 +48,40 @@ export const FriendSkyView = ({
   shared?: ReactNode;
 }) => {
   const { state, retry } = useFriendSky(friendId);
+  // The header's height varies (a status line, the shared constellation, wrapping), and
+  // the sky is laid out below it: read it before paint, and again whenever it changes.
+  const headerRef = useRef<HTMLElement>(null);
+  const [reserveTop, setReserveTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (header === null) return;
+    const read = () => {
+      const height = header.offsetHeight;
+      setReserveTop((prev) => (prev === height ? prev : height));
+    };
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(read);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+  // Content that arrives with the sky changes the header's height in the same commit.
+  useLayoutEffect(() => {
+    const height = headerRef.current?.offsetHeight;
+    if (height !== undefined) setReserveTop((prev) => (prev === height ? prev : height));
+  }, [state.kind]);
   const shownName =
     (state.kind === 'ready' ? state.sky.displayName : null) ?? name ?? 'Your friend';
 
   return (
     <>
-      {state.kind === 'ready' && renderSky(state.sky)}
+      {/* Not drawn until the header has been measured, so the stars never jump. */}
+      {state.kind === 'ready' && reserveTop !== null && renderSky(state.sky, { reserveTop })}
 
-      <header className="bg-night-900/70 border-night-600 fixed inset-x-0 top-0 z-20 flex flex-col items-center gap-3 border-b px-6 py-4 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="bg-night-900/70 border-night-600 fixed inset-x-0 top-0 z-20 flex flex-col items-center gap-3 border-b px-6 py-4 backdrop-blur"
+      >
         <h2 className="text-ink-primary text-base">{possessive(shownName)} sky</h2>
         {statusLine(status, now) !== null && (
           <p className="text-lavender-200 text-xs">{statusLine(status, now)}</p>

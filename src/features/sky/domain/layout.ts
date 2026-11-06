@@ -66,12 +66,22 @@ export const gridPlacements = (
   }));
 };
 
-/** A wandering star's resting place: anywhere, but always the same place. */
+/**
+ * A wandering star's resting place: anywhere, but always the same place.
+ *
+ * With `area`, it stays in the band between `top` px from the top and `bottom`
+ * px from the bottom (for a sky with something laid over its top). It draws the
+ * same two numbers either way, so only the vertical range changes.
+ */
 export const wanderingPosition = (
   seed: string,
   width: number,
   height: number,
+  area?: { top: number; bottom: number },
 ): [number, number] => {
   const rng = rngFromSeed(`wander:${seed}`);
-  return [between(rng, 0.04, 0.96) * width, between(rng, 0.04, 0.96) * height];
+  const x = between(rng, 0.04, 0.96) * width;
+  const y = between(rng, 0.04, 0.96);
+  if (area === undefined) return [x, y * height];
+  return [x, area.top + y * Math.max(0, height - area.top - area.bottom)];
 };

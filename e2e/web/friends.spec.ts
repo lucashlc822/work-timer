@@ -4,6 +4,7 @@ import { backToTimer, expectSignedIn, openFriends, sessionsOnDevice, signIn } fr
 import { closeDevices, openDevice } from '../support/devices';
 import {
   addCompletedSession,
+  addConstellation,
   befriend,
   friendCode,
   requestFriend,
@@ -145,6 +146,96 @@ test('declining, cancelling, and a request that crosses another', async ({ brows
     ).toBeVisible();
   } finally {
     await closeDevices(a);
+  }
+});
+
+/**
+ * The friend's header covers the top of the window and its height varies, so
+ * their sky is laid out below it: no star or caption may sit under it, at any
+ * window size, and a card never opens under it either.
+ */
+test('a friend’s sky is laid out below its header: every star can be reached', async ({
+  browser,
+}) => {
+  const ada = await createUser('fr-ada-layout');
+  const bea = await createUser('fr-bea-layout');
+  await setName(ada, 'Ada');
+  await setName(bea, 'Bea');
+  await befriend(ada, bea);
+  // Eight constellations with a star each, so the grid fills the window and reaches
+  // up under the header, and some wandering stars (earned before the first choice).
+  const shapes = ['kite', 'arrow', 'teacup', 'lantern', 'swan', 'harp', 'fox', 'owl'] as const;
+  for (const [i, shape] of shapes.entries()) {
+    const chosenAgo = 1000 - i * 100;
+    await addConstellation(ada, shape, chosenAgo);
+    await addCompletedSession(ada, 25, chosenAgo - 50);
+  }
+  for (const ago of [1400, 1350, 1300, 1250, 1200, 1150]) {
+    await addCompletedSession(ada, 25, ago);
+  }
+
+  const b = await openDevice(browser, BASE, bea);
+  try {
+    await openFriends(b.page);
+    await b.page
+      .getByRole('region', { name: 'Friends' })
+      .getByRole('button', { name: /^Ada/ })
+      .click();
+    await expect(b.page.getByRole('heading', { name: "Ada's sky" })).toBeVisible();
+    const sky = b.page.getByRole('group', { name: "Ada's sky" });
+    await expect(sky).toBeVisible();
+
+    for (const size of [
+      { width: 1280, height: 800 },
+      { width: 768, height: 1024 },
+      { width: 375, height: 812 },
+    ]) {
+      await b.page.setViewportSize(size);
+      await b.page.waitForTimeout(500);
+
+      const result = await b.page.evaluate(() => {
+        const svg = document.querySelector('svg[aria-label^="Ada"]')!;
+        const stops = Array.from(svg.querySelectorAll('[role="img"][tabindex="0"]'));
+        const covered = stops.flatMap((g) => {
+          // The invisible 24 px target of a star, or the box of a caption.
+          const hit = g.querySelector('circle[r="12"], rect')!.getBoundingClientRect();
+          const x = hit.x + hit.width / 2;
+          const y = hit.y + hit.height / 2;
+          const el = document.elementFromPoint(x, y);
+          // Only the header is of interest here: a figure's own box may sit over a wandering star.
+          if (el?.closest('header.fixed') == null) return [];
+          return [
+            `${g.getAttribute('aria-label')} at ${Math.round(x)},${Math.round(y)} under ${el?.tagName ?? 'nothing'}`,
+          ];
+        });
+        return { stops: stops.length, covered };
+      });
+      // 8 captions + 8 stars + 6 wandering stars.
+      expect(result.stops, `${size.width}px`).toBe(22);
+      expect(result.covered, `${size.width}px`).toEqual([]);
+    }
+
+    // A card opened on the top-most star stays clear of the header.
+    await b.page.setViewportSize({ width: 1280, height: 800 });
+    await b.page.waitForTimeout(500);
+    await b.page.evaluate(() => {
+      const svg = document.querySelector('svg[aria-label^="Ada"]')!;
+      const stars = Array.from(
+        svg.querySelectorAll(
+          '[role="img"][aria-label^="Star"], [role="img"][aria-label^="Wandering"]',
+        ),
+      );
+      stars.sort((x, y) => x.getBoundingClientRect().y - y.getBoundingClientRect().y);
+      stars[0]!.setAttribute('data-top-star', '');
+    });
+    await b.page.locator('[data-top-star]').focus();
+    const card = b.page.getByTestId('star-card');
+    await expect(card).toBeVisible();
+    const headerBottom = (await b.page.locator('header.fixed').boundingBox())!;
+    const cardBox = (await card.boundingBox())!;
+    expect(cardBox.y).toBeGreaterThanOrEqual(headerBottom.y + headerBottom.height - 0.5);
+  } finally {
+    await closeDevices(b);
   }
 });
 

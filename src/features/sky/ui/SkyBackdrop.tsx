@@ -85,6 +85,7 @@ export const SkyView = ({
   cardSide = 'above',
   celebrating,
   label,
+  reserveTop,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -114,6 +115,11 @@ export const SkyView = ({
   celebrating?: ReadonlyMap<string, number>;
   /** The full sky's accessible name; a friend's is theirs. Defaults to "Your sky". */
   label?: string;
+  /**
+   * Pixels covered from the top by something laid over the sky, like a friend's
+   * header. Stars and figures are laid out below it and cards keep clear of it.
+   */
+  reserveTop?: number;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -260,6 +266,8 @@ export const SkyView = ({
     figure?.target.constellation.choice.id ?? active?.target.constellation?.choice.id ?? null;
 
   const view = { w: width, h: height };
+  const cardInsets =
+    reserveTop === undefined ? insets : { ...insets, top: Math.max(insets.top, reserveTop) };
 
   // Said once per moment, politely, so a screen reader hears what the eye sees.
   const announcement =
@@ -289,6 +297,7 @@ export const SkyView = ({
           {...(full && { onStar, describeStar, onFigure, describeFigure, activeFigureId })}
           {...(full && celebrating !== undefined && { celebrating })}
           {...(label !== undefined && { label })}
+          {...(reserveTop !== undefined && { reserveTop })}
         />
       )}
       {full && active !== null ? (
@@ -297,7 +306,7 @@ export const SkyView = ({
           anchor={active.target}
           measureKey={active.target.session.id}
           view={view}
-          insets={insets}
+          insets={cardInsets}
           prefer={cardSide}
           render={(cardRef, style) => (
             <StarCard
@@ -319,7 +328,7 @@ export const SkyView = ({
             anchor={figure.target}
             measureKey={figure.target.constellation.choice.id}
             view={view}
-            insets={insets}
+            insets={cardInsets}
             prefer={cardSide}
             render={(cardRef, style) => (
               <ConstellationCard
