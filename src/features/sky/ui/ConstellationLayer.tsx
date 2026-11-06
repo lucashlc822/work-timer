@@ -16,6 +16,7 @@ import { starForm, type TierStyle } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
 import type { CompletedSession, ConstellationState, SkyState } from '../domain/types';
 import { AstroStar } from './AstroStar';
+import { AtlasFigure } from './AtlasFigure';
 import { figureCaption, progressLabel, starLabel, wanderingStarLabel } from './describe';
 
 export type SkyMode = 'hero' | 'full';
@@ -395,6 +396,9 @@ const Figure = ({
   const points = def.shape.points.map((p) => toPixels(p, box));
   const filled = (i: number) => i < stars.length;
   const earnedEdges = def.shape.edges.filter(([a, b]) => filled(a) && filled(b));
+  // How near it is to done: a shared one needs only what it was agreed to need.
+  const needed = isShared(state) ? state.starsNeeded : points.length;
+  const fill = complete || needed === 0 ? 1 : Math.min(1, stars.length / needed);
   const starRadius = Math.max(2, box.size * 0.016);
   const nebulaHue = NEBULA_HUES[hashSeed(state.choice.id) % NEBULA_HUES.length]!;
   const gradientId = `${glowId}-nebula-${state.choice.id}`;
@@ -463,6 +467,9 @@ const Figure = ({
           />
         </>
       )}
+
+      {/* The engraved figure, under everything else in the constellation. */}
+      <AtlasFigure def={def} box={box} fill={fill} complete={complete} />
 
       {/* Edges not yet earned: a faint blueprint of what is being built. */}
       {!complete &&
