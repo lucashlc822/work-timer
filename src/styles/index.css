@@ -60,6 +60,12 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+    /* A completion moment shows its final state at once: no waiting on a delay. */
+    .sky-draw,
+    .sky-bloom,
+    .sky-flare {
+      animation-delay: 0s !important;
+    }
   }
 }
 
@@ -141,4 +147,58 @@
 
 .sky-shimmer {
   animation: sky-shimmer 6s ease-in-out infinite;
+}
+
+/*
+ * The completion moment (View sky upgrade PR 6): a constellation's lines draw
+ * themselves in (with `pathLength="1"`, so a dash of 1 is the whole line), its
+ * engraving traces itself, a bloom swells and fades, and the stars flare once.
+ * Plays once per device; `fill-mode: both` holds each part hidden until its
+ * delay and finished after, and the reduced-motion rule above shows the end
+ * state at once.
+ */
+@keyframes sky-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sky-bloom {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sky-flare {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.7);
+  }
+}
+
+.sky-draw {
+  stroke-dasharray: 1;
+  animation: sky-draw var(--duration-draw) var(--ease-gentle) both;
+}
+
+.sky-bloom {
+  animation: sky-bloom var(--duration-bloom) var(--ease-gentle) both;
+}
+
+.sky-flare {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-flare var(--duration-flare) var(--ease-gentle) both;
 }

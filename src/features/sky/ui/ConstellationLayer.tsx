@@ -47,7 +47,15 @@ interface Props {
   describeFigure?: (constellation: ConstellationState) => string | undefined;
   /** The constellation being looked at: it stays bright while the others dim. */
   activeFigureId?: string | null;
+  /**
+   * Full mode only: constellations playing their completion moment now, by id,
+   * with the delay (ms) before each starts (View sky upgrade PR 6).
+   */
+  celebrating?: ReadonlyMap<string, number>;
 }
+
+/** Between one line drawing itself in and the next, in growth order. */
+export const EDGE_STAGGER_MS = 180;
 
 /** A constellation as it sits on screen: its centre and half its box. */
 export interface FigureTarget {
@@ -120,6 +128,7 @@ export const ConstellationLayer = ({
   onFigure,
   describeFigure,
   activeFigureId = null,
+  celebrating,
 }: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -210,6 +219,7 @@ export const ConstellationLayer = ({
             state.choice.id !== activeFigureId
           }
           active={full && state.choice.id === activeFigureId}
+          celebrate={full ? celebrating?.get(state.choice.id) : undefined}
         />
       ))}
     </svg>
@@ -376,6 +386,7 @@ const Figure = ({
   describeFigure,
   dimmed,
   active,
+  celebrate,
 }: {
   state: ConstellationState;
   box: Placement;
@@ -388,6 +399,8 @@ const Figure = ({
   describeFigure: Props['describeFigure'];
   dimmed: boolean;
   active: boolean;
+  /** When set, its completion moment plays, starting after this many ms. */
+  celebrate: number | undefined;
 }) => {
   const { def, stars, complete } = state;
   // A stopped shared constellation fades like an abandoned one of your own.
@@ -402,6 +415,8 @@ const Figure = ({
   const starRadius = Math.max(2, box.size * 0.016);
   const nebulaHue = NEBULA_HUES[hashSeed(state.choice.id) % NEBULA_HUES.length]!;
   const gradientId = `${glowId}-nebula-${state.choice.id}`;
+  // How long the lines take to draw in, one after another: the figure follows.
+  const linesMs = def.shape.edges.length * EDGE_STAGGER_MS;
   const figure: FigureTarget = {
     constellation: state,
     x: box.x + box.size / 2,
@@ -469,7 +484,44 @@ const Figure = ({
       )}
 
       {/* The engraved figure, under everything else in the constellation. */}
-      <AtlasFigure def={def} box={box} fill={fill} complete={complete} />
+      {/* The completion moment's bloom: a soft swell of light behind the figure. */}
+      {celebrate !== undefined && (
+        <>
+          <defs>
+            <radialGradient id={`${gradientId}-bloom`}>
+              <stop
+                offset="0%"
+                stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
+                stopOpacity={0.5}
+              />
+              <stop
+                offset="100%"
+                stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
+                stopOpacity={0}
+              />
+            </radialGradient>
+          </defs>
+          <ellipse
+            data-celebration="bloom"
+            cx={box.x + box.size / 2}
+            cy={box.y + box.size / 2}
+            rx={box.size * 0.7}
+            ry={box.size * 0.6}
+            fill={`url(#${gradientId}-bloom)`}
+            className="sky-bloom"
+            style={{ animationDelay: `${celebrate}ms` }}
+          />
+        </>
+      )}
+
+      <AtlasFigure
+        def={def}
+        box={box}
+        fill={fill}
+        complete={complete}
+        // The engraving traces itself once the lines are in.
+        {...(celebrate !== undefined && { drawDelayMs: celebrate + linesMs })}
+      />
 
       {/* Edges not yet earned: a faint blueprint of what is being built. */}
       {!complete &&
@@ -507,7 +559,7 @@ const Figure = ({
           ))}
         </g>
       )}
-      {earnedEdges.map(([a, b]) => (
+      {earnedEdges.map(([a, b], i) => (
         <line
           key={`edge-${a}-${b}`}
           x1={points[a]![0]}
@@ -517,7 +569,14 @@ const Figure = ({
           stroke={LAVENDER_300}
           strokeOpacity={0.7}
           strokeWidth={style === 'plain' ? 1 : 1.25}
-          className={full && style === 'nebula' ? 'sky-shimmer' : undefined}
+          // Each line draws itself in, one after another, in the order they grew.
+          {...(celebrate !== undefined
+            ? {
+                pathLength: 1,
+                className: 'sky-draw',
+                style: { animationDelay: `${celebrate + i * EDGE_STAGGER_MS}ms` },
+              }
+            : { className: full && style === 'nebula' ? 'sky-shimmer' : undefined })}
         />
       ))}
 
@@ -558,14 +617,22 @@ const Figure = ({
                   : undefined
               }
             >
-              <AstroStar
-                x={x}
-                y={y}
-                form={form}
-                color={look.color}
-                brightness={look.brightness}
-                id={`${glowId}-${session.id}`}
-              />
+              {/* The stars flare once as the last line lands. */}
+              <g
+                {...(celebrate !== undefined && {
+                  className: 'sky-flare',
+                  style: { animationDelay: `${celebrate + linesMs}ms` },
+                })}
+              >
+                <AstroStar
+                  x={x}
+                  y={y}
+                  form={form}
+                  color={look.color}
+                  brightness={look.brightness}
+                  id={`${glowId}-${session.id}`}
+                />
+              </g>
             </g>
             {/* Outside the twinkle, so the ring never fades with the star. */}
             {full && <FocusRing x={x} y={y} r={form.radius} />}

@@ -300,6 +300,13 @@ export const META_KEYS = {
    * device that wasn't in the room says "Focused together".
    */
   togetherNames: 'togetherNames',
+  /**
+   * Finished constellations (own and shared ids) whose completion moment this
+   * device has already shown, or decided not to (`string[]`). Per device and
+   * never synced: each device plays a completion once. Absent until the full
+   * sky is first opened, which records everything already finished.
+   */
+  celebratedConstellations: 'celebratedConstellations',
 } as const;
 
 /** `META_KEYS.togetherNames`: room id → the other members' names and when it started. */

@@ -640,6 +640,25 @@ rejected). Don't pre-populate this with guesses.
   more than 0.12 from a line, so a drawing of the wrong thing, mirrored, or
   misplaced fails.
 
+- **A finished constellation gets its moment once per device** (View sky
+  upgrade PR 6, 2026-11-06). When the full sky shows a constellation this
+  device has not yet celebrated, its lines draw themselves in, its engraving
+  traces itself, a bloom swells and fades and its stars flare; a polite live
+  region says "The Kite is complete." The record is
+  `META_KEYS.celebratedConstellations` (own and shared ids, per device, never
+  synced), decided by `pendingCelebrations` (`sky/domain/celebrate.ts`) and
+  written **when a moment starts**, so closing the sky part-way never brings it
+  back. **First run** (no record): nothing plays and everything already
+  finished is recorded. That record is made as soon as the sky has been read,
+  **even behind the timer** (`useCelebrations` with `enabled` false), otherwise
+  a constellation finished before the sky is first opened would be swallowed
+  into it. At most three play at once, newest first, 1.2 s apart; the rest are
+  recorded silently. Only your own full sky celebrates: never behind the timer,
+  never a friend's sky. Reduced motion shows the end state at once (the
+  reduced-motion rule zeroes these animations' delays). Known, accepted: a
+  shared constellation finished before the update whose data arrives after the
+  first-run record may play once.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then

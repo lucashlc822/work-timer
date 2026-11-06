@@ -337,3 +337,24 @@ describe('the constellation card', () => {
     expect(figureOpacity('c-arrow')).toBe('1');
   });
 });
+
+describe('the completion announcement', () => {
+  const finishedKite = () => deriveSky([star(1), star(2), star(3), star(4)], [kite], rules);
+  const announcer = () => screen.getByTestId('sky-announcer');
+
+  it('says, politely and once, which constellation is complete', () => {
+    renderSky({ sky: finishedKite(), celebrating: new Map([['c-kite', 0]]) });
+    expect(announcer().getAttribute('aria-live')).toBe('polite');
+    expect(announcer().textContent).toBe('The Kite is complete.');
+  });
+
+  it('says nothing when nothing is celebrating, and the region is there before it speaks', () => {
+    renderSky({ sky: finishedKite(), celebrating: new Map() });
+    expect(announcer().textContent).toBe('');
+  });
+
+  it('has no announcer behind the timer', () => {
+    renderSky({ sky: finishedKite(), mode: 'hero', celebrating: new Map([['c-kite', 0]]) });
+    expect(screen.queryByTestId('sky-announcer')).toBeNull();
+  });
+});
