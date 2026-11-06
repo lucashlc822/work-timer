@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -9,12 +10,15 @@ import {
   type RefObject,
 } from 'react';
 
+import { db } from '@/shared/db';
+
 import type { StarDetails } from '../data/starDetails';
 import { isShared, type SharedState } from '../domain/shared';
 import type { ConstellationState, SkyState } from '../domain/types';
 import { useElementSize } from '../hooks/useElementSize';
 import { useEquippedTheme } from '../hooks/useEquippedTheme';
 import { useSky } from '../hooks/useSky';
+import { useCelebrations } from '../hooks/useCelebrations';
 import { useStarDetails } from '../hooks/useStarDetails';
 import { AmbientCanvas } from './AmbientCanvas';
 import { cardPosition, type CardAnchor, type CardInsets } from './cardPosition';
@@ -79,6 +83,7 @@ export const SkyView = ({
   styleName = fallbackStyleName,
   insets = DEFAULT_INSETS,
   cardSide = 'above',
+  celebrating,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -101,6 +106,11 @@ export const SkyView = ({
    * varying height over its top, so its cards prefer to sit below the star.
    */
   cardSide?: 'above' | 'below';
+  /**
+   * Constellations playing their completion moment, by id, with each one's
+   * start delay. Only your own sky passes this; a friend's never celebrates.
+   */
+  celebrating?: ReadonlyMap<string, number>;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -247,8 +257,23 @@ export const SkyView = ({
     figure?.target.constellation.choice.id ?? active?.target.constellation?.choice.id ?? null;
 
   const view = { w: width, h: height };
+
+  // Said once per moment, politely, so a screen reader hears what the eye sees.
+  const announcement =
+    full && celebrating !== undefined && sky !== undefined
+      ? [...sky.constellations, ...(shared ?? [])]
+          .filter((c) => celebrating.has(c.choice.id))
+          .map((c) => `${constellationCardModel(c, Date.now()).name} is complete.`)
+          .join(' ')
+      : '';
+
   return (
     <div ref={ref} className={`fixed inset-0 ${full ? '' : 'pointer-events-none'}`}>
+      {full && (
+        <p className="sr-only" aria-live="polite" data-testid="sky-announcer">
+          {announcement}
+        </p>
+      )}
       <AmbientCanvas themeKey={themeKey} />
       {sky !== undefined && width > 0 && (
         <ConstellationLayer
@@ -259,6 +284,7 @@ export const SkyView = ({
           {...(shared !== undefined && { shared })}
           {...(focusId !== undefined && { focusId })}
           {...(full && { onStar, describeStar, onFigure, describeFigure, activeFigureId })}
+          {...(full && celebrating !== undefined && { celebrating })}
         />
       )}
       {full && active !== null ? (
@@ -359,12 +385,31 @@ export const SkyBackdrop = ({
   focusId?: string | null;
   styleName?: (key: string | undefined) => string;
 }) => {
-  const details = useStarDetails(mode === 'full');
+  const full = mode === 'full';
+  const sky = useSky();
+  const details = useStarDetails(full);
+
+  // Every finished constellation, your own and the shared ones, for the
+  // completion moment. Undefined until the sky has been read.
+  const finished = useMemo(
+    () =>
+      sky === undefined
+        ? undefined
+        : [...sky.constellations, ...(shared ?? [])].flatMap((c) =>
+            c.complete && c.completedAt !== null
+              ? [{ id: c.choice.id, completedAt: c.completedAt }]
+              : [],
+          ),
+    [sky, shared],
+  );
+  const celebrating = useCelebrations(db, finished, full);
+
   return (
     <SkyView
-      sky={useSky()}
+      sky={sky}
       themeKey={useEquippedTheme()}
       mode={mode}
+      celebrating={celebrating}
       {...(shared !== undefined && { shared })}
       {...(focusId !== undefined && { focusId })}
       {...(details !== undefined && { details })}

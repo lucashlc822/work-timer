@@ -25,12 +25,18 @@ export interface AtlasFigureProps {
   /** 0 with no stars, 1 when it needs no more. */
   fill: number;
   complete: boolean;
+  /** When set, the figure traces itself in (the completion moment), after this many ms. */
+  drawDelayMs?: number;
 }
 
 /** Looked up by string: a stored key this build does not know is simply not found. */
 const ART: Readonly<Partial<Record<string, AtlasFigureArt>>> = ATLAS_ART;
 
-export const AtlasFigure = ({ def, box, fill, complete }: AtlasFigureProps) => {
+export const AtlasFigure = ({ def, box, fill, complete, drawDelayMs }: AtlasFigureProps) => {
+  const draw =
+    drawDelayMs === undefined
+      ? {}
+      : { className: 'sky-draw', style: { animationDelay: `${drawDelayMs}ms` } };
   const art = def.source === 'catalogue' && def.shapeId !== null ? ART[def.shapeId] : undefined;
 
   if (art !== undefined) {
@@ -46,7 +52,7 @@ export const AtlasFigure = ({ def, box, fill, complete }: AtlasFigureProps) => {
         opacity={artOpacity(fill, complete)}
       >
         {art.paths.map((d) => (
-          <path key={d} d={pathToPixels(d, box)} pathLength={1} />
+          <path key={d} d={pathToPixels(d, box)} pathLength={1} {...draw} />
         ))}
       </g>
     );
@@ -64,6 +70,7 @@ export const AtlasFigure = ({ def, box, fill, complete }: AtlasFigureProps) => {
       strokeLinecap="round"
       strokeDasharray="2 5"
       opacity={outlineOpacity(fill, complete)}
+      {...draw}
     />
   );
 };

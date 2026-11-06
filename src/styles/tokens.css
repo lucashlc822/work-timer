@@ -98,4 +98,8 @@
   --tracking-code: 0.4em;
   --duration-drift: 40s;
   --duration-twinkle: 4s;
+  /* The completion moment: a line drawing in, the bloom, a star's flare. */
+  --duration-draw: 1.6s;
+  --duration-bloom: 3.2s;
+  --duration-flare: 1.2s;
 }

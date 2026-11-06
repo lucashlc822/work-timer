@@ -143,3 +143,85 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
 });
+
+/** A new person who finishes all four stars of the Kite from the timer, never opening the sky. */
+const finishTheKite = async (page: Page) => {
+  const user = await createUser('sky-complete');
+  await startClockInThePast(page);
+  await page.goto('/');
+  await signIn(page, user);
+  await expectSignedIn(page);
+
+  await page.getByRole('button', { name: 'Choose a constellation' }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^The Kite/ })
+    .click();
+  for (let i = 0; i < 4; i++) {
+    await page.getByRole('button', { name: 'Start 25 min' }).click();
+    await expect(page.getByRole('timer')).toContainText('25:00');
+    await page.clock.fastForward('25:01');
+    await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+  }
+};
+
+const kiteFigure = (page: Page) => page.locator('[data-figure][aria-label^="The Kite, complete"]');
+
+test('a constellation finished from the timer gets its moment when the sky opens, once, and never again (6.2)', async ({
+  page,
+}) => {
+  await finishTheKite(page);
+
+  await openView(page, 'View sky');
+  const figure = kiteFigure(page);
+  await expect(figure).toBeVisible();
+  // The lines draw in, the figure traces itself, a bloom swells, the stars flare.
+  await expect(figure.locator('line.sky-draw')).toHaveCount(4);
+  await expect(figure.locator('[data-atlas] path.sky-draw').first()).toBeAttached();
+  await expect(figure.locator('[data-celebration="bloom"]')).toHaveCount(1);
+  await expect(figure.locator('.sky-flare')).toHaveCount(4);
+  await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');
+
+  // Reopening the sky, and reloading the page: it does not play again.
+  await page.getByRole('button', { name: 'Back to timer' }).click();
+  await openView(page, 'View sky');
+  await expect(figure).toBeVisible();
+  await expect(figure.locator('.sky-draw, .sky-bloom, .sky-flare')).toHaveCount(0);
+
+  await page.reload();
+  await expectSignedIn(page);
+  await openView(page, 'View sky');
+  await expect(kiteFigure(page)).toBeVisible();
+  await expect(kiteFigure(page).locator('.sky-draw, .sky-bloom, .sky-flare')).toHaveCount(0);
+  await expect(page.getByTestId('sky-announcer')).toHaveText('');
+});
+
+test('with reduced motion the moment shows its final state at once, and is still announced (6.6)', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await finishTheKite(page);
+
+  await openView(page, 'View sky');
+  const figure = kiteFigure(page);
+  await expect(figure.locator('line.sky-draw')).toHaveCount(4);
+  await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');
+
+  // No waiting: no delay, an instant animation, and every line already fully drawn.
+  const lines = await figure.locator('line.sky-draw').evaluateAll((els) =>
+    els.map((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        delay: cs.animationDelay,
+        duration: cs.animationDuration,
+        offset: cs.strokeDashoffset,
+      };
+    }),
+  );
+  for (const line of lines) {
+    expect(line.delay).toBe('0s');
+    expect(parseFloat(line.duration)).toBeLessThan(0.001);
+    expect(parseFloat(line.offset)).toBe(0);
+  }
+});

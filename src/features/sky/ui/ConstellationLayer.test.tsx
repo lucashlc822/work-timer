@@ -320,6 +320,54 @@ describe('ConstellationLayer', () => {
     });
   });
 
+  describe('the completion moment', () => {
+    const celebrate = (delay: number, mode: 'hero' | 'full' = 'full') =>
+      render(
+        <ConstellationLayer
+          sky={sky()}
+          mode={mode}
+          width={1200}
+          height={800}
+          celebrating={new Map([['c1', delay]])}
+        />,
+      );
+    const kite = (container: HTMLElement) => container.querySelector('[data-figure="c1"]')!;
+    const delayOf = (el: Element) => parseFloat((el as SVGElement).style.animationDelay);
+
+    it('draws the lines in one after another, then traces the figure, blooms and flares the stars', () => {
+      const { container } = celebrate(500);
+      const figure = kite(container);
+
+      const lines = [...figure.querySelectorAll('line.sky-draw')];
+      expect(lines).toHaveLength(4);
+      for (const line of lines) expect(line.getAttribute('pathLength')).toBe('1');
+      const delays = lines.map(delayOf);
+      expect(delays[0]).toBe(500);
+      for (let i = 1; i < delays.length; i++) expect(delays[i]).toBeGreaterThan(delays[i - 1]!);
+
+      const art = [...figure.querySelectorAll('[data-atlas] path.sky-draw')];
+      expect(art.length).toBeGreaterThan(0);
+      for (const path of art) expect(delayOf(path)).toBeGreaterThanOrEqual(delays.at(-1)!);
+
+      const bloom = figure.querySelector('[data-celebration="bloom"]');
+      expect(bloom?.getAttribute('class')).toBe('sky-bloom');
+      expect(delayOf(bloom!)).toBe(500);
+
+      expect(figure.querySelectorAll('.sky-flare')).toHaveLength(4);
+    });
+
+    it('leaves a figure that is not celebrating exactly as it was', () => {
+      const { container } = renderLayer('full');
+      expect(container.querySelector('.sky-draw, .sky-bloom, .sky-flare')).toBeNull();
+      expect(container.querySelector('[data-celebration]')).toBeNull();
+    });
+
+    it('never plays behind the timer', () => {
+      const { container } = celebrate(0, 'hero');
+      expect(container.querySelector('.sky-draw, .sky-bloom, .sky-flare')).toBeNull();
+    });
+  });
+
   describe('captions at the window edge', () => {
     // jsdom has no text metrics, so give every caption a width to measure.
     const withTextLength = (length: number) => {
