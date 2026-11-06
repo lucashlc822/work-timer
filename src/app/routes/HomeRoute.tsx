@@ -12,8 +12,8 @@ import {
   SharedPicker,
   SharedStartHint,
   SkyBackdrop,
-  StarGlyph,
   StartHint,
+  StylePreview,
   TargetPicker,
   ThemeSwatch,
   useEarnedTiers,
@@ -147,9 +147,7 @@ const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
 
 /** The same star in each style, so the shop shows only what the style changes. */
-const renderStylePreview = (styleKey: string) => (
-  <StarGlyph seed="shop-preview" focusS={1500} style={styleKey} size={40} />
-);
+const renderStylePreview = (styleKey: string) => <StylePreview styleKey={styleKey} />;
 
 const renderThemePreview = (themeKey: string) => <ThemeSwatch theme={themeKey} />;
 const renderPackPreview = (packKey: string) => <PackPreview pack={packKey} />;
