@@ -14,6 +14,7 @@ export { OnlineToggle } from './ui/OnlineToggle';
 export type { Friends } from './hooks/useFriends';
 export type { FriendRow } from './data/friendsRepository';
 export type { FriendChoice, FriendSession, FriendSky } from './domain/friendSky';
+export { possessive } from './domain/possessive';
 export { TogetherPanel } from './ui/TogetherPanel';
 export { TogetherLobby } from './ui/TogetherLobby';
 export {

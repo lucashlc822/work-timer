@@ -1,8 +1,21 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
-import { LAVENDER_300, LAVENDER_400, MINT_300, ROSE_300 } from '../../../../design-tokens.mjs';
+import {
+  LAVENDER_300,
+  LAVENDER_400,
+  MINT_300,
+  NIGHT_900,
+  ROSE_300,
+} from '../../../../design-tokens.mjs';
 import { hashSeed } from '@/shared/lib';
 
+import {
+  CAPTION_ALPHA,
+  CAPTION_ALPHA_ACTIVE,
+  CAPTION_LINE_HEIGHT,
+  captionCandidates,
+  shrunkFontSize,
+} from '../domain/captionLayout';
 import {
   gridPlacements,
   heroPlacement,
@@ -52,6 +65,8 @@ interface Props {
    * with the delay (ms) before each starts (View sky upgrade PR 6).
    */
   celebrating?: ReadonlyMap<string, number>;
+  /** Full mode only: the sky's accessible name. Your own is "Your sky"; a friend's is theirs. */
+  label?: string;
 }
 
 /** Between one line drawing itself in and the next, in growth order. */
@@ -129,6 +144,7 @@ export const ConstellationLayer = ({
   describeFigure,
   activeFigureId = null,
   celebrating,
+  label = 'Your sky',
 }: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -154,7 +170,7 @@ export const ConstellationLayer = ({
       className="absolute inset-0"
       aria-hidden={full ? undefined : true}
       role={full ? 'group' : undefined}
-      aria-label={full ? 'Your sky' : undefined}
+      aria-label={full ? label : undefined}
       data-active={full && activeFigureId !== null ? activeFigureId : undefined}
     >
       <defs>
@@ -261,11 +277,17 @@ const CAPTION_EDGE = 8;
 
 /**
  * The words under a figure, in the atlas type. Small capitals with wide
- * tracking run wider than the figure's own cell, and the last column's caption
- * (a shared constellation's "The Kite · with Bea · 1/4" is the longest) would be
- * clipped by the window at narrow widths. So it is measured once drawn and nudged
- * back inside the edges. Re-measured when the web font arrives, since the
- * fallback face has different widths.
+ * tracking run wider than the figure's own cell, so what was drawn is measured
+ * and, while it is wider than the cell, set on more lines (`captionCandidates`,
+ * fewest first), and only as a last resort smaller. Then it is nudged back
+ * inside the window's edges: the last column's caption (a shared
+ * constellation's "The Kite · with Bea · 1/4" is the longest) would be clipped by
+ * the window at narrow widths. All of it is re-measured when the web font
+ * arrives, since the fallback face has different widths. This happens before
+ * the browser paints, so no one sees the steps.
+ *
+ * A caption keeps its own opacity, never its figure's: an unfinished or dimmed
+ * figure fades its lines and stars, but its name stays readable (4.5:1).
  */
 const Caption = ({
   text,
@@ -274,6 +296,8 @@ const Caption = ({
   fontSize,
   nebula,
   viewWidth,
+  maxWidth,
+  active,
   focus,
 }: {
   text: string;
@@ -282,6 +306,10 @@ const Caption = ({
   fontSize: number;
   nebula: boolean;
   viewWidth: number;
+  /** The width of the figure's cell: a caption wider than this wraps. */
+  maxWidth: number;
+  /** The figure being looked at, whose caption is a little brighter. */
+  active: boolean;
   /** Makes the caption the constellation's keyboard stop (View sky upgrade PR 4). */
   focus?: {
     label: string;
@@ -295,6 +323,10 @@ const Caption = ({
   // Until measured (and always in jsdom), a fair guess at small capitals' width.
   const [width, setWidth] = useState(text.length * fontSize * 0.62);
   const [fontEpoch, setFontEpoch] = useState(0);
+  // Which setting of the words is drawn: reset whenever anything it depends on changes.
+  const fitKey = `${text}|${maxWidth}|${fontSize}|${nebula}|${fontEpoch}`;
+  const [fit, setFit] = useState({ key: fitKey, index: 0, size: fontSize });
+  const now = fit.key === fitKey ? fit : { key: fitKey, index: 0, size: fontSize };
 
   useEffect(() => {
     const fonts = typeof document === 'undefined' ? undefined : document.fonts;
@@ -304,19 +336,39 @@ const Caption = ({
     return () => fonts.removeEventListener('loadingdone', bump);
   }, []);
 
+  const candidates = captionCandidates(text);
+  const lines = candidates[Math.min(now.index, candidates.length - 1)]!;
+  const extraLines = lines.length - 1;
+  const lineHeight = now.size * CAPTION_LINE_HEIGHT;
+  const linesKey = lines.join('\n');
+
   useLayoutEffect(() => {
     const el = ref.current;
-    // jsdom has no text metrics: leave the caption centred there.
-    if (el === null || typeof el.getComputedTextLength !== 'function') return;
-    const measured = el.getComputedTextLength();
+    // jsdom has no text metrics: leave the caption on one line, centred.
+    if (el === null || typeof el.getBBox !== 'function') return;
+    const measured = el.getBBox().width;
     setWidth(measured);
+    if (measured > maxWidth + 0.5) {
+      // Too wide for its cell: more lines first, then smaller.
+      if (now.index < candidates.length - 1) {
+        setFit({ key: fitKey, index: now.index + 1, size: fontSize });
+        return;
+      }
+      const smaller = shrunkFontSize(now.size, measured, maxWidth);
+      if (smaller < now.size - 0.05) {
+        setFit({ key: fitKey, index: now.index, size: smaller });
+        return;
+      }
+    }
     const half = measured / 2;
     const lowest = CAPTION_EDGE + half;
     const highest = viewWidth - CAPTION_EDGE - half;
     // A caption wider than the window itself stays centred rather than flip-flopping.
     const x = highest < lowest ? cx : Math.min(Math.max(cx, lowest), highest);
     setDx(x - cx);
-  }, [text, cx, fontSize, nebula, viewWidth, fontEpoch]);
+    // `candidates` is a function of `text`, already in the key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitKey, now.index, now.size, linesKey, cx, viewWidth, maxWidth, fontSize]);
 
   const words = (
     <text
@@ -325,8 +377,14 @@ const Caption = ({
       y={y}
       textAnchor="middle"
       fill={LAVENDER_300}
-      fillOpacity={0.75}
-      fontSize={fontSize}
+      fillOpacity={active ? CAPTION_ALPHA_ACTIVE : CAPTION_ALPHA}
+      // A dark edge under the letters, so they hold against a figure's own glow.
+      stroke={NIGHT_900}
+      strokeOpacity={0.7}
+      strokeWidth={3}
+      strokeLinejoin="round"
+      paintOrder="stroke"
+      fontSize={now.size}
       className="font-atlas"
       fontWeight={500}
       fontStyle={nebula ? 'italic' : undefined}
@@ -335,17 +393,23 @@ const Caption = ({
         fontVariantNumeric: 'oldstyle-nums',
       }}
     >
-      {text}
+      {lines.length === 1
+        ? lines[0]
+        : lines.map((line, i) => (
+            <tspan key={line} x={cx + dx} dy={i === 0 ? 0 : lineHeight}>
+              {line}
+            </tspan>
+          ))}
     </text>
   );
   if (focus === undefined) return words;
 
   // A target at least 24 px tall (WCAG 2.5.8) around the words, and a ring on it
   // for the keyboard (2.4.7): the global outline would box the SVG oddly.
-  const height = Math.max(24, fontSize + 12);
+  const height = Math.max(24, now.size + 12 + extraLines * lineHeight);
   const box = {
     x: cx + dx - width / 2 - 6,
-    y: y - fontSize - (height - fontSize) / 2 + 3,
+    y: y - now.size - (height - now.size - extraLines * lineHeight) / 2 + 3,
     width: width + 12,
     height,
   };
@@ -425,14 +489,14 @@ const Figure = ({
   };
   // Faded (abandoned, or a stopped shared one) unless it is the one looked at.
   const base = faded && !active ? 0.45 : 1;
+  // The cell the figure sits in (`gridPlacements` makes the box 70% of it): its caption wraps to fit.
+  const cellWidth = box.size / 0.7;
 
   return (
     <g
       data-figure={full ? state.choice.id : undefined}
       role={full ? 'group' : undefined}
       aria-label={full ? progressLabel(state) : undefined}
-      style={full ? { opacity: base * (dimmed ? DIMMED : 1) } : { opacity: base }}
-      className={full ? 'ease-gentle transition-opacity duration-500' : undefined}
       {...(onFigure !== undefined && {
         onPointerEnter: () => onFigure('enter', figure),
         onPointerLeave: () => onFigure('leave', figure),
@@ -452,6 +516,8 @@ const Figure = ({
           fontSize={Math.max(11, Math.min(14, box.size * 0.07))}
           nebula={style === 'nebula'}
           viewWidth={viewWidth}
+          maxWidth={cellWidth - 6}
+          active={active}
           {...(onFigure !== undefined && {
             focus: {
               label: progressLabel(state),
@@ -463,182 +529,189 @@ const Figure = ({
         />
       )}
 
-      {style === 'nebula' && (
-        <>
-          <defs>
-            <radialGradient id={gradientId}>
-              <stop offset="0%" stopColor={nebulaHue} stopOpacity={0.32} />
-              <stop offset="60%" stopColor={nebulaHue} stopOpacity={0.1} />
-              <stop offset="100%" stopColor={nebulaHue} stopOpacity={0} />
-            </radialGradient>
-          </defs>
-          <ellipse
-            cx={box.x + box.size / 2}
-            cy={box.y + box.size / 2}
-            rx={box.size * 0.62}
-            ry={box.size * 0.5}
-            fill={`url(#${gradientId})`}
-            opacity={0.35 + 0.65 * (stars.length / points.length)}
-          />
-        </>
-      )}
-
-      {/* The engraved figure, under everything else in the constellation. */}
-      {/* The completion moment's bloom: a soft swell of light behind the figure. */}
-      {celebrate !== undefined && (
-        <>
-          <defs>
-            <radialGradient id={`${gradientId}-bloom`}>
-              <stop
-                offset="0%"
-                stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
-                stopOpacity={0.5}
-              />
-              <stop
-                offset="100%"
-                stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
-                stopOpacity={0}
-              />
-            </radialGradient>
-          </defs>
-          <ellipse
-            data-celebration="bloom"
-            cx={box.x + box.size / 2}
-            cy={box.y + box.size / 2}
-            rx={box.size * 0.7}
-            ry={box.size * 0.6}
-            fill={`url(#${gradientId}-bloom)`}
-            className="sky-bloom"
-            style={{ animationDelay: `${celebrate}ms` }}
-          />
-        </>
-      )}
-
-      <AtlasFigure
-        def={def}
-        box={box}
-        fill={fill}
-        complete={complete}
-        // The engraving traces itself once the lines are in.
-        {...(celebrate !== undefined && { drawDelayMs: celebrate + linesMs })}
-      />
-
-      {/* Edges not yet earned: a faint blueprint of what is being built. */}
-      {!complete &&
-        def.shape.edges
-          .filter(([a, b]) => !(filled(a) && filled(b)))
-          .map(([a, b]) => (
-            <line
-              key={`todo-${a}-${b}`}
-              x1={points[a]![0]}
-              y1={points[a]![1]}
-              x2={points[b]![0]}
-              y2={points[b]![1]}
-              stroke={LAVENDER_300}
-              strokeOpacity={0.12}
-              strokeWidth={1}
-              strokeDasharray="2 4"
+      {/* Everything but the caption fades (unfinished) and dims (another figure looked at). */}
+      <g
+        data-figure-body={full ? state.choice.id : undefined}
+        style={full ? { opacity: base * (dimmed ? DIMMED : 1) } : { opacity: base }}
+        className={full ? 'ease-gentle transition-opacity duration-500' : undefined}
+      >
+        {style === 'nebula' && (
+          <>
+            <defs>
+              <radialGradient id={gradientId}>
+                <stop offset="0%" stopColor={nebulaHue} stopOpacity={0.32} />
+                <stop offset="60%" stopColor={nebulaHue} stopOpacity={0.1} />
+                <stop offset="100%" stopColor={nebulaHue} stopOpacity={0} />
+              </radialGradient>
+            </defs>
+            <ellipse
+              cx={box.x + box.size / 2}
+              cy={box.y + box.size / 2}
+              rx={box.size * 0.62}
+              ry={box.size * 0.5}
+              fill={`url(#${gradientId})`}
+              opacity={0.35 + 0.65 * (stars.length / points.length)}
             />
-          ))}
-
-      {/* Earned edges. Glow tiers get a blurred underlay, blurred once for the whole
-          figure (not once per line); the hardest tier shimmers. */}
-      {style !== 'plain' && (
-        <g filter={`url(#${glowId})`}>
-          {earnedEdges.map(([a, b]) => (
-            <line
-              key={`glow-${a}-${b}`}
-              x1={points[a]![0]}
-              y1={points[a]![1]}
-              x2={points[b]![0]}
-              y2={points[b]![1]}
-              stroke={LAVENDER_300}
-              strokeOpacity={style === 'nebula' ? 0.55 : 0.4}
-              strokeWidth={style === 'nebula' ? 4 : 3}
-            />
-          ))}
-        </g>
-      )}
-      {earnedEdges.map(([a, b], i) => (
-        <line
-          key={`edge-${a}-${b}`}
-          x1={points[a]![0]}
-          y1={points[a]![1]}
-          x2={points[b]![0]}
-          y2={points[b]![1]}
-          stroke={LAVENDER_300}
-          strokeOpacity={0.7}
-          strokeWidth={style === 'plain' ? 1 : 1.25}
-          // Each line draws itself in, one after another, in the order they grew.
-          {...(celebrate !== undefined
-            ? {
-                pathLength: 1,
-                className: 'sky-draw',
-                style: { animationDelay: `${celebrate + i * EDGE_STAGGER_MS}ms` },
-              }
-            : { className: full && style === 'nebula' ? 'sky-shimmer' : undefined })}
-        />
-      ))}
-
-      {/* Empty slots. */}
-      {!complete &&
-        points.map(([x, y], i) =>
-          filled(i) ? null : (
-            <circle key={`slot-${i}`} cx={x} cy={y} r={1.5} fill={LAVENDER_300} opacity={0.22} />
-          ),
+          </>
         )}
 
-      {stars.map((session, i) => {
-        const [x, y] = points[i]!;
-        const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
-        const form = starForm(look, session.actualFocusS, session.starStyle, starRadius, style);
-        const label = starLabel(session.endedAt, session.actualFocusS);
-        const ref: StarRef = { session, constellation: state, tier: style };
-        const description = full ? describeStar?.(ref) : undefined;
-        return (
-          <g
-            key={session.id}
-            tabIndex={full ? 0 : undefined}
-            role={full ? 'img' : undefined}
-            aria-label={full ? label : undefined}
-            className={full ? 'group focus:outline-none' : undefined}
-            {...(full ? starHandlers(onStar, { ...ref, x, y, r: form.radius }) : {})}
-          >
-            {description !== undefined && <desc>{description}</desc>}
-            {full && <HitArea x={x} y={y} />}
-            <g
-              className={full ? 'sky-twinkle' : undefined}
-              style={
-                full
-                  ? {
-                      animationDuration: `${look.twinklePeriodMs}ms`,
-                      animationDelay: `-${(look.twinklePhase / (Math.PI * 2)) * look.twinklePeriodMs}ms`,
-                    }
-                  : undefined
-              }
-            >
-              {/* The stars flare once as the last line lands. */}
-              <g
-                {...(celebrate !== undefined && {
-                  className: 'sky-flare',
-                  style: { animationDelay: `${celebrate + linesMs}ms` },
-                })}
-              >
-                <AstroStar
-                  x={x}
-                  y={y}
-                  form={form}
-                  color={look.color}
-                  brightness={look.brightness}
-                  id={`${glowId}-${session.id}`}
+        {/* The engraved figure, under everything else in the constellation. */}
+        {/* The completion moment's bloom: a soft swell of light behind the figure. */}
+        {celebrate !== undefined && (
+          <>
+            <defs>
+              <radialGradient id={`${gradientId}-bloom`}>
+                <stop
+                  offset="0%"
+                  stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
+                  stopOpacity={0.5}
                 />
-              </g>
-            </g>
-            {/* Outside the twinkle, so the ring never fades with the star. */}
-            {full && <FocusRing x={x} y={y} r={form.radius} />}
+                <stop
+                  offset="100%"
+                  stopColor={style === 'nebula' ? nebulaHue : LAVENDER_300}
+                  stopOpacity={0}
+                />
+              </radialGradient>
+            </defs>
+            <ellipse
+              data-celebration="bloom"
+              cx={box.x + box.size / 2}
+              cy={box.y + box.size / 2}
+              rx={box.size * 0.7}
+              ry={box.size * 0.6}
+              fill={`url(#${gradientId}-bloom)`}
+              className="sky-bloom"
+              style={{ animationDelay: `${celebrate}ms` }}
+            />
+          </>
+        )}
+
+        <AtlasFigure
+          def={def}
+          box={box}
+          fill={fill}
+          complete={complete}
+          // The engraving traces itself once the lines are in.
+          {...(celebrate !== undefined && { drawDelayMs: celebrate + linesMs })}
+        />
+
+        {/* Edges not yet earned: a faint blueprint of what is being built. */}
+        {!complete &&
+          def.shape.edges
+            .filter(([a, b]) => !(filled(a) && filled(b)))
+            .map(([a, b]) => (
+              <line
+                key={`todo-${a}-${b}`}
+                x1={points[a]![0]}
+                y1={points[a]![1]}
+                x2={points[b]![0]}
+                y2={points[b]![1]}
+                stroke={LAVENDER_300}
+                strokeOpacity={0.12}
+                strokeWidth={1}
+                strokeDasharray="2 4"
+              />
+            ))}
+
+        {/* Earned edges. Glow tiers get a blurred underlay, blurred once for the whole
+          figure (not once per line); the hardest tier shimmers. */}
+        {style !== 'plain' && (
+          <g filter={`url(#${glowId})`}>
+            {earnedEdges.map(([a, b]) => (
+              <line
+                key={`glow-${a}-${b}`}
+                x1={points[a]![0]}
+                y1={points[a]![1]}
+                x2={points[b]![0]}
+                y2={points[b]![1]}
+                stroke={LAVENDER_300}
+                strokeOpacity={style === 'nebula' ? 0.55 : 0.4}
+                strokeWidth={style === 'nebula' ? 4 : 3}
+              />
+            ))}
           </g>
-        );
-      })}
+        )}
+        {earnedEdges.map(([a, b], i) => (
+          <line
+            key={`edge-${a}-${b}`}
+            x1={points[a]![0]}
+            y1={points[a]![1]}
+            x2={points[b]![0]}
+            y2={points[b]![1]}
+            stroke={LAVENDER_300}
+            strokeOpacity={0.7}
+            strokeWidth={style === 'plain' ? 1 : 1.25}
+            // Each line draws itself in, one after another, in the order they grew.
+            {...(celebrate !== undefined
+              ? {
+                  pathLength: 1,
+                  className: 'sky-draw',
+                  style: { animationDelay: `${celebrate + i * EDGE_STAGGER_MS}ms` },
+                }
+              : { className: full && style === 'nebula' ? 'sky-shimmer' : undefined })}
+          />
+        ))}
+
+        {/* Empty slots. */}
+        {!complete &&
+          points.map(([x, y], i) =>
+            filled(i) ? null : (
+              <circle key={`slot-${i}`} cx={x} cy={y} r={1.5} fill={LAVENDER_300} opacity={0.22} />
+            ),
+          )}
+
+        {stars.map((session, i) => {
+          const [x, y] = points[i]!;
+          const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
+          const form = starForm(look, session.actualFocusS, session.starStyle, starRadius, style);
+          const label = starLabel(session.endedAt, session.actualFocusS);
+          const ref: StarRef = { session, constellation: state, tier: style };
+          const description = full ? describeStar?.(ref) : undefined;
+          return (
+            <g
+              key={session.id}
+              tabIndex={full ? 0 : undefined}
+              role={full ? 'img' : undefined}
+              aria-label={full ? label : undefined}
+              className={full ? 'group focus:outline-none' : undefined}
+              {...(full ? starHandlers(onStar, { ...ref, x, y, r: form.radius }) : {})}
+            >
+              {description !== undefined && <desc>{description}</desc>}
+              {full && <HitArea x={x} y={y} />}
+              <g
+                className={full ? 'sky-twinkle' : undefined}
+                style={
+                  full
+                    ? {
+                        animationDuration: `${look.twinklePeriodMs}ms`,
+                        animationDelay: `-${(look.twinklePhase / (Math.PI * 2)) * look.twinklePeriodMs}ms`,
+                      }
+                    : undefined
+                }
+              >
+                {/* The stars flare once as the last line lands. */}
+                <g
+                  {...(celebrate !== undefined && {
+                    className: 'sky-flare',
+                    style: { animationDelay: `${celebrate + linesMs}ms` },
+                  })}
+                >
+                  <AstroStar
+                    x={x}
+                    y={y}
+                    form={form}
+                    color={look.color}
+                    brightness={look.brightness}
+                    id={`${glowId}-${session.id}`}
+                  />
+                </g>
+              </g>
+              {/* Outside the twinkle, so the ring never fades with the star. */}
+              {full && <FocusRing x={x} y={y} r={form.radius} />}
+            </g>
+          );
+        })}
+      </g>
     </g>
   );
 };

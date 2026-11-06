@@ -7,6 +7,7 @@ import { deriveSky } from '../domain/derive';
 import { deriveShared } from '../domain/shared';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
+import { CAPTION_ALPHA, CAPTION_ALPHA_ACTIVE } from '../domain/captionLayout';
 import { ConstellationLayer } from './ConstellationLayer';
 
 afterEach(() => {
@@ -82,6 +83,75 @@ describe('ConstellationLayer', () => {
 
     const captions = [...container.querySelectorAll('text')].map((t) => t.textContent);
     expect(captions).toEqual(['The Kite', 'The Arrow · 2/5']);
+  });
+
+  it('names the sky "Your sky" unless it is told whose it is', () => {
+    const own = renderLayer('full');
+    expect(own.container.querySelector('svg')!.getAttribute('aria-label')).toBe('Your sky');
+    cleanup();
+
+    const { container } = render(
+      <ConstellationLayer sky={sky()} mode="full" width={1200} height={800} label="Ada's sky" />,
+    );
+    const root = container.querySelector('svg')!;
+    expect(root.getAttribute('role')).toBe('group');
+    expect(root.getAttribute('aria-label')).toBe("Ada's sky");
+  });
+
+  describe('a caption', () => {
+    /** An Arrow left at 2 of 5 stars (so unfinished), then a finished Kite. */
+    const unfinishedThenKite = () =>
+      deriveSky(
+        [star(1), star(2), star(11), star(12), star(13), star(14)],
+        [choice('c1', 'arrow', T0), choice('c2', 'kite', T0 + 10 * HOUR)],
+        rules,
+      );
+    const captionOf = (container: HTMLElement, id: string) =>
+      container.querySelector<SVGTextElement>(`[data-figure="${id}"] text`)!;
+    const bodyOf = (container: HTMLElement, id: string) =>
+      container.querySelector<SVGElement>(`[data-figure="${id}"] > [data-figure-body]`)!;
+
+    it('keeps its own opacity when its figure is unfinished and another is looked at', () => {
+      const { container } = render(
+        <ConstellationLayer
+          sky={unfinishedThenKite()}
+          mode="full"
+          width={1200}
+          height={800}
+          activeFigureId="c2"
+        />,
+      );
+
+      // The unfinished Arrow's lines and stars fade (0.45) and dim (0.35)...
+      expect(Number(bodyOf(container, 'c1').style.opacity)).toBeCloseTo(0.45 * 0.35);
+      // ...but its caption is outside that group, at the readable opacity.
+      const caption = captionOf(container, 'c1');
+      expect(caption.closest('[data-figure-body]')).toBeNull();
+      expect(Number(caption.getAttribute('fill-opacity'))).toBe(CAPTION_ALPHA);
+    });
+
+    it('is a little brighter on the figure being looked at', () => {
+      const { container } = render(
+        <ConstellationLayer
+          sky={unfinishedThenKite()}
+          mode="full"
+          width={1200}
+          height={800}
+          activeFigureId="c1"
+        />,
+      );
+      expect(Number(captionOf(container, 'c1').getAttribute('fill-opacity'))).toBe(
+        CAPTION_ALPHA_ACTIVE,
+      );
+      expect(Number(captionOf(container, 'c2').getAttribute('fill-opacity'))).toBe(CAPTION_ALPHA);
+    });
+
+    it('has a dark edge so it holds against a glow', () => {
+      const { container } = renderLayer('full');
+      const caption = container.querySelector('text')!;
+      expect(caption.getAttribute('stroke')).not.toBeNull();
+      expect(caption.getAttribute('paint-order')).toBe('stroke');
+    });
   });
 
   it('draws one line per earned edge, and the rest as faint dashes', () => {
@@ -271,7 +341,7 @@ describe('ConstellationLayer', () => {
     it('is drawn under the lines and stars of its constellation, in the same pixels', () => {
       const { container } = renderLayer('full', kiteAfter(2));
 
-      const group = container.querySelector('[data-figure]')!;
+      const group = container.querySelector('[data-figure-body]')!;
       const children = [...group.children];
       const artAt = children.findIndex((c) => c.getAttribute('data-atlas') === 'art');
       const firstLine = children.findIndex((c) => c.tagName.toLowerCase() === 'line');
@@ -371,14 +441,15 @@ describe('ConstellationLayer', () => {
   describe('captions at the window edge', () => {
     // jsdom has no text metrics, so give every caption a width to measure.
     const withTextLength = (length: number) => {
-      Object.defineProperty(SVGElement.prototype, 'getComputedTextLength', {
+      Object.defineProperty(SVGElement.prototype, 'getBBox', {
         configurable: true,
-        value: () => length,
+        value: () => ({ x: 0, y: 0, width: length, height: 12 }),
       });
     };
-    afterEach(() => {
-      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
-    });
+    const withoutTextLength = () => {
+      Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+    };
+    afterEach(withoutTextLength);
 
     const captionXs = (container: HTMLElement) =>
       [...container.querySelectorAll('text')].map((t) => Number(t.getAttribute('x')));
@@ -402,7 +473,7 @@ describe('ConstellationLayer', () => {
       withTextLength(20);
       const measured = captionXs(renderLayer('full', crowdedSky(), 480).container);
       cleanup();
-      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
+      withoutTextLength();
       const unmeasured = captionXs(renderLayer('full', crowdedSky(), 480).container);
 
       expect(measured).toEqual(unmeasured);
@@ -412,7 +483,7 @@ describe('ConstellationLayer', () => {
       withTextLength(900);
       const clamped = captionXs(renderLayer('full', crowdedSky(), 480).container);
       cleanup();
-      Reflect.deleteProperty(SVGElement.prototype, 'getComputedTextLength');
+      withoutTextLength();
       const natural = captionXs(renderLayer('full', crowdedSky(), 480).container);
 
       expect(clamped).toEqual(natural);

@@ -685,6 +685,16 @@ rejected). Don't pre-populate this with guesses.
   so two rows differ only by style. Static, decorative, no filter. The result
   screen keeps `StarGlyph`, which matches the brand `StarMark`; don't switch it.
 
+- **A constellation's caption keeps its own opacity and wraps to its cell** (View
+  sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
+  dimmed figure fades its lines and stars (`data-figure-body`), never its name:
+  the caption sits outside that group at `CAPTION_ALPHA` (0.75, 6.4:1 on night-900;
+  0.9 on the figure looked at) with a dark halo so it holds over a glow. A caption
+  wider than its cell is measured once drawn and set on more lines (at " · ", then
+  at spaces, up to three, `captionCandidates`), smaller only as a last resort
+  (floor 10 px); nothing is ever cut off. A friend's sky is named "Ada's sky",
+  yours "Your sky" (`label`).
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
