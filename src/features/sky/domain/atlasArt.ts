@@ -11,13 +11,15 @@ import type { CatalogueKey } from './catalogue';
  * on purpose: they are a whisper under the stars, not an illustration.
  *
  * Art is keyed by catalogue key, which is permanent, so a drawing may be
- * redrawn but never removed. A shape without art draws a soft outline instead.
+ * redrawn but never removed. **Every catalogue shape must have one**: the type
+ * below demands it, so a new shape cannot ship without its drawing. Only a
+ * generated ("wild") shape has none, and draws a soft outline instead.
  */
 export interface AtlasFigureArt {
   paths: readonly string[];
 }
 
-export const ATLAS_ART: Partial<Readonly<Record<CatalogueKey, AtlasFigureArt>>> = {
+export const ATLAS_ART = {
   // A paper kite on its string: the sail, its two spars, and a tail of bows.
   kite: {
     paths: [
@@ -120,4 +122,78 @@ export const ATLAS_ART: Partial<Readonly<Record<CatalogueKey, AtlasFigureArt>>> 
       'M0.36 0.3L0.4 0.14L0.32 0.04M0.4 0.14L0.48 0.06M0.4 0.14L0.28 0.12',
     ],
   },
-};
+
+  // A fox’s face: pointed ears, cheek tufts, slanted eyes, a small nose and whiskers.
+  fox: {
+    paths: [
+      'M0.2 0.15C0.24 0.3 0.26 0.4 0.3 0.45C0.36 0.62 0.44 0.76 0.5 0.82C0.56 0.76 0.64 0.62 0.7 0.45C0.74 0.4 0.76 0.3 0.8 0.15',
+      'M0.2 0.15C0.26 0.2 0.34 0.26 0.4 0.32M0.8 0.15C0.74 0.2 0.66 0.26 0.6 0.32M0.4 0.32C0.46 0.3 0.54 0.3 0.6 0.32',
+      'M0.36 0.46L0.44 0.5M0.64 0.46L0.56 0.5',
+      'M0.47 0.78L0.53 0.78L0.5 0.84Z',
+      'M0.4 0.64L0.26 0.62M0.4 0.68L0.28 0.72M0.6 0.64L0.74 0.62M0.6 0.68L0.72 0.72',
+      'M0.3 0.45L0.2 0.5L0.28 0.54M0.7 0.45L0.8 0.5L0.72 0.54',
+    ],
+  },
+
+  // An owl on its branch: ear tufts, round eyes, beak, scalloped chest and folded wings.
+  owl: {
+    paths: [
+      'M0.3 0.32C0.2 0.4 0.16 0.56 0.22 0.7C0.28 0.84 0.4 0.92 0.5 0.92C0.6 0.92 0.72 0.84 0.78 0.7C0.84 0.56 0.8 0.4 0.7 0.32',
+      'M0.22 0.1C0.3 0.16 0.4 0.2 0.5 0.2C0.6 0.2 0.7 0.16 0.78 0.1M0.22 0.1C0.2 0.2 0.24 0.28 0.3 0.32M0.78 0.1C0.8 0.2 0.76 0.28 0.7 0.32',
+      'M0.31 0.4C0.31 0.34 0.45 0.34 0.45 0.4C0.45 0.46 0.31 0.46 0.31 0.4ZM0.55 0.4C0.55 0.34 0.69 0.34 0.69 0.4C0.69 0.46 0.55 0.46 0.55 0.4Z',
+      'M0.46 0.46L0.54 0.46L0.5 0.54Z',
+      'M0.34 0.64Q0.4 0.7 0.46 0.64M0.46 0.64Q0.5 0.7 0.54 0.64M0.54 0.64Q0.6 0.7 0.66 0.64M0.38 0.76Q0.44 0.82 0.5 0.76M0.5 0.76Q0.56 0.82 0.62 0.76',
+      'M0.22 0.7C0.3 0.64 0.32 0.54 0.3 0.46M0.78 0.7C0.7 0.64 0.68 0.54 0.7 0.46',
+      'M0.1 0.95L0.9 0.95',
+    ],
+  },
+
+  // A stag in profile: antlers, ear, a long neck, four legs and a short tail.
+  stag: {
+    paths: [
+      'M0.12 0.52L0.1 0.56L0.16 0.58L0.26 0.5M0.27 0.38L0.33 0.3L0.34 0.38',
+      'M0.16 0.58C0.26 0.54 0.34 0.58 0.42 0.62C0.5 0.7 0.56 0.7 0.6 0.64C0.7 0.66 0.8 0.64 0.9 0.6',
+      'M0.4 0.38C0.5 0.36 0.7 0.4 0.82 0.46C0.9 0.48 0.94 0.54 0.9 0.6M0.9 0.5L0.96 0.46',
+      'M0.46 0.64L0.44 0.8L0.42 0.9M0.52 0.66L0.5 0.8L0.5 0.9M0.84 0.6L0.82 0.76L0.84 0.9M0.78 0.64L0.76 0.8L0.78 0.9',
+      'M0.3 0.3C0.26 0.22 0.24 0.14 0.22 0.08M0.28 0.2L0.2 0.18M0.25 0.12L0.18 0.1',
+      'M0.3 0.3C0.34 0.24 0.38 0.18 0.4 0.12M0.4 0.12L0.34 0.04M0.37 0.18L0.46 0.16M0.4 0.12L0.46 0.08',
+    ],
+  },
+
+  // A sailboat: a mast with its pennant, mainsail and jib, a hull, and waves.
+  sailboat: {
+    paths: [
+      'M0.5 0.06L0.5 0.84M0.5 0.08L0.62 0.12L0.5 0.16',
+      'M0.5 0.1C0.56 0.3 0.7 0.5 0.84 0.62C0.72 0.66 0.6 0.66 0.5 0.64M0.5 0.26C0.58 0.34 0.64 0.42 0.7 0.5M0.5 0.42C0.56 0.5 0.62 0.56 0.66 0.62',
+      'M0.46 0.16C0.4 0.34 0.3 0.5 0.2 0.62C0.3 0.64 0.4 0.64 0.46 0.62Z',
+      'M0.14 0.7C0.24 0.76 0.6 0.76 0.9 0.7C0.84 0.8 0.78 0.86 0.72 0.9C0.56 0.92 0.36 0.92 0.2 0.9C0.17 0.84 0.15 0.76 0.14 0.7Z',
+      'M0.08 0.97C0.18 0.94 0.26 1 0.36 0.97M0.62 0.97C0.72 0.94 0.8 1 0.9 0.97',
+    ],
+  },
+
+  // An anchor: ring, stock, a doubled shank with a rope coiled round it, curved arms and flukes.
+  anchor: {
+    paths: [
+      'M0.45 0.1C0.45 0.04 0.55 0.04 0.55 0.1C0.55 0.16 0.45 0.16 0.45 0.1Z',
+      'M0.3 0.26L0.7 0.26M0.3 0.23L0.3 0.29M0.7 0.23L0.7 0.29',
+      'M0.48 0.16L0.48 0.84M0.52 0.16L0.52 0.84',
+      'M0.5 0.84C0.34 0.84 0.2 0.76 0.14 0.62M0.5 0.84C0.66 0.84 0.8 0.76 0.86 0.62',
+      'M0.14 0.62L0.07 0.56L0.2 0.57ZM0.86 0.62L0.93 0.56L0.8 0.57Z',
+      'M0.5 0.16C0.62 0.2 0.62 0.3 0.5 0.34C0.38 0.4 0.4 0.5 0.5 0.54',
+    ],
+  },
+
+  // A galleon under sail: hull with its planks and stern, two masts, billowing sails, stays and a pennant.
+  galleon: {
+    paths: [
+      'M0.04 0.6C0.1 0.7 0.14 0.8 0.2 0.86C0.4 0.9 0.6 0.9 0.8 0.86C0.86 0.8 0.9 0.7 0.96 0.6M0.04 0.6C0.3 0.66 0.7 0.66 0.96 0.6',
+      'M0.12 0.72C0.4 0.78 0.6 0.78 0.88 0.72M0.16 0.8C0.4 0.84 0.6 0.84 0.84 0.8M0.8 0.62L0.8 0.5L0.94 0.5L0.94 0.62',
+      'M0.35 0.06L0.35 0.64M0.68 0.1L0.68 0.64',
+      'M0.35 0.1C0.2 0.2 0.12 0.34 0.14 0.44C0.2 0.5 0.28 0.52 0.35 0.5',
+      'M0.68 0.16C0.56 0.24 0.5 0.32 0.52 0.38C0.6 0.44 0.7 0.46 0.84 0.44C0.8 0.34 0.76 0.24 0.68 0.16',
+      'M0.68 0.12L0.78 0.06L0.68 0.04',
+      'M0.35 0.1L0.06 0.62M0.68 0.16L0.94 0.62',
+      'M0.04 0.95C0.14 0.92 0.22 0.98 0.32 0.95M0.68 0.95C0.78 0.92 0.86 0.98 0.96 0.95',
+    ],
+  },
+} as const satisfies Readonly<Record<CatalogueKey, AtlasFigureArt>>;

@@ -6,10 +6,6 @@ import { CATALOGUE, catalogueEntry, type CatalogueEntry, type CatalogueKey } fro
 
 const keys = Object.keys(CATALOGUE) as CatalogueKey[];
 const entry = (k: CatalogueKey) => catalogueEntry(k) as CatalogueEntry;
-const drawn = keys.filter((k) => ATLAS_ART[k] !== undefined);
-
-/** The shapes everyone has: these must have drawings. A pack comes in its own PR. */
-const BASE = keys.filter((k) => entry(k).pack === undefined);
 
 const box = (points: readonly (readonly [number, number])[]) => ({
   minX: Math.min(...points.map((p) => p[0])),
@@ -19,22 +15,19 @@ const box = (points: readonly (readonly [number, number])[]) => ({
 });
 
 describe('the atlas art', () => {
-  it('draws every shape everyone has', () => {
-    expect(BASE.filter((k) => ATLAS_ART[k] === undefined)).toEqual([]);
+  it('draws every catalogue shape, the packs included, and nothing that is not one', () => {
+    // The type already demands a drawing per key; this also catches a stale extra one.
+    expect(Object.keys(ATLAS_ART).sort()).toEqual([...keys].sort());
   });
 
-  it('is only ever keyed by a shape that exists (keys are permanent)', () => {
-    for (const k of Object.keys(ATLAS_ART)) expect(keys).toContain(k);
-  });
-
-  it.each(drawn)('%s is written in the path language', (k) => {
-    const art = ATLAS_ART[k]!;
+  it.each(keys)('%s is written in the path language', (k) => {
+    const art = ATLAS_ART[k];
     expect(art.paths.length).toBeGreaterThan(0);
     for (const d of art.paths) expect(() => parsePath(d)).not.toThrow();
   });
 
-  it.each(drawn)('%s stays inside the unit square', (k) => {
-    for (const d of ATLAS_ART[k]!.paths) {
+  it.each(keys)('%s stays inside the unit square', (k) => {
+    for (const d of ATLAS_ART[k].paths) {
       for (const [x, y] of samplePath(d)) {
         expect(x).toBeGreaterThanOrEqual(-0.05);
         expect(x).toBeLessThanOrEqual(1.05);
@@ -44,8 +37,8 @@ describe('the atlas art', () => {
     }
   });
 
-  it.each(drawn)('%s covers its stars, and leaves none floating clear of a line', (k) => {
-    const lines = ATLAS_ART[k]!.paths.flatMap((d) => samplePath(d));
+  it.each(keys)('%s covers its stars, and leaves none floating clear of a line', (k) => {
+    const lines = ATLAS_ART[k].paths.flatMap((d) => samplePath(d));
     const art = box(lines);
     const stars = box(entry(k).shape.points);
     // Not a drawing of something else, nor the same thing mirrored or off to one side.
@@ -60,7 +53,7 @@ describe('the atlas art', () => {
 
   it('draws nothing twice within a shape', () => {
     for (const k of keys) {
-      const paths = ATLAS_ART[k]?.paths ?? [];
+      const paths: readonly string[] = ATLAS_ART[k].paths;
       expect(new Set(paths).size).toBe(paths.length);
     }
   });

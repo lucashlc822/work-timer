@@ -630,9 +630,12 @@ rejected). Don't pre-populate this with guesses.
   width). It fades in with the stars (`atlasFade.ts`: 0.04 at no stars, up to
   0.3 once complete) and is decorative: `aria-hidden`, no role or name. Art is
   keyed by the permanent catalogue key, so a drawing may be redrawn but never
-  removed. A shape with no drawing (a generated "wild" one, or a pack shape
-  until its art is drawn) gets `figureOutline`: a fainter dotted outline, the
-  convex hull of its stars padded and smoothed. Tests check every drawing
+  removed. **Every catalogue shape must have a drawing**: `ATLAS_ART` is
+  `satisfies Record<CatalogueKey, …>`, so a new shape fails to compile until
+  its art is drawn. Only a generated ("wild") shape has none, and gets
+  `figureOutline`: a fainter dotted outline, the convex hull of its stars
+  padded and smoothed. A pack shape draws its art whether or not the pack is
+  owned (art is not gated, like the shapes themselves). Tests check every drawing
   parses, stays inside the square, covers its stars' extent and leaves no star
   more than 0.12 from a line, so a drawing of the wrong thing, mirrored, or
   misplaced fails.

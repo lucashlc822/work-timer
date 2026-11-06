@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ART_COMPLETE } from '../domain/atlasFade';
 import { deriveSky } from '../domain/derive';
+import { deriveShared } from '../domain/shared';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
 import { ConstellationLayer } from './ConstellationLayer';
@@ -287,10 +288,35 @@ describe('ConstellationLayer', () => {
       expect(container.querySelector('[data-atlas][class]')).toBeNull();
     });
 
-    it('draws a shape of a pack the same way as any other until its art is drawn', () => {
+    it('draws a pack shape its own drawing too, whether or not its pack is owned', () => {
       const fox: ConstellationChoice = { ...kite, id: 'c-fox', shapeId: 'fox' };
-      const { container } = renderLayer('full', deriveSky([star(1)], [fox], rules));
-      expect(['art', 'outline']).toContain(figure(container)?.getAttribute('data-atlas'));
+      const mine = renderLayer('full', deriveSky([star(1)], [fox], rules));
+      expect(figure(mine.container)?.getAttribute('data-atlas')).toBe('art');
+      cleanup();
+
+      // A friend’s shared constellation of a pack shape you do not own draws it as well.
+      const theirs = deriveShared({
+        id: 'sh-owl',
+        partnerName: 'Bea',
+        choice: { ...kite, id: 'sh-owl', shapeId: 'owl', tier: 'medium' },
+        starsNeeded: 8,
+        minFocusS: 0,
+        acceptedAt: T0,
+        stoppedAt: null,
+        sessions: [],
+      });
+      const shared = render(
+        <ConstellationLayer
+          sky={deriveSky([], [], rules)}
+          mode="full"
+          width={1200}
+          height={800}
+          shared={[theirs]}
+        />,
+      );
+      expect(shared.container.querySelector('[data-atlas]')?.getAttribute('data-atlas')).toBe(
+        'art',
+      );
     });
   });
 

@@ -1,17 +1,16 @@
 import { LAVENDER_300 } from '../../../../design-tokens.mjs';
 
-import { ATLAS_ART } from '../domain/atlasArt';
+import { ATLAS_ART, type AtlasFigureArt } from '../domain/atlasArt';
 import { artOpacity, outlineOpacity } from '../domain/atlasFade';
 import { pathToPixels } from '../domain/atlasPath';
-import type { CatalogueKey } from '../domain/catalogue';
 import type { Placement } from '../domain/layout';
 import { figureOutline } from '../domain/outline';
 import type { ConstellationDef } from '../domain/types';
 
 /**
  * The engraved figure behind a constellation: a hand-drawn line drawing for a
- * catalogue shape, or a soft dotted outline for one with no art (a generated
- * "wild" shape). It grows clearer as stars fill in and is fully drawn once the
+ * catalogue shape, or a soft dotted outline for a generated ("wild") shape,
+ * which has none. It grows clearer as stars fill in and is fully drawn once the
  * constellation is complete.
  *
  * Decorative: `aria-hidden`, no role, no name. Everything a person needs to
@@ -28,11 +27,11 @@ export interface AtlasFigureProps {
   complete: boolean;
 }
 
+/** Looked up by string: a stored key this build does not know is simply not found. */
+const ART: Readonly<Partial<Record<string, AtlasFigureArt>>> = ATLAS_ART;
+
 export const AtlasFigure = ({ def, box, fill, complete }: AtlasFigureProps) => {
-  const art =
-    def.source === 'catalogue' && def.shapeId !== null
-      ? ATLAS_ART[def.shapeId as CatalogueKey]
-      : undefined;
+  const art = def.source === 'catalogue' && def.shapeId !== null ? ART[def.shapeId] : undefined;
 
   if (art !== undefined) {
     return (
