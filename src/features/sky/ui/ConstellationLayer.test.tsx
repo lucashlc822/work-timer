@@ -2,6 +2,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ART_COMPLETE } from '../domain/atlasFade';
 import { deriveSky } from '../domain/derive';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
@@ -200,6 +201,96 @@ describe('ConstellationLayer', () => {
         const target = el.getAttribute('fill')!.slice(5, -1);
         expect(ids).toContain(target);
       }
+    });
+  });
+
+  describe('the engraved figure', () => {
+    const figure = (container: HTMLElement) => container.querySelector('[data-atlas]');
+    const opacityOf = (el: Element | null) => Number(el?.getAttribute('opacity'));
+
+    /** The Kite after `n` of its 4 stars. */
+    const kiteAfter = (n: number) =>
+      deriveSky(
+        Array.from({ length: n }, (_, i) => star(i + 1)),
+        [kite],
+        rules,
+      );
+    const kite = choice('c-kite', 'kite', T0);
+
+    /** A generated ("wild") constellation: no hand-drawn art to show. */
+    const wild = (): ConstellationChoice => ({
+      id: 'c-wild',
+      source: 'generated',
+      shapeId: null,
+      seed: 'wild-seed',
+      tier: 'easy',
+      chosenAt: T0,
+    });
+
+    it('draws a catalogue shape\u2019s own drawing behind it', () => {
+      const { container } = renderLayer('full', kiteAfter(2));
+
+      const art = figure(container);
+      expect(art?.getAttribute('data-atlas')).toBe('art');
+      expect(art?.querySelectorAll('path').length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('draws a soft dotted outline for a shape with no drawing', () => {
+      const { container } = renderLayer('full', deriveSky([star(1)], [wild()], rules));
+
+      const outline = figure(container);
+      expect(outline?.getAttribute('data-atlas')).toBe('outline');
+      expect(outline?.getAttribute('stroke-dasharray')).toBeTruthy();
+      expect(outline?.getAttribute('d')).toMatch(/^M.+Z$/);
+    });
+
+    it('is decorative: hidden from assistive tech, with no role or name', () => {
+      const { container } = renderLayer('full', kiteAfter(2));
+
+      const art = figure(container)!;
+      expect(art.getAttribute('aria-hidden')).toBe('true');
+      expect(art.hasAttribute('role')).toBe(false);
+      expect(art.hasAttribute('aria-label')).toBe(false);
+      expect(art.hasAttribute('tabindex')).toBe(false);
+    });
+
+    it('grows clearer as stars fill in, and is fully drawn when complete', () => {
+      const at = (n: number) => opacityOf(figure(renderLayer('full', kiteAfter(n)).container));
+      const levels = [at(1), at(2), at(3)];
+      cleanup();
+      const done = at(4);
+
+      expect(levels[0]!).toBeGreaterThan(0);
+      expect(levels[1]!).toBeGreaterThan(levels[0]!);
+      expect(levels[2]!).toBeGreaterThan(levels[1]!);
+      expect(done).toBeGreaterThan(levels[2]!);
+      expect(done).toBe(ART_COMPLETE);
+    });
+
+    it('is drawn under the lines and stars of its constellation, in the same pixels', () => {
+      const { container } = renderLayer('full', kiteAfter(2));
+
+      const group = container.querySelector('[data-figure]')!;
+      const children = [...group.children];
+      const artAt = children.findIndex((c) => c.getAttribute('data-atlas') === 'art');
+      const firstLine = children.findIndex((c) => c.tagName.toLowerCase() === 'line');
+      const firstStar = children.findIndex((c) => c.getAttribute('role') === 'img');
+      expect(artAt).toBeGreaterThanOrEqual(0);
+      expect(artAt).toBeLessThan(firstLine);
+      expect(artAt).toBeLessThan(firstStar);
+    });
+
+    it('is drawn in hero mode too, still and without a role', () => {
+      const { container } = renderLayer('hero', kiteAfter(2));
+
+      expect(figure(container)?.getAttribute('data-atlas')).toBe('art');
+      expect(container.querySelector('[data-atlas][class]')).toBeNull();
+    });
+
+    it('draws a shape of a pack the same way as any other until its art is drawn', () => {
+      const fox: ConstellationChoice = { ...kite, id: 'c-fox', shapeId: 'fox' };
+      const { container } = renderLayer('full', deriveSky([star(1)], [fox], rules));
+      expect(['art', 'outline']).toContain(figure(container)?.getAttribute('data-atlas'));
     });
   });
 

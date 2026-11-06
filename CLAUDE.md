@@ -622,6 +622,20 @@ rejected). Don't pre-populate this with guesses.
   `<desc>`; it becomes focusable only when the sky is interactive. Escape
   closes both cards and undims in one press. A shared constellation's start
   date is when it was accepted.
+- **A constellation has an engraved figure behind it, keyed by catalogue key**
+  (View sky upgrade PR 5, 2026-11-06). Hand-drawn line art in
+  `sky/domain/atlasArt.ts`, one entry per catalogue shape, in the unit square,
+  written in the tiny path language `atlasPath.ts` reads (absolute M, L, C, Q,
+  Z only; scaled to pixels by number, not by a transform, so strokes stay one
+  width). It fades in with the stars (`atlasFade.ts`: 0.04 at no stars, up to
+  0.3 once complete) and is decorative: `aria-hidden`, no role or name. Art is
+  keyed by the permanent catalogue key, so a drawing may be redrawn but never
+  removed. A shape with no drawing (a generated "wild" one, or a pack shape
+  until its art is drawn) gets `figureOutline`: a fainter dotted outline, the
+  convex hull of its stars padded and smoothed. Tests check every drawing
+  parses, stays inside the square, covers its stars' extent and leaves no star
+  more than 0.12 from a line, so a drawing of the wrong thing, mirrored, or
+  misplaced fails.
 
 ## Plans include acceptance tests
 
