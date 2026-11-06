@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { FRIENDS_MESSAGES } from '../domain/errors';
 import { statusLine, type FocusStatus } from '../domain/focusStatus';
 import type { FriendSky } from '../domain/friendSky';
+import { possessive } from '../domain/possessive';
 import { useFriendSky } from '../hooks/useFriendSky';
 
 /** The four numbers shown over a friend's sky. `app/` computes them. */
@@ -13,8 +14,6 @@ export interface FriendSummary {
   streakDays: number;
   constellations: number;
 }
-
-const possessive = (name: string): string => (name.endsWith('s') ? `${name}'` : `${name}'s`);
 
 /**
  * A friend's sky, full screen, with their name and a few numbers on a strip

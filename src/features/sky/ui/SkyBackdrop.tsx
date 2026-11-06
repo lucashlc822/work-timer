@@ -84,6 +84,7 @@ export const SkyView = ({
   insets = DEFAULT_INSETS,
   cardSide = 'above',
   celebrating,
+  label,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -111,6 +112,8 @@ export const SkyView = ({
    * start delay. Only your own sky passes this; a friend's never celebrates.
    */
   celebrating?: ReadonlyMap<string, number>;
+  /** The full sky's accessible name; a friend's is theirs. Defaults to "Your sky". */
+  label?: string;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -285,6 +288,7 @@ export const SkyView = ({
           {...(focusId !== undefined && { focusId })}
           {...(full && { onStar, describeStar, onFigure, describeFigure, activeFigureId })}
           {...(full && celebrating !== undefined && { celebrating })}
+          {...(label !== undefined && { label })}
         />
       )}
       {full && active !== null ? (

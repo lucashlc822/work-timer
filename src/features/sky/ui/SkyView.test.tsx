@@ -73,7 +73,7 @@ const stars = () => screen.getAllByRole('img', { name: /star from/i });
 const captions = () => screen.getAllByRole('img', { name: /^The / });
 const constellationCard = () => screen.queryByTestId('constellation-card');
 const figureOpacity = (id: string) =>
-  document.querySelector<SVGElement>(`[data-figure="${id}"]`)?.style.opacity;
+  document.querySelector<SVGElement>(`[data-figure="${id}"] > [data-figure-body]`)?.style.opacity;
 const card = () => screen.queryByTestId('star-card');
 
 type ViewProps = Parameters<typeof SkyView>[0];
@@ -356,5 +356,17 @@ describe('the completion announcement', () => {
   it('has no announcer behind the timer', () => {
     renderSky({ sky: finishedKite(), mode: 'hero', celebrating: new Map([['c-kite', 0]]) });
     expect(screen.queryByTestId('sky-announcer')).toBeNull();
+  });
+});
+
+describe('the sky’s name', () => {
+  it('is "Your sky" by default, and a friend’s when the view is told whose it is', () => {
+    const { unmount } = renderSky();
+    expect(screen.getByRole('group', { name: 'Your sky' })).not.toBeNull();
+    unmount();
+
+    renderSky({ label: 'Ada’s sky' }, false);
+    expect(screen.getByRole('group', { name: 'Ada’s sky' })).not.toBeNull();
+    expect(screen.queryByRole('group', { name: 'Your sky' })).toBeNull();
   });
 });

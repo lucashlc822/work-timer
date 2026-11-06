@@ -1,4 +1,4 @@
-import type { FriendSky, FriendSummary } from '@/features/friends';
+import { possessive, type FriendSky, type FriendSummary } from '@/features/friends';
 import { streakAt, styleName } from '@/features/progression';
 import { completedConstellations, deriveOtherSky, SkyView } from '@/features/sky';
 import { formatFocus, periodContaining, totals } from '@/features/stats';
@@ -18,6 +18,7 @@ export const renderFriendSky = (sky: FriendSky) => (
     sky={deriveOtherSky(sky.sessions, sky.choices)}
     themeKey={sky.themeKey ?? undefined}
     mode="full"
+    label={`${possessive(sky.displayName ?? 'Your friend')} sky`}
     styleName={styleName}
     // The friend's header, of varying height, sits over the top of their sky.
     cardSide="below"
