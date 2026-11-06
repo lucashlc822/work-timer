@@ -65,9 +65,18 @@ interface Props {
    * with the delay (ms) before each starts (View sky upgrade PR 6).
    */
   celebrating?: ReadonlyMap<string, number>;
+  /**
+   * Full mode only: pixels covered from the top of the window by something
+   * laid over the sky (a friend's header). Figures and wandering stars are laid
+   * out below it; unset, the whole window is used as before.
+   */
+  reserveTop?: number;
   /** Full mode only: the sky's accessible name. Your own is "Your sky"; a friend's is theirs. */
   label?: string;
 }
+
+/** Air left between a header over the sky and the first figure. */
+const CLEAR_OF_COVER = 16;
 
 /** Between one line drawing itself in and the next, in growth order. */
 export const EDGE_STAGGER_MS = 180;
@@ -144,6 +153,7 @@ export const ConstellationLayer = ({
   describeFigure,
   activeFigureId = null,
   celebrating,
+  reserveTop,
   label = 'Your sky',
 }: Props) => {
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
@@ -156,8 +166,21 @@ export const ConstellationLayer = ({
     ...shared.filter((s) => s.status !== 'proposed'),
   ];
   const focused = shared.find((s) => s.choice.id === focusId && s.status === 'active');
+  // Below whatever covers the top (plus a little air), and never more than 60% of the window.
+  const clear =
+    full && reserveTop !== undefined && reserveTop > 0
+      ? Math.min(reserveTop + CLEAR_OF_COVER, height * 0.6)
+      : undefined;
+  const wanderArea = clear === undefined ? undefined : { top: clear, bottom: height * 0.14 };
   const shown: { state: ConstellationState; box: Placement }[] = full
-    ? gridPlacements(visible.length, width, height).map((box, i) => ({ state: visible[i]!, box }))
+    ? gridPlacements(
+        visible.length,
+        width,
+        height,
+        clear === undefined
+          ? undefined
+          : { top: Math.max(height * 0.1, clear), bottom: height * 0.14 },
+      ).map((box, i) => ({ state: visible[i]!, box }))
     : focused !== undefined
       ? [{ state: focused, box: heroPlacement(width, height) }]
       : heroShown(sky, width, height);
@@ -180,7 +203,7 @@ export const ConstellationLayer = ({
       </defs>
 
       {sky.wandering.map(({ session }) => {
-        const [x, y] = wanderingPosition(session.seed, width, height);
+        const [x, y] = wanderingPosition(session.seed, width, height, wanderArea);
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         // Smaller than a star in a constellation, with shorter spikes: it belongs to nothing.
         const form = starForm(look, session.actualFocusS, session.starStyle, 1.3, 'plain', {

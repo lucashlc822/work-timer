@@ -98,6 +98,52 @@ describe('ConstellationLayer', () => {
     expect(root.getAttribute('aria-label')).toBe("Ada's sky");
   });
 
+  describe('with something laid over the top of the sky', () => {
+    /** One finished Kite and a few wandering stars (nothing was ever chosen for them). */
+    const withWanderers = () =>
+      deriveSky(
+        [star(1), star(2), star(3), star(4), ...[5, 6, 7, 8, 9].map((i) => star(i))],
+        [choice('c1', 'kite', T0)],
+        rules,
+      );
+    const starYs = (container: HTMLElement) =>
+      [...container.querySelectorAll('[role="img"][tabindex="0"] circle[r="12"]')].map((c) =>
+        Number(c.getAttribute('cy')),
+      );
+    const renderReserved = (reserveTop?: number) =>
+      render(
+        <ConstellationLayer
+          sky={withWanderers()}
+          mode="full"
+          width={1200}
+          height={800}
+          {...(reserveTop !== undefined && { reserveTop })}
+        />,
+      ).container;
+
+    it('lays every figure and wandering star out below it', () => {
+      const container = renderReserved(300);
+      const ys = starYs(container);
+      expect(ys.length).toBeGreaterThan(4);
+      for (const y of ys) expect(y).toBeGreaterThanOrEqual(300);
+    });
+
+    it('leaves the sky exactly as it was when nothing is laid over it', () => {
+      // Ids differ between renders, so compare where things are, not the markup.
+      const where = (c: HTMLElement) =>
+        [...c.querySelectorAll('circle[r="12"], text')].map((el) =>
+          [
+            el.getAttribute('cx') ?? el.getAttribute('x'),
+            el.getAttribute('cy') ?? el.getAttribute('y'),
+          ].join(','),
+        );
+      const plain = where(renderReserved());
+      cleanup();
+      expect(plain.length).toBeGreaterThan(5);
+      expect(where(renderReserved(0))).toEqual(plain);
+    });
+  });
+
   describe('a caption', () => {
     /** An Arrow left at 2 of 5 stars (so unfinished), then a finished Kite. */
     const unfinishedThenKite = () =>

@@ -1,4 +1,4 @@
-import { possessive, type FriendSky, type FriendSummary } from '@/features/friends';
+import { possessive, type FriendSky, type FriendSummary, type SkyLayout } from '@/features/friends';
 import { streakAt, styleName } from '@/features/progression';
 import { completedConstellations, deriveOtherSky, SkyView } from '@/features/sky';
 import { formatFocus, periodContaining, totals } from '@/features/stats';
@@ -13,14 +13,15 @@ import { formatFocus, periodContaining, totals } from '@/features/stats';
  * and the streak count completed sessions only.
  */
 
-export const renderFriendSky = (sky: FriendSky) => (
+export const renderFriendSky = (sky: FriendSky, { reserveTop }: SkyLayout) => (
   <SkyView
     sky={deriveOtherSky(sky.sessions, sky.choices)}
     themeKey={sky.themeKey ?? undefined}
     mode="full"
     label={`${possessive(sky.displayName ?? 'Your friend')} sky`}
     styleName={styleName}
-    // The friend's header, of varying height, sits over the top of their sky.
+    // The friend's header, of varying height, sits over the top of their sky: lay it out below.
+    reserveTop={reserveTop}
     cardSide="below"
   />
 );

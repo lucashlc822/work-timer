@@ -69,6 +69,25 @@ export const addCompletedSession = async (
   expect(error).toBeNull();
 };
 
+/** Gives `user` a catalogue constellation, chosen `chosenMinutesAgo` ago (sessions after it fill it). */
+export const addConstellation = async (
+  user: TestUser,
+  shapeId: string,
+  chosenMinutesAgo: number,
+): Promise<void> => {
+  const chosen = new Date(Date.now() - chosenMinutesAgo * 60_000).toISOString();
+  const { error } = await adminClient().from('constellations').insert({
+    id: newId(),
+    user_id: user.id,
+    source: 'catalogue',
+    shape_id: shapeId,
+    tier: 'easy',
+    chosen_at: chosen,
+    client_created_at: chosen,
+  });
+  expect(error).toBeNull();
+};
+
 /** Shares a focus block of `minutes` from now, as the app does when a session starts. */
 export const shareFocus = async (user: TestUser, minutes: number): Promise<void> => {
   const now = Date.now();

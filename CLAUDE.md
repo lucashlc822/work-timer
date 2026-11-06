@@ -694,6 +694,14 @@ rejected). Don't pre-populate this with guesses.
   at spaces, up to three, `captionCandidates`), smaller only as a last resort
   (floor 10 px); nothing is ever cut off. A friend's sky is named "Ada's sky",
   yours "Your sky" (`label`).
+- **A friend's sky is laid out below its header** (View sky upgrade follow-up,
+  2026-11-06). The header's height varies (status line, shared constellation,
+  wrapping), so `FriendSkyView` measures it before paint and on resize and tells
+  `renderSky` as `{ reserveTop }`; the sky is not drawn until it has. `SkyView`
+  passes it to `ConstellationLayer`, which lays figures out (`gridPlacements`
+  `insets.top`) and wandering stars (`wanderingPosition`'s `area`) below it and
+  keeps cards clear of it. Unset or 0, a sky lays out exactly as before: your own
+  sky never passes it.
 
 ## Plans include acceptance tests
 
