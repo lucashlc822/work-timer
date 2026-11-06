@@ -679,6 +679,12 @@ rejected). Don't pre-populate this with guesses.
   version stretched it each frame and cost about 5 points of CPU in the full
   sky. Measure before and after any change to what a frame draws.
 
+- **The shop previews a style with the sky's own star** (View sky upgrade PR 8,
+  2026-11-06). `StylePreview` (`sky/ui`) runs `starAppearance` -> `starForm` ->
+  `AstroStar` at the `glow` tier with one fixed seed and a 25-minute session,
+  so two rows differ only by style. Static, decorative, no filter. The result
+  screen keeps `StarGlyph`, which matches the brand `StarMark`; don't switch it.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then

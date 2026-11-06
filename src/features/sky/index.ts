@@ -13,6 +13,7 @@ export type { ConstellationChoice, SkyState } from './domain/types';
 export type { SkyMode } from './ui/ConstellationLayer';
 export { StarGlyph } from './ui/StarGlyph';
 export { ResultStarGlyph } from './ui/ResultStarGlyph';
+export { StylePreview } from './ui/StylePreview';
 export { STAR_STYLE_KEYS } from './domain/starStyles';
 export { SKY_THEME_KEYS } from './domain/skyThemes';
 export { PACK_KEYS } from './domain/catalogue';
