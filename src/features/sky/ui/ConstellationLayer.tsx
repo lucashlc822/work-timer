@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 import {
   LAVENDER_300,
@@ -195,6 +195,7 @@ export const ConstellationLayer = ({
       role={full ? 'group' : undefined}
       aria-label={full ? label : undefined}
       data-active={full && activeFigureId !== null ? activeFigureId : undefined}
+      onKeyDown={full ? moveAlongUnit : undefined}
     >
       <defs>
         <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
@@ -202,7 +203,7 @@ export const ConstellationLayer = ({
         </filter>
       </defs>
 
-      {sky.wandering.map(({ session }) => {
+      {sky.wandering.map(({ session }, i) => {
         const [x, y] = wanderingPosition(session.seed, width, height, wanderArea);
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         // Smaller than a star in a constellation, with shorter spikes: it belongs to nothing.
@@ -211,11 +212,18 @@ export const ConstellationLayer = ({
         });
         const label = wanderingStarLabel(session.endedAt, session.actualFocusS);
         const ref: StarRef = { session, constellation: null, tier: 'plain' };
-        const description = full ? describeStar?.(ref) : undefined;
+        const description = full
+          ? withHint(
+              describeStar?.(ref),
+              i === 0 && sky.wandering.length > 1 ? WANDERING_HINT : null,
+            )
+          : undefined;
         return (
           <g
             key={session.id}
-            tabIndex={full ? 0 : undefined}
+            // The wandering stars are one Tab stop, the first of them; arrows move between them.
+            tabIndex={full ? (i === 0 ? 0 : -1) : undefined}
+            data-nav-unit={full ? WANDERING_UNIT : undefined}
             role={full ? 'img' : undefined}
             aria-label={full ? label : undefined}
             className="group focus:outline-none"
@@ -263,6 +271,57 @@ export const ConstellationLayer = ({
       ))}
     </svg>
   );
+};
+
+/** The arrow-key unit of the stars that belong to no constellation. */
+const WANDERING_UNIT = 'wandering';
+
+/** Told to a screen reader on a figure's Tab stop, so the arrow keys can be found. */
+export const STARS_HINT = 'Use the arrow keys to move between its stars.';
+export const WANDERING_HINT = 'Use the arrow keys to move between the wandering stars.';
+
+const withHint = (description: string | undefined, hint: string | null): string | undefined =>
+  hint === null ? description : description === undefined ? hint : `${description} ${hint}`;
+
+/**
+ * The sky's keyboard model (a roving Tab stop). Each constellation is one Tab
+ * stop: its caption, or its first star when the caption isn't focusable; the
+ * wandering stars are one more, the first of them. Inside a unit the arrow
+ * keys move one star at a time (Right/Down onward, Left/Up back, from the
+ * first star back to the caption), Home and End to its ends; they don't wrap.
+ * So a crowded sky is a few stops, not one per star, and every star is still
+ * reachable. Focus moving fires the usual focus/blur, so cards follow it.
+ */
+const moveAlongUnit = (e: KeyboardEvent<SVGSVGElement>): void => {
+  const step: Partial<Record<string, 'next' | 'prev' | 'first' | 'last'>> = {
+    ArrowRight: 'next',
+    ArrowDown: 'next',
+    ArrowLeft: 'prev',
+    ArrowUp: 'prev',
+    Home: 'first',
+    End: 'last',
+  };
+  const move = step[e.key];
+  if (move === undefined || e.altKey || e.ctrlKey || e.metaKey) return;
+  const from = (e.target as Element).closest('[data-nav-unit]');
+  if (from === null) return;
+  const unit = from.getAttribute('data-nav-unit');
+  // In page order, which puts a caption before its stars.
+  const items = Array.from(e.currentTarget.querySelectorAll<SVGElement>('[data-nav-unit]')).filter(
+    (el) => el.getAttribute('data-nav-unit') === unit,
+  );
+  const at = items.indexOf(from as SVGElement);
+  const to =
+    move === 'next'
+      ? Math.min(at + 1, items.length - 1)
+      : move === 'prev'
+        ? Math.max(at - 1, 0)
+        : move === 'first'
+          ? 0
+          : items.length - 1;
+  // Arrows inside the sky never scroll the page, even at a unit's end.
+  e.preventDefault();
+  if (to !== at) items[to]!.focus();
 };
 
 /**
@@ -337,6 +396,8 @@ const Caption = ({
   focus?: {
     label: string;
     description: string | undefined;
+    /** The figure's id: the caption and its stars are one unit for the arrow keys. */
+    navUnit: string;
     onFocus: () => void;
     onBlur: () => void;
   };
@@ -439,6 +500,7 @@ const Caption = ({
   return (
     <g
       tabIndex={0}
+      data-nav-unit={focus.navUnit}
       role="img"
       aria-label={focus.label}
       className="group focus:outline-none"
@@ -544,7 +606,8 @@ const Figure = ({
           {...(onFigure !== undefined && {
             focus: {
               label: progressLabel(state),
-              description: describeFigure?.(state),
+              description: withHint(describeFigure?.(state), stars.length > 0 ? STARS_HINT : null),
+              navUnit: state.choice.id,
               onFocus: () => onFigure('focus', figure),
               onBlur: () => onFigure('blur', figure),
             },
@@ -693,7 +756,9 @@ const Figure = ({
           return (
             <g
               key={session.id}
-              tabIndex={full ? 0 : undefined}
+              // One Tab stop per figure: its caption when that is focusable, else its first star.
+              tabIndex={full ? (onFigure === undefined && i === 0 ? 0 : -1) : undefined}
+              data-nav-unit={full ? state.choice.id : undefined}
               role={full ? 'img' : undefined}
               aria-label={full ? label : undefined}
               className={full ? 'group focus:outline-none' : undefined}

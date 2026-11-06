@@ -122,11 +122,9 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
   expect(box!.width).toBeGreaterThanOrEqual(24);
   expect(box!.height).toBeGreaterThanOrEqual(24);
 
-  // 4.2: reached with the keyboard. From Back, the Arrow's star is one stop back
-  // and its caption, the figure's first stop, one more.
+  // 4.2: reached with the keyboard. A constellation is one Tab stop, its caption:
+  // from Back it is one stop back, and its star is not a stop of its own.
   await expect(page.getByRole('button', { name: 'Back to timer' })).toBeFocused();
-  await page.keyboard.press('Shift+Tab');
-  await expect(theStar(page)).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(caption).toBeFocused();
   const card = page.getByTestId('constellation-card');
@@ -135,6 +133,15 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
   await expect(card).toContainText(/1 of \d+ stars/);
   await expect(card).toContainText('Started ');
   await expect(card).toContainText('25 minutes of focus');
+
+  // The arrow keys reach its star, whose card takes over; Left goes back.
+  await page.keyboard.press('ArrowRight');
+  await expect(theStar(page)).toBeFocused();
+  await expect(page.getByTestId('star-card')).toBeVisible();
+  await expect(page.getByTestId('star-card')).toContainText('Writing');
+  await page.keyboard.press('ArrowLeft');
+  await expect(caption).toBeFocused();
+  await expect(card).toBeVisible();
 
   // First Escape closes the card, second leaves the sky.
   await page.keyboard.press('Escape');
