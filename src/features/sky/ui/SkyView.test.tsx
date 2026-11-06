@@ -271,7 +271,7 @@ describe('the constellation card', () => {
       caption.compareDocumentPosition(firstStar) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(caption.querySelector('desc')?.textContent).toMatch(
-      /^Complete on .+\. Started .+\. 1 h 40 min of focus\.$/,
+      /^Complete on .+\. Started .+\. 1 h 40 min of focus\. Use the arrow keys to move between its stars\.$/,
     );
 
     fireEvent.focus(caption);
@@ -380,5 +380,144 @@ describe('the star card’s time line', () => {
     expect(pieces).toHaveLength(2);
     expect(pieces[0]).toMatch(/\d.*[–-].*\d/);
     expect(pieces[1]).toBe('25 minutes');
+  });
+});
+
+describe('the keyboard', () => {
+  const arrow: ConstellationChoice = {
+    ...kite,
+    id: 'c-arrow',
+    shapeId: 'arrow',
+    chosenAt: T0 + 10 * HOUR,
+  };
+  const teacup: ConstellationChoice = {
+    ...kite,
+    id: 'c-teacup',
+    shapeId: 'teacup',
+    chosenAt: T0 + 20 * HOUR,
+  };
+  /**
+   * Five wandering stars (before any choice), then a finished Kite (4), an
+   * Arrow left at 4 of 5, and a Teacup with 2.
+   */
+  const crowded = () =>
+    deriveSky(
+      [
+        ...[-5, -4, -3, -2, -1].map((i) => star(i)),
+        ...[1, 2, 3, 4].map((i) => star(i)),
+        ...[11, 12, 13, 14].map((i) => star(i)),
+        ...[21, 22].map((i) => star(i)),
+      ],
+      [kite, arrow, teacup],
+      rules,
+    );
+  const theSky = () => screen.getByRole('group', { name: 'Your sky' });
+  const focused = () => document.activeElement?.getAttribute('aria-label');
+  const press = (key: string, init: Partial<KeyboardEventInit> = {}) =>
+    fireEvent.keyDown(document.activeElement!, { key, ...init });
+  const kiteCaption = () => screen.getByRole('img', { name: 'The Kite, complete' });
+
+  it('makes each constellation one Tab stop, and the wandering stars one more', () => {
+    renderSky({ sky: crowded() });
+
+    const stops = [...theSky().querySelectorAll('[tabindex="0"]')].map((el) =>
+      el.getAttribute('aria-label'),
+    );
+    expect(stops).toEqual([
+      expect.stringMatching(/^Wandering star from /),
+      'The Kite, complete',
+      'The Arrow, 4 of 5 stars, unfinished',
+      'The Teacup, 2 of 5 stars',
+    ]);
+    // Every other star is still focusable, just not a Tab stop of its own.
+    expect(theSky().querySelectorAll('[role="img"][tabindex="-1"]')).toHaveLength(4 + 4 + 4 + 2);
+  });
+
+  it('moves along a constellation with the arrow keys, without wrapping', () => {
+    renderSky({ sky: crowded() });
+    act(() => kiteCaption().focus());
+
+    press('ArrowRight');
+    expect(focused()).toMatch(/^Star from /);
+    const first = document.activeElement;
+    press('ArrowDown');
+    press('ArrowRight');
+    press('ArrowRight');
+    const last = document.activeElement;
+    expect(last).not.toBe(first);
+    // At the end it stays put, rather than wrapping or leaving the figure.
+    press('ArrowRight');
+    expect(document.activeElement).toBe(last);
+
+    press('Home');
+    expect(document.activeElement).toBe(kiteCaption());
+    press('End');
+    expect(document.activeElement).toBe(last);
+    for (let i = 0; i < 4; i++) press('ArrowLeft');
+    expect(document.activeElement).toBe(kiteCaption());
+    press('ArrowUp');
+    expect(document.activeElement).toBe(kiteCaption());
+  });
+
+  it('keeps the arrows inside one constellation: the next one is the next Tab stop', () => {
+    renderSky({ sky: crowded() });
+    act(() => kiteCaption().focus());
+    press('End');
+    press('ArrowRight');
+    const kiteStars = [
+      ...document.querySelectorAll('[data-figure="c-kite"] [role="img"][aria-label^="Star"]'),
+    ];
+    expect(kiteStars.length).toBe(4);
+    expect(kiteStars.includes(document.activeElement!)).toBe(true);
+  });
+
+  it('moves between the wandering stars the same way', () => {
+    renderSky({ sky: crowded() });
+    const firstWanderer = theSky().querySelector<SVGElement>('[tabindex="0"]')!;
+    act(() => firstWanderer.focus());
+    press('End');
+    expect(focused()).toMatch(/^Wandering star from /);
+    expect(document.activeElement).not.toBe(firstWanderer);
+    press('Home');
+    expect(document.activeElement).toBe(firstWanderer);
+    expect(firstWanderer.querySelector('desc')?.textContent).toMatch(
+      /Use the arrow keys to move between the wandering stars\.$/,
+    );
+  });
+
+  it('opens a star’s card as the arrows reach it, and Escape closes it', () => {
+    renderSky({ sky: crowded() });
+    act(() => kiteCaption().focus());
+    expect(screen.queryByTestId('constellation-card')).not.toBeNull();
+
+    press('ArrowRight');
+    expect(card()).not.toBeNull();
+    press('ArrowRight');
+    expect(card()).not.toBeNull();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(card()).toBeNull();
+  });
+
+  it('leaves the arrows alone with a modifier held', () => {
+    renderSky({ sky: crowded() });
+    act(() => kiteCaption().focus());
+    press('ArrowRight', { altKey: true });
+    expect(document.activeElement).toBe(kiteCaption());
+    press('ArrowRight', { ctrlKey: true });
+    expect(document.activeElement).toBe(kiteCaption());
+  });
+
+  it('says how to reach the stars on a caption only when there are stars to reach', () => {
+    const swan: ConstellationChoice = {
+      ...kite,
+      id: 'c-swan',
+      shapeId: 'swan',
+      chosenAt: T0 + 40 * HOUR,
+    };
+    renderSky({ sky: deriveSky([star(1), star(2), star(3), star(4)], [kite, swan], rules) });
+    const empty = screen.getByRole('img', { name: /^The Swan, 0 of / });
+    expect(empty.querySelector('desc')?.textContent ?? '').not.toMatch(/arrow keys/);
+    expect(kiteCaption().querySelector('desc')?.textContent).toMatch(/arrow keys/);
   });
 });

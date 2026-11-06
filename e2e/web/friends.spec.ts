@@ -195,7 +195,8 @@ test('a friend’s sky is laid out below its header: every star can be reached',
 
       const result = await b.page.evaluate(() => {
         const svg = document.querySelector('svg[aria-label^="Ada"]')!;
-        const stops = Array.from(svg.querySelectorAll('[role="img"][tabindex="0"]'));
+        // Every star and caption: Tab stops or reached with the arrow keys.
+        const stops = Array.from(svg.querySelectorAll('[role="img"][tabindex]'));
         const covered = stops.flatMap((g) => {
           // The invisible 24 px target of a star, or the box of a caption.
           const hit = g.querySelector('circle[r="12"], rect')!.getBoundingClientRect();
@@ -208,11 +209,14 @@ test('a friend’s sky is laid out below its header: every star can be reached',
             `${g.getAttribute('aria-label')} at ${Math.round(x)},${Math.round(y)} under ${el?.tagName ?? 'nothing'}`,
           ];
         });
-        return { stops: stops.length, covered };
+        const tabStops = svg.querySelectorAll('[tabindex="0"]').length;
+        return { stops: stops.length, tabStops, covered };
       });
       // 8 captions + 8 stars + 6 wandering stars.
       expect(result.stops, `${size.width}px`).toBe(22);
       expect(result.covered, `${size.width}px`).toEqual([]);
+      // One Tab stop per constellation, and one for the wandering stars (PR 4).
+      expect(result.tabStops, `${size.width}px`).toBe(9);
     }
 
     // A card opened on the top-most star stays clear of the header.

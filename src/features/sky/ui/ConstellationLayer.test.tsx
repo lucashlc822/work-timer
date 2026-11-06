@@ -67,10 +67,12 @@ describe('ConstellationLayer', () => {
     expect(root.getAttribute('aria-label')).toBe('Your sky');
     expect(root.hasAttribute('aria-hidden')).toBe(false);
 
-    const stars = [...container.querySelectorAll('[role="img"][tabindex="0"]')];
+    const stars = [...container.querySelectorAll('[role="img"][tabindex]')];
     expect(stars).toHaveLength(6);
     for (const s of stars)
       expect(s.getAttribute('aria-label')).toMatch(/^Star from .+, 25 minutes$/);
+    // With no focusable captions, each figure's first star is its one Tab stop.
+    expect(container.querySelectorAll('[tabindex="0"]')).toHaveLength(2);
   });
 
   it('in full mode, labels each figure with its progress and captions it', () => {
@@ -107,7 +109,7 @@ describe('ConstellationLayer', () => {
         rules,
       );
     const starYs = (container: HTMLElement) =>
-      [...container.querySelectorAll('[role="img"][tabindex="0"] circle[r="12"]')].map((c) =>
+      [...container.querySelectorAll('[role="img"][tabindex] circle[r="12"]')].map((c) =>
         Number(c.getAttribute('cy')),
       );
     const renderReserved = (reserveTop?: number) =>
@@ -253,7 +255,7 @@ describe('ConstellationLayer', () => {
     it('draws every earned star with a corona, spikes, a body and a core, and no blur filter', () => {
       const { container } = renderLayer('full');
 
-      const stars = [...container.querySelectorAll('[role="img"][tabindex="0"]')];
+      const stars = [...container.querySelectorAll('[role="img"][tabindex]')];
       expect(stars).toHaveLength(6);
       for (const s of stars) {
         expect(s.querySelector('ellipse')).not.toBeNull();

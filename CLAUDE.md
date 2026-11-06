@@ -702,6 +702,16 @@ rejected). Don't pre-populate this with guesses.
   `insets.top`) and wandering stars (`wanderingPosition`'s `area`) below it and
   keeps cards clear of it. Unset or 0, a sky lays out exactly as before: your own
   sky never passes it.
+- **The sky is one Tab stop per constellation; arrows move between its stars**
+  (View sky upgrade follow-up, 2026-11-06; refines PR 4's "caption is the
+  figure's first stop"). A roving Tab stop: each figure's caption is its only
+  stop (or its first star, where captions aren't focusable), and the wandering
+  stars are one more, the first of them. Every star stays focusable
+  (`tabindex=-1`): Right/Down move on, Left/Up back (from the first star back
+  to the caption), Home/End to the unit's ends, no wrap; focus moving fires the
+  usual focus/blur, so cards follow. The unit is `data-nav-unit`, handled once on
+  the svg (`moveAlongUnit`). A caption's `<desc>` ends with how to reach its
+  stars. A crowded sky went from one stop per star (~150) to ~20.
 
 ## Plans include acceptance tests
 
