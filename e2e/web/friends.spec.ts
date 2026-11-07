@@ -173,6 +173,10 @@ test('a friend’s sky is laid out below its header: every star can be reached',
   for (const ago of [1400, 1350, 1300, 1250, 1200, 1150]) {
     await addCompletedSession(ada, 25, ago);
   }
+  // Bea has a constellation of her own, so her timer backdrop draws a hero figure
+  // that must not show through Ada's sky.
+  await addConstellation(bea, 'kite', 1000);
+  await addCompletedSession(bea, 25, 950);
 
   const b = await openDevice(browser, BASE, bea);
   try {
@@ -192,6 +196,18 @@ test('a friend’s sky is laid out below its header: every star can be reached',
     ]) {
       await b.page.setViewportSize(size);
       await b.page.waitForTimeout(500);
+
+      // The friend's sky is an opaque layer over the window: nothing of Bea's own sky shows.
+      const layer = await b.page.evaluate(() => {
+        const el = document.querySelector('[data-testid="friend-sky-layer"]')!;
+        const r = el.getBoundingClientRect();
+        return {
+          background: getComputedStyle(el).backgroundColor,
+          covers: r.width === innerWidth && r.height === innerHeight,
+        };
+      });
+      expect(layer.background, `${size.width}px`).toBe('rgb(11, 10, 26)');
+      expect(layer.covers, `${size.width}px`).toBe(true);
 
       const result = await b.page.evaluate(() => {
         const svg = document.querySelector('svg[aria-label^="Ada"]')!;
