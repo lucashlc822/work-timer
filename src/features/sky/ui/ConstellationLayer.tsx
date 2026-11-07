@@ -14,9 +14,12 @@ import {
   CAPTION_ALPHA_ACTIVE,
   CAPTION_LINE_HEIGHT,
   captionCandidates,
+  captionFontSize,
+  captionTop,
   shrunkFontSize,
 } from '../domain/captionLayout';
 import {
+  figureFootprint,
   gridPlacements,
   heroPlacement,
   toPixels,
@@ -185,6 +188,10 @@ export const ConstellationLayer = ({
       ? [{ state: focused, box: heroPlacement(width, height) }]
       : heroShown(sky, width, height);
 
+  // In the full sky a wandering star keeps clear of every figure's box and caption,
+  // where a hit area or a caption would otherwise sit over it.
+  const avoid = full ? shown.flatMap(({ box }) => figureFootprint(box)) : undefined;
+
   return (
     <svg
       width={width}
@@ -204,7 +211,7 @@ export const ConstellationLayer = ({
       </defs>
 
       {sky.wandering.map(({ session }, i) => {
-        const [x, y] = wanderingPosition(session.seed, width, height, wanderArea);
+        const [x, y] = wanderingPosition(session.seed, width, height, wanderArea, avoid);
         const look = starAppearance(session.seed, session.actualFocusS, session.starStyle);
         // Smaller than a star in a constellation, with shorter spikes: it belongs to nothing.
         const form = starForm(look, session.actualFocusS, session.starStyle, 1.3, 'plain', {
@@ -597,8 +604,8 @@ const Figure = ({
         <Caption
           text={figureCaption(state)}
           cx={box.x + box.size / 2}
-          y={box.y + box.size + Math.max(14, box.size * 0.1)}
-          fontSize={Math.max(11, Math.min(14, box.size * 0.07))}
+          y={captionTop(box)}
+          fontSize={captionFontSize(box)}
           nebula={style === 'nebula'}
           viewWidth={viewWidth}
           maxWidth={cellWidth - 6}

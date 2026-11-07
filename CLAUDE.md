@@ -713,6 +713,17 @@ rejected). Don't pre-populate this with guesses.
   the svg (`moveAlongUnit`). A caption's `<desc>` ends with how to reach its
   stars. A crowded sky went from one stop per star (~150) to ~20.
 
+- **In the full sky, wandering stars keep clear of every figure** (2026-11-07).
+  A figure's transparent hit rect and its caption sit over anything drawn before
+  them, so a wandering star under one couldn't be hovered. `figureFootprint`
+  (`sky/domain/layout.ts`) is the box and caption area plus a star's hit radius;
+  `wanderingPosition` takes it as `avoid` and, if its first place falls inside,
+  redraws from the same seed (up to 32 tries, else it stays put). A star that was
+  already clear never moves, hero mode avoids nothing, and DOM, Tab and paint
+  order are unchanged. Caption geometry (`captionTop`, `captionFontSize`) is
+  shared with the footprint so the two can't drift. Known, accepted: two
+  wandering stars can still land within a hit radius of each other.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
