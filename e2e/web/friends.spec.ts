@@ -219,10 +219,18 @@ test('a friend’s sky is laid out below its header: every star can be reached',
           const x = hit.x + hit.width / 2;
           const y = hit.y + hit.height / 2;
           const el = document.elementFromPoint(x, y);
-          // Only the header is of interest here: a figure's own box may sit over a wandering star.
-          if (el?.closest('header.fixed') == null) return [];
+          // The point must belong to this very star or caption: not the header, and not
+          // a figure's box or another label laid over it.
+          if (el !== null && g.contains(el)) return [];
+          // A card opened by the pointer resting there is meant to float over the sky.
+          if (el?.closest('[data-testid$="-card"]') != null) return [];
+          // Two wandering stars can land within a hit radius of each other by chance (their
+          // seeds are random); that is not what this checks. Figures and captions are.
+          const over = el?.closest('[role="img"]')?.getAttribute('aria-label') ?? '';
+          if (g.getAttribute('aria-label')!.startsWith('Wandering') && over.startsWith('Wandering'))
+            return [];
           return [
-            `${g.getAttribute('aria-label')} at ${Math.round(x)},${Math.round(y)} under ${el?.tagName ?? 'nothing'}`,
+            `${g.getAttribute('aria-label')} at ${Math.round(x)},${Math.round(y)} under ${el?.closest('[role="img"]')?.getAttribute('aria-label') ?? el?.tagName ?? 'nothing'}`,
           ];
         });
         const tabStops = svg.querySelectorAll('[tabindex="0"]').length;
