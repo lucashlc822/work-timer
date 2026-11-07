@@ -533,7 +533,9 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'friend' && friend !== null && (
-        <div className="fixed inset-0 z-10">
+        // Opaque: a Night-theme sky paints no ground of its own, so without this your
+        // own timer backdrop (stars and its constellation) shows through a friend's.
+        <div className="bg-night-900 fixed inset-0 z-10" data-testid="friend-sky-layer">
           <FriendSkyView
             key={friend.friendId}
             friendId={friend.friendId}
