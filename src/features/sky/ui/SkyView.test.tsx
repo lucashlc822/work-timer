@@ -372,14 +372,23 @@ describe('the sky’s name', () => {
 });
 
 describe('the star card’s time line', () => {
-  it('keeps "25 minutes" and the clock times each in one piece, so a break can fall only at the dot', () => {
+  it('keeps the clock times and "· 25 minutes" each in one piece, so the dot leads a wrapped line', () => {
     renderSky();
     fireEvent.pointerEnter(stars()[0]!);
 
     const pieces = [...card()!.querySelectorAll('.whitespace-nowrap')].map((el) => el.textContent);
     expect(pieces).toHaveLength(2);
     expect(pieces[0]).toMatch(/\d.*[–-].*\d/);
-    expect(pieces[1]).toBe('25 minutes');
+    expect(pieces[1]).toBe('· 25 minutes');
+    // No dot outside the pieces: it can never be left at the end of the first line.
+    const line = [...card()!.querySelectorAll('p')].find((p) =>
+      p.querySelector('.whitespace-nowrap'),
+    )!;
+    const outside = [...line.childNodes]
+      .filter((n) => n.nodeType === Node.TEXT_NODE)
+      .map((n) => n.textContent)
+      .join('');
+    expect(outside).not.toContain('·');
   });
 });
 
