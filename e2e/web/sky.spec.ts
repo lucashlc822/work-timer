@@ -125,7 +125,7 @@ test('when the star card’s time line wraps, the dot starts the second line', a
       timeBoxes: time!.getClientRects().length,
       // The dot and the number sit on one line: the break did not fall between them.
       dotAndNumberShareALine: (() => {
-        const text = duration!.textContent!;
+        const text = duration!.textContent;
         const at = (i: number) => {
           const range = document.createRange();
           let left = i;
