@@ -9,6 +9,7 @@ import {
   captionCandidates,
   shrunkFontSize,
 } from './captionLayout';
+import { SKY_THEMES } from './skyThemes';
 
 const channels = (hex: string): [number, number, number] => [
   parseInt(hex.slice(1, 3), 16),
@@ -42,6 +43,26 @@ describe('caption brightness', () => {
   it('would not have been, at the old stacked opacity of an unfinished, dimmed figure', () => {
     // 0.75 (caption) x 0.45 (unfinished) x 0.35 (another figure looked at).
     expect(contrast(LAVENDER_300, NIGHT_900, 0.75 * 0.45 * 0.35)).toBeLessThan(4.5);
+  });
+});
+
+describe('caption brightness over every sky theme’s ground', () => {
+  // Night paints no ground and shows the app's own night-900; the others paint a
+  // gradient whose two stops a caption can sit on. A theme added later is covered
+  // by being in SKY_THEMES. This is the ground only: a bright cloud behind a
+  // caption is what the caption's dark halo is for.
+  const grounds = Object.entries(SKY_THEMES).flatMap(([key, theme]) =>
+    (theme.ground ?? [NIGHT_900]).map((ground) => ({ key, ground })),
+  );
+
+  it('covers every theme', () => {
+    expect(new Set(grounds.map((g) => g.key))).toEqual(new Set(Object.keys(SKY_THEMES)));
+    expect(grounds.length).toBeGreaterThan(Object.keys(SKY_THEMES).length);
+  });
+
+  it.each(grounds)('is at least 4.5:1 on $key’s ground $ground', ({ ground }) => {
+    expect(contrast(LAVENDER_300, ground, CAPTION_ALPHA)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(LAVENDER_300, ground, CAPTION_ALPHA_ACTIVE)).toBeGreaterThanOrEqual(4.5);
   });
 });
 
