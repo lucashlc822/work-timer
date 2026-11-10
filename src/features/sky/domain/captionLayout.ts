@@ -5,6 +5,8 @@
  * component measures what it drew and walks these candidates until one fits.
  */
 
+import type { Placement } from './layout';
+
 /**
  * A caption's opacity, whatever state its figure is in. Lavender-300 over
  * night-900 at 0.75 is 6.4:1 (WCAG AA needs 4.5:1), so a caption stays
@@ -93,3 +95,11 @@ export const captionCandidates = (text: string): string[][] => {
  */
 export const shrunkFontSize = (fontSize: number, width: number, maxWidth: number): number =>
   width <= maxWidth ? fontSize : Math.max(MIN_CAPTION_PX, fontSize * (maxWidth / width));
+
+/** Where a figure's caption starts (its baseline), below its box. */
+export const captionTop = (box: Placement): number =>
+  box.y + box.size + Math.max(14, box.size * 0.1);
+
+/** A caption's font size before it is fitted to its cell. */
+export const captionFontSize = (box: Placement): number =>
+  Math.max(11, Math.min(14, box.size * 0.07));

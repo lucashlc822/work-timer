@@ -8,6 +8,7 @@ import { deriveShared } from '../domain/shared';
 import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
 import { CAPTION_ALPHA, CAPTION_ALPHA_ACTIVE } from '../domain/captionLayout';
+import { figureFootprint, gridPlacements } from '../domain/layout';
 import { ConstellationLayer } from './ConstellationLayer';
 
 afterEach(() => {
@@ -143,6 +144,42 @@ describe('ConstellationLayer', () => {
       cleanup();
       expect(plain.length).toBeGreaterThan(5);
       expect(where(renderReserved(0))).toEqual(plain);
+    });
+  });
+
+  describe('wandering stars', () => {
+    /** Eight wandering stars, then constellations chosen after them. */
+    const mixed = () =>
+      deriveSky(
+        [
+          ...[-8, -7, -6, -5, -4, -3, -2, -1].map((i) => star(i)),
+          ...[1, 2, 3].map((i) => star(i, T0 + (i * 10 + 5) * HOUR)),
+        ],
+        ['kite', 'arrow', 'teacup'].map((shape, i) => choice(`m${i}`, shape, T0 + i * 10 * HOUR)),
+        rules,
+      );
+
+    it.each([
+      [1280, 800],
+      [375, 812],
+    ])('keep clear of every figure and caption at %i px', (w, h) => {
+      const { container } = render(
+        <ConstellationLayer sky={mixed()} mode="full" width={w} height={h} />,
+      );
+      const figures = container.querySelectorAll('[data-figure]').length;
+      expect(figures).toBeGreaterThan(0);
+      const avoid = gridPlacements(figures, w, h).flatMap(figureFootprint);
+      const wanderers = [...container.querySelectorAll('[role="img"][aria-label^="Wandering"]')];
+      expect(wanderers).toHaveLength(8);
+      for (const el of wanderers) {
+        const c = el.querySelector('circle[r="12"]')!;
+        const x = Number(c.getAttribute('cx'));
+        const y = Number(c.getAttribute('cy'));
+        for (const r of avoid) {
+          const hit = x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+          expect(hit, `${el.getAttribute('aria-label')} at ${x},${y}`).toBe(false);
+        }
+      }
     });
   });
 
