@@ -108,6 +108,53 @@ test('a focused star shows its card; Escape closes it, and only a second Escape 
   await expect(page.getByRole('button', { name: 'View sky', exact: true })).toBeFocused();
 });
 
+test('when the star card’s time line wraps, the dot starts the second line', async ({ page }) => {
+  await finishTaggedSession(page, 'Writing');
+  await theStar(page).focus();
+  await expect(card(page)).toBeVisible();
+
+  // Narrow the card until the line must break, then see where.
+  const result = await card(page).evaluate((el) => {
+    el.style.width = '9rem';
+    const spans = Array.from(el.querySelectorAll<HTMLElement>('.whitespace-nowrap'));
+    const [time, duration] = spans;
+    return {
+      time: time!.textContent,
+      duration: duration!.textContent,
+      // Each piece stays whole: one box, not split across lines.
+      timeBoxes: time!.getClientRects().length,
+      // The dot and the number sit on one line: the break did not fall between them.
+      dotAndNumberShareALine: (() => {
+        const text = duration!.textContent!;
+        const at = (i: number) => {
+          const range = document.createRange();
+          let left = i;
+          const walker = document.createTreeWalker(duration!, NodeFilter.SHOW_TEXT);
+          for (let n = walker.nextNode(); n !== null; n = walker.nextNode()) {
+            const len = n.textContent!.length;
+            if (left < len) {
+              range.setStart(n, left);
+              range.setEnd(n, left + 1);
+              return range.getBoundingClientRect().top;
+            }
+            left -= len;
+          }
+          return NaN;
+        };
+        return Math.abs(at(0) - at(text.indexOf('2'))) < 2;
+      })(),
+      wrapped: duration!.getBoundingClientRect().top > time!.getBoundingClientRect().top + 2,
+      // The text before the duration is only the space the break falls on.
+      between: time!.nextSibling?.textContent,
+    };
+  });
+  expect(result.wrapped).toBe(true);
+  expect(result.duration).toBe('· 25 minutes');
+  expect(result.timeBoxes).toBe(1);
+  expect(result.dotAndNumberShareALine).toBe(true);
+  expect(result.between).toBe(' ');
+});
+
 test('a constellation’s caption opens its card from the keyboard, and is a big enough target (4.2, 4.6)', async ({
   page,
 }) => {
