@@ -12,10 +12,70 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-10 — Released 0.8.0 (the View sky upgrade)
+
+**Status: published.** v0.8.0 is the Latest release (tag `v0.8.0`, commit
+`ea57f08`, version bump #168). The desktop update and the web version both went
+out at 05:15 UTC. Nothing in flight.
+
+### What was done
+
+Followed `RELEASING.md`. No migration (`supabase/migrations` is identical to
+v0.7.0; `migration list --linked` showed all 7 applied and `db push --dry-run`
+said up to date), and `min_client_version` was left empty: no wire or store
+change, only two per-device `meta` keys and a sync filter that skips dev-seeded
+constellations. Bump PR #168 had all five CI jobs green before the merge; the
+`Release` run built the draft in about 8 minutes; `Deploy web` succeeded on the
+tagged commit.
+
+### Checked, with what was seen
+
+- Production web build against the local stack: full sky opens, Alegreya SC
+  loaded and used by captions, no console errors. The font ships as `.woff2`
+  files (none inlined as `data:`).
+- Draft: four files, `tag_name` `v0.8.0`, `latest.json` says 0.8.0 under
+  `/download/v0.8.0/`, signature key id `8E3AF18012526DA8` (the one in
+  `RELEASING.md`). Installer SHA-256 matched GitHub's recorded digest.
+- **Packaged desktop app** (installed the draft's installer over 0.7.0, silent
+  `/S`): launched signed in with existing data, the font loads under the real
+  CSP, captions in Alegreya SC, constellation and star cards render on hover (read
+  from screenshots), no service worker. The only console errors were the
+  known `ipc.localhost` CSP noise.
+- After publishing: release list shows v0.8.0 Latest and not `untagged-…`; the
+  live site returns 200 and serves the 0.8.0 bundle and the font;
+  `Starkeep-setup.exe` answers 206.
+
+### Not verified
+
+- **An installed 0.7.0 app being offered the update.** This machine's only
+  install was upgraded by the check above, so "Starkeep 0.8.0 is ready" /
+  "Restart to update" was not seen. Worth a look on the other machine or a
+  friend's, within the updater's ~6-hour cycle.
+- Signing in on the live web site (production accounts, not touched).
+- Other themes, the shop's "Owned" state, a real screen reader, a crowded
+  (~20-figure) sky: as before, not blockers.
+
+### Things learned that aren't in the code
+
+- **PowerShell eats the double quotes in a native command's argument**, so a
+  `gh api --jq '… == "name" …'` from PowerShell failed to parse and the
+  download saved a 111-byte error body as the "installer". Run `gh` with jq
+  expressions from Bash. Checking the file size and `MZ` header caught it.
+- **A silent install (`/S`) of the per-user NSIS installer upgrades in place**
+  and exits 0; the launch needed `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`
+  to read the real app's page over DevTools.
+
+### Next
+
+- Optionally confirm the update on a second 0.7.0 install (above).
+
+---
+
 ## 2026-11-09 (end of session) — Reviewer findings fixed (#156–#159), re-checked, and the re-check's four findings fixed (#160–#164); not released
 
-**Status: merged, not released.** `package.json` is still 0.7.0, so friends and
-the web version still have the old sky. Releasing is Lucas's call
+**Status: merged, not released.** *(Superseded: released as 0.8.0 on 2026-11-10;
+see above.)* `package.json` was still 0.7.0 at the time, so friends and
+the web version still had the old sky. Releasing is Lucas's call
 (`RELEASING.md`). Master's CI is green after #164 (all five jobs).
 
 ### What landed
