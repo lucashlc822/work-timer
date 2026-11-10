@@ -63,16 +63,24 @@ results.
 ### Not verified
 
 Non-Night themes rendered live (they cost Stardust and a purchase writes to the
-synced ledger), the shop's "Owned" state, the packaged desktop app, a real
-screen reader, and any live screenshot of #160–#162 (the browser pane loses its
-sign-in across reboots).
+synced ledger), the shop's "Owned" state, the packaged desktop app and a real
+screen reader.
+
+A narrow `ui-ux-reviewer` re-check on `9e2d40d` then covered #160–#162 live: a
+friend's sky is opaque at 1280/768/375 (nothing from the viewer's own sky on top
+at 399–520 sample points per size); every wandering star in the viewer's own sky
+hovers to its own card (15/15 at each size) and none sits on a caption; the
+star-card dot leads the second line at 375; axe is clean on a friend's sky at
+1280/768/375 and the viewer's own at 768. In a friend's sky with 40 wandering
+stars, 39/40 hover at 1280/768 and 33/40 at 375: every miss is a star within
+~12 px of another, the accepted case. Still uncovered: other themes, the shop's
+"Owned" state, the desktop app, a sky with more than 8 figures (Tab stops were
+checked at 9, not the ~20 of a crowded one), and a wrapped card that also has a
+tag line.
 
 ### Next
 
-- Optional: a narrow `ui-ux-reviewer` re-check of #160–#162 (friend-sky
-  background, wandering-star hover, star-card dot) plus axe on a friend's sky at
-  768 and 375, which was missed last time.
-- Release when Lucas decides.
+- Release when Lucas decides (on 2026-11-09 he chose to leave it for now).
 
 ---
 
