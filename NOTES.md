@@ -16,7 +16,7 @@ Once this file passes ~1,000 lines, archive older entries to
 
 **Status: merged, not released.** `package.json` is still 0.7.0, so friends and
 the web version still have the old sky. Releasing is Lucas's call
-(`RELEASING.md`). Master's CI after #164 was queued when this was written.
+(`RELEASING.md`). Master's CI is green after #164 (all five jobs).
 
 ### What landed
 
@@ -69,7 +69,6 @@ sign-in across reboots).
 
 ### Next
 
-- Check master's CI on the #164 run; re-run `e2e` if the port clash recurs.
 - Optional: a narrow `ui-ux-reviewer` re-check of #160–#162 (friend-sky
   background, wandering-star hover, star-card dot) plus axe on a friend's sky at
   768 and 375, which was missed last time.
