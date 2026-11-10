@@ -12,13 +12,79 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-09 (end of session) — Reviewer findings fixed (#156–#159), re-checked, and the re-check's four findings fixed (#160–#164); not released
+
+**Status: merged, not released.** `package.json` is still 0.7.0, so friends and
+the web version still have the old sky. Releasing is Lucas's call
+(`RELEASING.md`). Master's CI after #164 was queued when this was written.
+
+### What landed
+
+First pass, from the 2026-11-06 `ui-ux-reviewer` report: #156 caption legibility
+(captions keep their own opacity, wrap to their cell, "Ada's sky" naming) · #157
+a friend's sky is laid out below its header (`reserveTop`) · #158 small polish
+(star-card line, shop "Equipped" as a status, "Focus with friends" 24 px) · #159
+one Tab stop per constellation with arrow keys between its stars. A re-check
+confirmed all nine fixed and axe at 0 violations.
+
+Second pass, from the re-check's four new findings: #160 a friend's sky is
+opaque (`bg-night-900`) so your own timer constellation doesn't show through ·
+#161 wandering stars keep clear of every figure's box and caption
+(`figureFootprint`), which also fixes "can't hover a wandering star under a
+figure" · #162 the "·" in the star card leads the second line · #163 a unit test
+that captions are at least 4.5:1 over every theme's ground (lowest 5.58) · #164
+a lint fix for #162. Decisions are in CLAUDE.md; PR bodies hold the acceptance
+results.
+
+### Things learned that aren't in the code
+
+- **I merged #160 and #162 with CI still pending, and #162 was red.** Lint
+  failed on `sky.spec.ts` because I changed a spread to `Array.from` after my
+  last local lint run. The lesson is to run lint and `tsc -b` after the *last*
+  edit, not before it. The same master run's `e2e` job died in "Start the local
+  Supabase stack" with `0.0.0.0:54324 address already in use`: a runner
+  problem, fixed by a re-run, not by code.
+- **`docker info` printing a Client section does not mean the engine is up.**
+  Docker Desktop had been off for days; `npx supabase start` and
+  `npm run e2e:web` fail until `docker version --format '{{.Server.Version}}'`
+  answers. `supabase start` can also report "db not ready: starting" once and
+  then be fine.
+- **A DOM `getClientRects()` count is the wrong way to ask "did this wrap".** A
+  nowrap span with two text nodes reported 2 boxes; a `Range` over the
+  characters and a comparison of their `top` is what answers it.
+- **The friend-sky e2e hit-test now demands each star's centre belong to that
+  same element.** It still ignores a floating card and a wandering star landing
+  on another wandering star (seeds are random per run, so two can sit within a
+  hit radius of each other). That second case is known and accepted.
+- **Sensitivity checks matter.** A first attempt to disable `avoid` with
+  `[] && x` did nothing (an empty array is truthy); only `full ? [] : undefined`
+  made the tests fail the way they should.
+
+### Not verified
+
+Non-Night themes rendered live (they cost Stardust and a purchase writes to the
+synced ledger), the shop's "Owned" state, the packaged desktop app, a real
+screen reader, and any live screenshot of #160–#162 (the browser pane loses its
+sign-in across reboots).
+
+### Next
+
+- Check master's CI on the #164 run; re-run `e2e` if the port clash recurs.
+- Optional: a narrow `ui-ux-reviewer` re-check of #160–#162 (friend-sky
+  background, wandering-star hover, star-card dot) plus axe on a friend's sky at
+  768 and 375, which was missed last time.
+- Release when Lucas decides.
+
+---
+
 ## 2026-11-06 (end of session) — View sky upgrade fully merged (PRs 0–8); not released; reviewer findings open
 
 **Status: merged, nothing in flight, not released.** `master` (`8c78057`) holds the
 whole "premium View sky" plan from the 2026-11-05/06 sessions. `package.json` is
 still 0.7.0, so friends and the web version still have the old sky. A
 `ui-ux-reviewer` pass was run afterwards and found two High and three Medium
-issues; none are fixed yet.
+issues; none are fixed yet. **(Superseded 2026-11-09 — all nine were fixed in
+#156–#159 and confirmed by a re-check; see the 2026-11-09 entry.)**
 
 ### What landed (all merged by Lucas's "merge PR N", CI green each time)
 
