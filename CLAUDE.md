@@ -724,6 +724,28 @@ rejected). Don't pre-populate this with guesses.
   shared with the footprint so the two can't drift. Known, accepted: two
   wandering stars can still land within a hit radius of each other.
 
+- **The Stardust panel is three tabs, a card shows one state, and Buy asks
+  first** (Stardust shop redesign, #170–#173, 2026-11-10). The balance sits on
+  top and the earning explainer is a closed disclosure. Then three tabs: Shop
+  (opens first, every time), Goal & streak, and History (grouped by day,
+  `domain/ledgerDays.ts`). They follow the ARIA tabs pattern: one Tab stop,
+  arrows/Home/End (`radioKeyTarget`, `shared/ui/radioKeys.ts`), and every panel
+  stays mounted and `hidden` so `aria-controls` always resolves. Styles,
+  themes and packs are cards (`ShopCard.tsx`); each shows exactly one state,
+  decided by the pure `shopState` (`domain/shopState.ts`): equipped, equip,
+  owned, unlocked, buy, or short by N. A new state goes there, never as a second
+  footer. Tier unlocks are a quiet "Shortcuts" list, not cards. **Buy never
+  spends on one click:** it opens an in-card question naming the price and the
+  balance left, with Buy and Not now. Focus goes to the confirm button, back to
+  Buy on Not now, Escape or a refusal, and onto Equip (or the Owned status)
+  after a purchase. A polite live region says "Ember is yours." and the picture
+  flares once (not under reduced motion). **Escape closes the question only:**
+  the card's `onKeyDown` stops propagation before the event reaches the
+  `document` keydown listener in `app/routes/HomeRoute.tsx`, so that listener
+  must stay a bubble-phase `document` one; in capture or on `window` one Escape
+  would close the panel too. `Shop.test.tsx` and `e2e/web/shop.spec.ts` pin both
+  directions.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
