@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useState, type ReactNode } from 'react';
 
 import {
   itemsOfKind,
@@ -16,7 +16,7 @@ import {
   useEquippedStyle,
   useOwned,
 } from '../hooks/useStardust';
-import { ShopAction, ShopCard, type Tile } from './ShopCard';
+import { ShopCard, ShortcutRow, type FocusTarget, type ItemProps, type Tile } from './ShopCard';
 
 export interface ShopProps {
   userId: string;
@@ -46,6 +46,9 @@ const headingClass = 'font-atlas tracking-atlas text-lavender-200 text-base';
  * star keeps the style it was born with), sky themes, constellation packs, and
  * constellation tiers bought early. Owning is derived from the ledger, so a
  * purchase on one device shows on the others once they sync.
+ *
+ * Buying is deliberate: Buy asks "Buy Ember for 300? You'll have 142 left." in
+ * place, and only the second Buy spends. At most one item asks at a time.
  */
 export const Shop = ({
   userId,
@@ -59,7 +62,16 @@ export const Shop = ({
   const equippedStyle = useEquippedStyle();
   const equippedTheme = useEquippedSkyTheme();
   const [notice, setNotice] = useState<string | null>(null);
+  /** The item key that is asking "are you sure?", if any. */
+  const [asking, setAsking] = useState<string | null>(null);
+  /** The item key just bought, for its one flare. */
+  const [bought, setBought] = useState<string | null>(null);
+  /** For a screen reader, said politely after a purchase. */
+  const [announcement, setAnnouncement] = useState('');
+  /** Where focus goes next, on which item. */
+  const [pending, setPending] = useState<{ key: string; target: FocusTarget } | null>(null);
   const base = useId();
+  const clearPending = useCallback(() => setPending(null), []);
 
   if (
     balance === undefined ||
@@ -72,9 +84,29 @@ export const Shop = ({
 
   const ctx: ShopContext = { balance, owned, equippedStyle, equippedTheme, earnedTiers };
 
-  const buy = async (item: CatalogueItem) => {
+  const ask = (item: CatalogueItem) => {
+    setNotice(null);
+    setAsking(item.key);
+    setPending({ key: item.key, target: 'confirm' });
+  };
+
+  const cancel = (item: CatalogueItem) => {
+    setAsking(null);
+    setPending({ key: item.key, target: 'buy' });
+  };
+
+  const confirm = async (item: CatalogueItem) => {
     const result = await buyItem(userId, item.key);
-    setNotice(result.ok ? null : (REFUSALS[result.reason] ?? 'That did not work.'));
+    setAsking(null);
+    if (result.ok) {
+      setNotice(null);
+      setBought(item.key);
+      setAnnouncement(`${item.name} is yours.`);
+      setPending({ key: item.key, target: 'settle' });
+    } else {
+      setNotice(REFUSALS[result.reason] ?? 'That did not work.');
+      setPending({ key: item.key, target: 'buy' });
+    }
   };
 
   const equip = (item: CatalogueItem) => {
@@ -82,16 +114,22 @@ export const Shop = ({
     if (item.kind === 'sky-theme' && item.themeKey !== undefined) void equipTheme(item.themeKey);
   };
 
+  const itemProps = (item: CatalogueItem): ItemProps => ({
+    item,
+    state: shopState(item, ctx),
+    balance,
+    confirming: asking === item.key,
+    flare: bought === item.key,
+    focusTarget: pending?.key === item.key ? pending.target : null,
+    onFocused: clearPending,
+    onAsk: () => ask(item),
+    onConfirm: () => void confirm(item),
+    onCancel: () => cancel(item),
+    onEquip: () => equip(item),
+  });
+
   const card = (item: CatalogueItem, preview: ReactNode, tile: Tile) => (
-    <ShopCard
-      key={item.key}
-      item={item}
-      state={shopState(item, ctx)}
-      preview={preview}
-      tile={tile}
-      onBuy={() => void buy(item)}
-      onEquip={() => equip(item)}
-    />
+    <ShopCard key={item.key} {...itemProps(item)} preview={preview} tile={tile} />
   );
 
   /** A kind of thing for sale: a heading, how much of it you have, its note, then its cards. */
@@ -176,20 +214,7 @@ export const Shop = ({
         </p>
         <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft divide-y border">
           {itemsOfKind('tier').map((item) => (
-            <li
-              key={item.key}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3"
-            >
-              <span className="text-ink-primary text-sm">{item.name}</span>
-              <span className="flex items-center gap-3">
-                <ShopAction
-                  item={item}
-                  state={shopState(item, ctx)}
-                  onBuy={() => void buy(item)}
-                  onEquip={() => equip(item)}
-                />
-              </span>
-            </li>
+            <ShortcutRow key={item.key} {...itemProps(item)} />
           ))}
         </ul>
       </div>
@@ -199,6 +224,9 @@ export const Shop = ({
           {notice}
         </p>
       )}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
     </section>
   );
 };
