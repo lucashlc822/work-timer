@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { expectSignedIn, openTagPicker, signIn, stardustPill } from '../support/app';
 import { startClockInThePast } from '../support/clock';
+import { befriend, setName } from '../support/friends';
 import { createUser } from '../support/users';
 
 /**
@@ -61,6 +62,64 @@ test('closing a panel hands focus back to the button that opened it', async ({ p
       await expect(opener).toBeFocused();
     });
   }
+});
+
+test('a panel opened with the mouse also lands on its title', async ({ page }) => {
+  await signedIn(page, 'focus-mouse');
+  const openers: Array<[Locator, string]> = [
+    [page.getByRole('button', { name: 'Stats', exact: true }), 'Stats'],
+    [stardustPill(page), 'Stardust'],
+    [page.getByRole('button', { name: /^Friends(,|$)/ }), 'Friends'],
+    [page.getByRole('button', { name: 'Account', exact: true }), 'Account'],
+  ];
+  for (const [opener, title] of openers) {
+    await opener.click();
+    await expect(page.getByRole('heading', { name: title, level: 2 })).toBeFocused();
+    await page.getByRole('button', { name: 'Back to timer' }).click();
+  }
+});
+
+test('with a friend: Focus together opens on its title, and leaving a friend’s sky lands on Friends', async ({
+  page,
+}) => {
+  const [ada, bea] = await Promise.all([createUser('focus-ada'), createUser('focus-bea')]);
+  await Promise.all([setName(ada, 'Ada'), setName(bea, 'Bea')]);
+  await befriend(ada, bea);
+  await startClockInThePast(page);
+  await page.goto('/');
+  await signIn(page, ada);
+  await expectSignedIn(page);
+
+  // Focus together, by keyboard and by mouse; closing goes back to its opener.
+  const together = page.getByRole('button', { name: 'Focus with friends' });
+  const togetherTitle = page.getByRole('heading', { name: 'Focus together', level: 2 });
+  await press(together, 'Enter');
+  await expect(togetherTitle).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(together).toBeFocused();
+  await together.click();
+  await expect(togetherTitle).toBeFocused();
+  await page.getByRole('button', { name: 'Back to timer' }).click();
+
+  // A friend's sky: its Back is floating and focused; leaving it, by Back or
+  // by Escape, opens Friends on its title, never the page.
+  await page.getByRole('button', { name: /^Friends(,|$)/ }).click();
+  const friendsTitle = page.getByRole('heading', { name: 'Friends', level: 2 });
+  const beaRow = page
+    .getByRole('region', { name: 'Friends' })
+    .getByRole('button', { name: /^Bea/ });
+  const backToFriends = page.getByRole('button', { name: 'Back to friends' });
+
+  await beaRow.click();
+  await expect(page.getByRole('heading', { name: "Bea's sky" })).toBeVisible();
+  await expect(backToFriends).toBeFocused();
+  await press(backToFriends, 'Enter');
+  await expect(friendsTitle).toBeFocused();
+
+  await beaRow.click();
+  await expect(backToFriends).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(friendsTitle).toBeFocused();
 });
 
 test('a panel opens on its title: Tab goes into the content, and Back is the last stop', async ({
