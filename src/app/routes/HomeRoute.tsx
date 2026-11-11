@@ -147,10 +147,16 @@ const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
 
 /** The same star in each style, so the shop shows only what the style changes. */
-const renderStylePreview = (styleKey: string) => <StylePreview styleKey={styleKey} />;
+const renderStylePreview = (styleKey: string, size?: number) => (
+  <StylePreview styleKey={styleKey} size={size} />
+);
 
-const renderThemePreview = (themeKey: string) => <ThemeSwatch theme={themeKey} />;
-const renderPackPreview = (packKey: string) => <PackPreview pack={packKey} />;
+const renderThemePreview = (themeKey: string, size?: 'sm' | 'card') => (
+  <ThemeSwatch theme={themeKey} size={size} />
+);
+const renderPackPreview = (packKey: string, labelled?: boolean) => (
+  <PackPreview pack={packKey} labelled={labelled} />
+);
 
 /**
  * The main window: the timer in front of your night sky.
