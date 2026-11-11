@@ -1,5 +1,8 @@
 const number = new Intl.NumberFormat();
 
+/** "1,240": a bare amount, for where the unit is already said. */
+export const count = (amount: number): string => number.format(amount);
+
 /** "1,240 Stardust" — the one way an amount is written. */
 export const stardust = (amount: number): string => `${number.format(amount)} Stardust`;
 
