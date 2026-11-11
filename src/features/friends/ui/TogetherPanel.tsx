@@ -45,7 +45,12 @@ export const TogetherPanel = ({
 }) => (
   <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-10">
     <header className="flex flex-col items-center gap-1">
-      <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Focus together</h2>
+      <h2
+        tabIndex={-1}
+        className="text-ink-secondary text-sm tracking-widest uppercase outline-none"
+      >
+        Focus together
+      </h2>
     </header>
     {together.room !== null ? (
       <section className={CARD}>
