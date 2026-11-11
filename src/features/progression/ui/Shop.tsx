@@ -1,6 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
-import { itemsOfKind, type BuyableTier, type CatalogueItem } from '../domain/catalogue';
+import {
+  itemsOfKind,
+  type BuyableTier,
+  type CatalogueItem,
+  type ItemKind,
+} from '../domain/catalogue';
+import { shopState, type ShopContext } from '../domain/shopState';
 import {
   buyItem,
   equipStyle,
@@ -10,18 +16,18 @@ import {
   useEquippedStyle,
   useOwned,
 } from '../hooks/useStardust';
-import { stardust } from './format';
+import { ShopAction, ShopCard, type Tile } from './ShopCard';
 
 export interface ShopProps {
   userId: string;
   /** Tiers already earned by finishing the tier below; nothing to buy there. */
   earnedTiers: Readonly<Partial<Record<BuyableTier, boolean>>>;
-  /** A small star in the given style, drawn by the sky through `app/`. */
-  renderStylePreview: (styleKey: string) => ReactNode;
-  /** A small swatch of the given sky theme, drawn by the sky through `app/`. */
-  renderThemePreview: (themeKey: string) => ReactNode;
+  /** A star in the given style, drawn by the sky through `app/`; `size` is in px. */
+  renderStylePreview: (styleKey: string, size?: number) => ReactNode;
+  /** A swatch of the given sky theme, drawn by the sky through `app/`. */
+  renderThemePreview: (themeKey: string, size?: 'sm' | 'card') => ReactNode;
   /** The shapes in the given constellation pack, drawn by the sky through `app/`. */
-  renderPackPreview: (packKey: string) => ReactNode;
+  renderPackPreview: (packKey: string, labelled?: boolean) => ReactNode;
 }
 
 const REFUSALS: Record<string, string> = {
@@ -31,12 +37,9 @@ const REFUSALS: Record<string, string> = {
   unknown: 'That item is no longer for sale.',
 };
 
-const button =
-  'rounded-pill border px-4 py-1.5 text-xs transition-colors disabled:cursor-default disabled:opacity-60';
-const primary = `${button} border-lavender-400 bg-lavender-400/15 text-ink-primary hover:bg-lavender-400/25`;
-const status =
-  'text-ink-secondary inline-flex items-center gap-1.5 border border-transparent px-4 py-1.5 text-xs';
-const quiet = `${button} border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary`;
+const STYLE_PREVIEW_PX = 72;
+
+const headingClass = 'font-atlas tracking-atlas text-lavender-200 text-base';
 
 /**
  * Spend Stardust: star styles (which apply to stars born from now on — each
@@ -56,6 +59,7 @@ export const Shop = ({
   const equippedStyle = useEquippedStyle();
   const equippedTheme = useEquippedSkyTheme();
   const [notice, setNotice] = useState<string | null>(null);
+  const base = useId();
 
   if (
     balance === undefined ||
@@ -66,138 +70,129 @@ export const Shop = ({
     return null;
   }
 
+  const ctx: ShopContext = { balance, owned, equippedStyle, equippedTheme, earnedTiers };
+
   const buy = async (item: CatalogueItem) => {
     const result = await buyItem(userId, item.key);
     setNotice(result.ok ? null : (REFUSALS[result.reason] ?? 'That did not work.'));
   };
 
-  /**
-   * What is already so (Equipped, Owned, Unlocked): a status, not a disabled
-   * button, so it reads at full ink-secondary instead of a faded 60%.
-   */
-  const done = (label: string) => (
-    <span className={status}>
-      <svg
-        aria-hidden
-        width="12"
-        height="12"
-        viewBox="0 0 12 12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2.5 6.5l2.5 2.5 4.5-5.5" />
-      </svg>
-      {label}
-    </span>
-  );
-
-  /** Equipped / Equip for something you can wear, and nothing for the rest. */
-  const equipAction = (
-    item: CatalogueItem,
-    current: string,
-    key: string | undefined,
-    equip: (key: string) => Promise<boolean>,
-  ): ReactNode => {
-    if (key === undefined || !owned.has(item.key)) return null;
-    if (current === key) return done('Equipped');
-    return (
-      <button type="button" className={primary} onClick={() => void equip(key)}>
-        Equip
-      </button>
-    );
+  const equip = (item: CatalogueItem) => {
+    if (item.kind === 'star-style' && item.styleKey !== undefined) void equipStyle(item.styleKey);
+    if (item.kind === 'sky-theme' && item.themeKey !== undefined) void equipTheme(item.themeKey);
   };
 
-  const action = (item: CatalogueItem): ReactNode => {
-    const have = owned.has(item.key);
-    const equip =
-      item.kind === 'star-style'
-        ? equipAction(item, equippedStyle, item.styleKey, equipStyle)
-        : item.kind === 'sky-theme'
-          ? equipAction(item, equippedTheme, item.themeKey, equipTheme)
-          : null;
-    if (equip !== null) return equip;
-    if (item.kind === 'pack' && have) return done('Owned');
-    if (
-      item.kind === 'tier' &&
-      item.tier !== undefined &&
-      (have || earnedTiers[item.tier] === true)
-    ) {
-      return done('Unlocked');
-    }
-    const affordable = balance >= item.price;
+  const card = (item: CatalogueItem, preview: ReactNode, tile: Tile) => (
+    <ShopCard
+      key={item.key}
+      item={item}
+      state={shopState(item, ctx)}
+      preview={preview}
+      tile={tile}
+      onBuy={() => void buy(item)}
+      onEquip={() => equip(item)}
+    />
+  );
+
+  /** A kind of thing for sale: a heading, how much of it you have, its note, then its cards. */
+  const collection = (
+    kind: ItemKind,
+    title: string,
+    note: string,
+    grid: string,
+    cards: ReactNode,
+  ) => {
+    const items = itemsOfKind(kind);
+    const have = items.filter((i) => owned.has(i.key)).length;
+    const id = `${base}-${kind}`;
     return (
-      <button
-        type="button"
-        disabled={!affordable}
-        className={affordable ? primary : quiet}
-        onClick={() => void buy(item)}
-      >
-        {affordable ? `Buy · ${stardust(item.price)}` : `Needs ${stardust(item.price)}`}
-      </button>
+      <div role="group" aria-labelledby={id} className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 id={id} className={headingClass}>
+            {title}
+          </h3>
+          <span className="text-ink-muted text-xs whitespace-nowrap">
+            {have} of {items.length} owned
+          </span>
+        </div>
+        <p className="text-ink-secondary text-xs">{note}</p>
+        <ul className={grid}>{cards}</ul>
+      </div>
     );
   };
-
-  const row = (item: CatalogueItem, preview?: ReactNode) => (
-    <li key={item.key} className="flex items-center justify-between gap-4 px-4 py-3">
-      <span className="flex items-center gap-3">
-        {preview}
-        <span className="text-ink-primary text-sm">{item.name}</span>
-      </span>
-      {action(item)}
-    </li>
-  );
-
-  const section = (title: string, note: string, rows: ReactNode) => (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-ink-secondary text-xs tracking-widest uppercase">{title}</h3>
-      <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft divide-y border">
-        {rows}
-      </ul>
-      <p className="text-ink-muted text-xs">{note}</p>
-    </div>
-  );
 
   return (
-    <section aria-label="Shop" className="flex w-full flex-col gap-4">
-      {section(
+    <section aria-label="Shop" className="flex w-full flex-col gap-8">
+      {collection(
+        'star-style',
         'Star styles',
         'A new style marks the stars you earn from now on. Stars already in your sky keep the style they were born with.',
+        'grid grid-cols-2 gap-3 sm:grid-cols-3',
         itemsOfKind('star-style').map((item) =>
-          row(
+          card(
             item,
-            item.styleKey === undefined ? undefined : (
-              <span className="flex h-10 w-10 items-center justify-center">
-                {renderStylePreview(item.styleKey)}
-              </span>
-            ),
+            item.styleKey === undefined
+              ? null
+              : renderStylePreview(item.styleKey, STYLE_PREVIEW_PX),
+            'stars',
           ),
         ),
       )}
 
-      {section(
+      {collection(
+        'sky-theme',
         'Sky themes',
         'A theme re-colours the night behind your stars, and applies at once.',
+        'grid grid-cols-1 gap-3 sm:grid-cols-2',
         itemsOfKind('sky-theme').map((item) =>
-          row(item, item.themeKey === undefined ? undefined : renderThemePreview(item.themeKey)),
+          card(
+            item,
+            item.themeKey === undefined ? null : renderThemePreview(item.themeKey, 'card'),
+            'sky',
+          ),
         ),
       )}
 
-      {section(
+      {collection(
+        'pack',
         'Constellation packs',
         "A pack adds new shapes to the picker: one easy, one medium and one hard. Constellations you've already started aren't affected.",
+        'grid grid-cols-1 gap-3 sm:grid-cols-2',
         itemsOfKind('pack').map((item) =>
-          row(item, item.packKey === undefined ? undefined : renderPackPreview(item.packKey)),
+          card(
+            item,
+            item.packKey === undefined ? null : renderPackPreview(item.packKey, true),
+            'plain',
+          ),
         ),
       )}
 
-      {section(
-        'Unlock a tier early',
-        'Finishing an easier constellation unlocks the next tier for free; this is the shortcut.',
-        itemsOfKind('tier').map((item) => row(item)),
-      )}
+      <div role="group" aria-labelledby={`${base}-shortcuts`} className="flex flex-col gap-3">
+        <h3 id={`${base}-shortcuts`} className={headingClass}>
+          Shortcuts
+        </h3>
+        <p className="text-ink-secondary text-xs">
+          Finishing an easier constellation unlocks the next tier for free; this is the shortcut.
+        </p>
+        <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft divide-y border">
+          {itemsOfKind('tier').map((item) => (
+            <li
+              key={item.key}
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3"
+            >
+              <span className="text-ink-primary text-sm">{item.name}</span>
+              <span className="flex items-center gap-3">
+                <ShopAction
+                  item={item}
+                  state={shopState(item, ctx)}
+                  onBuy={() => void buy(item)}
+                  onEquip={() => equip(item)}
+                />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {notice !== null && (
         <p role="status" className="text-faded text-center text-xs">

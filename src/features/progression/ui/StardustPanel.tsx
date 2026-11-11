@@ -179,7 +179,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('shop')}
         aria-labelledby={tabId('shop')}
         hidden={tab !== 'shop'}
-        className="w-full max-w-md"
+        className="w-full"
       >
         <Shop {...shop} />
       </div>
@@ -199,7 +199,7 @@ export const StardustPanel = (shop: ShopProps) => {
         hidden={tab !== 'history'}
         className="w-full max-w-md"
       >
-        <h3 className="text-ink-secondary mb-3 text-xs tracking-widest uppercase">History</h3>
+        <h3 className="font-atlas tracking-atlas text-lavender-200 mb-3 text-base">History</h3>
         <History />
       </div>
     </div>

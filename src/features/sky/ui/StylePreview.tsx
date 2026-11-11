@@ -25,18 +25,21 @@ export const StylePreview = ({
   styleKey,
   seed = 'shop-preview',
   focusS = 1500,
+  size = BOX,
 }: {
   styleKey: string;
   seed?: string;
   focusS?: number;
+  /** The drawn size in px; the star is scaled, not redrawn, so it looks the same bigger. */
+  size?: number | undefined;
 }) => {
   const id = `style-${useId()}`;
   const look = starAppearance(seed, focusS, styleKey);
   const form = starForm(look, focusS, styleKey, BASE_R, 'glow');
   return (
     <svg
-      width={BOX}
-      height={BOX}
+      width={size}
+      height={size}
       viewBox={`0 0 ${BOX} ${BOX}`}
       aria-hidden="true"
       focusable="false"
