@@ -12,6 +12,51 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-10 (later) — Stardust shop redesign merged (#170–#173); not released
+
+**Status: merged, not released.** `master` (`eaf2e16`) holds a three-part redesign of the Stardust panel, a reviewer-polish PR, and the reviewer's memory update (#174). `package.json` is still 0.8.0, so the redesign reaches nobody until the next release. Each code PR had all five CI jobs green before it was merged (master's own runs after the merges were not looked at).
+
+### Why
+
+Lucas: the shop felt like features stacked in the order they were built. Looked at live, that was true: one long column (balance, earning explainer, goal and streak settings, four shop lists, then an untitled 20-row ledger), every item the same row with a 40 px preview, price only inside a faded "Needs 1,200 Stardust" pill, and Buy spending on one click with no feedback on success.
+
+### What landed
+
+- **#170, structure.** Balance up front under an atlas-face title; the explainer in a closed disclosure; three tabs (Shop opens first every time, Goal & streak, History). History is now headed and grouped by day (`domain/ledgerDays.ts`). Tabs follow the ARIA tabs pattern with arrows, Home and End, and one Tab stop (reuses `radioKeyTarget`). Panels stay mounted and `hidden`, so `aria-controls` always resolves.
+- **#171, cards.** Styles, themes and packs are cards (`ShopCard.tsx`). Previews are bigger and drawn by the sky through optional props (`StylePreview size`, `ThemeSwatch size='card'`, `PackPreview labelled`); with no props each renders exactly as before. One state per card from a pure function (`domain/shopState.ts`): Equipped (ring), Owned + Equip, Owned/Unlocked, price + Buy, or price + "N more to go". Each collection says "N of M owned". Tier unlocks are a quiet "Shortcuts" list.
+- **#172, deliberate buying.** Buy opens an in-card question ("Buy Ember for 300? You'll have 142 left.") with Buy and Not now. Focus goes to the confirm button, back to Buy after Not now, Escape or a refusal, and onto Equip (or the Owned status) after a purchase. A polite live region says "Ember is yours." and the picture flares once (no animation under reduced motion). New `e2e/web/shop.spec.ts`; `seedStardust` moved into `e2e/support/users.ts`.
+- **#173, reviewer polish.** Taller disclosure toggle, History amounts read "+25 Stardust" to a screen reader, no duplicate "History" heading or "Shop" landmark.
+- **#174.** The reviewer's own memory line for this review.
+
+### Reviewer result (`ui-ux-reviewer`, master `b659745`)
+
+No Blocker, High or Medium. axe 0 violations on all three tabs at 1280, 768 and 375, and with a question open (12 scans). Text contrast measured over the real background; `ink-muted` is the thin one at 4.55–4.72:1 (passes AA, little margin). No colour or spacing outside the tokens.
+
+### Things learned that aren't in the code
+
+- **The Escape handling depends on React's event order.** The card's `onKeyDown` calls `stopPropagation`, which stops the native event before it reaches the panel's `document` keydown listener in `HomeRoute.tsx`. If that listener ever moves to the capture phase or to `window`, an Escape would close the panel as well as the question. `Shop.test.tsx` and `shop.spec.ts` both pin this, in both directions.
+- **A purchase writes a permanent ledger row**, so the live checks stopped at the question and the real purchase is covered only by the e2e tests, on fresh accounts.
+- **`exactOptionalPropertyTypes` is on**, so passing an optional prop through needs `| undefined` in the target's prop type.
+- **jsdom drops a multi-gradient `background`**, so the `style` attribute is absent there; don't assert on it.
+- **Reduced motion:** the global rule zeroes durations but keeps `animation-name`; `.shop-flare` and `.shop-pulse` have their own `animation: none` so the computed name is `none`.
+- **Huge Bash heredocs with mixed quoting can fail to parse and run nothing.** For big files use the Write tool, and a small Python script for edits.
+- **Docker Desktop was off again** after the app restarted, so `npx supabase start` failed until it was started (the "db not ready: starting" message once is the known blip).
+- **The reviewer's run leaves its memory file modified** on whatever branch is checked out. Stage only your own files, and land it as its own docs PR, as #174 did.
+- **Browser pane screenshots can show a stale frame.** Read the DOM state before believing one.
+
+### Not verified
+
+The purchase flow by eye (focus after a purchase, the flare; only computed style and tests), a non-Night theme equipped, the History "Today"/"Yesterday" and empty states, the packaged desktop app with the new panel, and a real screen reader. The reviewer did cover 768 px.
+
+### Next
+
+- **Release** when Lucas decides (`RELEASING.md`; this would be 0.9.0, as a minor bump with no migration).
+- **Still open from the 0.8.0 release:** confirm an installed 0.7.0 app is offered the update (not checkable on the machine that upgraded itself).
+- **Reviewer Lows left on purpose:** L1, focus lands on "Back to timer" when any panel opens (every panel, noted since 2026-10-28, its own PR); L4, a card row grows when a question opens; the Shop tab is wider than the other two; five styles in three columns leave one empty cell.
+- **CLAUDE.md "Decisions already made"** doesn't yet record the shop's structure (tabs, one state per card from `shopState`, ask-first Buy, Escape closes the question only). Worth a short entry so it isn't re-litigated.
+
+---
+
 ## 2026-11-10 — Released 0.8.0 (the View sky upgrade)
 
 **Status: published.** v0.8.0 is the Latest release (tag `v0.8.0`, commit
