@@ -107,14 +107,14 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await backToTimer(page);
 
   await page.getByRole('button', { name: /Stardust$/ }).click();
-  await page.getByRole('region', { name: 'Shop' }).waitFor();
+  await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'Stardust and shop')));
   await page.getByRole('tab', { name: 'Goal & streak' }).click();
   await page.getByRole('region', { name: 'Daily goal and streak' }).waitFor();
   findings.push(...(await scan(page, 'Stardust goal and streak')));
   await page.getByRole('tab', { name: 'History' }).click();
-  await page.getByRole('heading', { name: 'History' }).waitFor();
+  await page.getByRole('tabpanel', { name: 'History' }).waitFor();
   findings.push(...(await scan(page, 'Stardust history')));
   await backToTimer(page);
 
