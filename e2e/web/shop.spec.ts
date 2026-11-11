@@ -29,7 +29,7 @@ const openShop = async (page: Page, label: string) => {
   await expectSignedIn(page);
   await expect(stardustPill(page)).toHaveText(/\b1,000 Stardust$/, { timeout: 20_000 });
   await stardustPill(page).click();
-  await page.getByRole('region', { name: 'Shop' }).waitFor();
+  await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
   await settleTransitions(page);
   return { user, ember: page.getByRole('listitem').filter({ hasText: 'Ember' }) };
 };
@@ -48,7 +48,7 @@ test('Buy asks first; Escape closes the question, not the panel; nothing is spen
 
   await page.keyboard.press('Escape');
   await expect(ember.getByText(/You’ll have/)).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Shop' })).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: 'Shop' })).toBeVisible();
   await expect(ember.getByRole('button', { name: /^Buy Ember/ })).toBeFocused();
   expect(await purchases(user)).toEqual([]);
 

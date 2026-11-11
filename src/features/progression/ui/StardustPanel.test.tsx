@@ -54,7 +54,9 @@ describe('the Stardust panel', () => {
   it('opens on the shop, with the balance up front', () => {
     renderPanel();
     expect(screen.getByRole('tab', { name: 'Shop' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('region', { name: 'Shop' })).toBeTruthy();
+    expect(screen.getByRole('tabpanel', { name: 'Shop' })).toBeTruthy();
+    // The tabpanel is the landmark: no second "Shop" region inside it.
+    expect(screen.queryByRole('region', { name: 'Shop' })).toBeNull();
     expect(screen.getByText('1,234')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Daily goal and streak' })).toBeNull();
   });
@@ -87,12 +89,19 @@ describe('the Stardust panel', () => {
     vi.setSystemTime(NOW);
     renderPanel();
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
-    expect(screen.getByRole('heading', { name: 'History' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Today' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Yesterday' })).toBeTruthy();
+    // The tab names the panel; the page doesn't say "History" twice.
+    expect(screen.getByRole('tabpanel', { name: 'History' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'History' })).toBeNull();
+    // Under the Stardust title (h2), the days are the next level.
+    for (const day of ['Today', 'Yesterday']) {
+      expect(screen.getByRole('heading', { name: day, level: 3 })).toBeTruthy();
+    }
     expect(screen.getByText('Focus session')).toBeTruthy();
-    expect(screen.getByText('+25')).toBeTruthy();
     expect(screen.getByText('Daily goal reached')).toBeTruthy();
+    // An amount says what it is an amount of, to a screen reader.
+    const amount = screen.getByText('+25');
+    expect(amount.textContent).toBe('+25 Stardust');
+    expect(amount.querySelector('.sr-only')?.textContent).toBe(' Stardust');
   });
 
   it('tucks the earning explainer into a closed disclosure', () => {
@@ -100,5 +109,7 @@ describe('the Stardust panel', () => {
     const details = screen.getByText('How Stardust is earned').closest('details');
     expect(details).not.toBeNull();
     expect(details?.open).toBe(false);
+    // A pointer-sized target, not a 16 px line of text.
+    expect(details?.querySelector('summary')?.className).toContain('py-1.5');
   });
 });

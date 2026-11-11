@@ -160,7 +160,7 @@ export const Shop = ({
   };
 
   return (
-    <section aria-label="Shop" className="flex w-full flex-col gap-8">
+    <div className="flex w-full flex-col gap-8">
       {collection(
         'star-style',
         'Star styles',
@@ -227,6 +227,6 @@ export const Shop = ({
       <p role="status" className="sr-only">
         {announcement}
       </p>
-    </section>
+    </div>
   );
 };

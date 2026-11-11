@@ -58,9 +58,9 @@ const History = () => {
     <div className="flex flex-col gap-5">
       {groupByDay(recent).map((group) => (
         <div key={group.key} className="flex flex-col gap-2">
-          <h4 className="text-ink-secondary text-xs tracking-widest uppercase">
+          <h3 className="text-ink-secondary text-xs tracking-widest uppercase">
             {dayLabel(group.at, now)}
-          </h4>
+          </h3>
           <ul className="border-night-600 bg-night-800/70 divide-night-600 rounded-soft w-full divide-y border">
             {group.rows.map((row) => (
               <li
@@ -73,6 +73,7 @@ const History = () => {
                 </span>
                 <span className={row.delta < 0 ? 'text-rose-300' : 'text-star-warm'}>
                   {signed(row.delta)}
+                  <span className="sr-only"> Stardust</span>
                 </span>
               </li>
             ))}
@@ -130,7 +131,7 @@ export const StardustPanel = (shop: ShopProps) => {
           <span className="sr-only"> Stardust</span>
         </p>
         <details className="text-ink-secondary max-w-sm text-center text-sm">
-          <summary className="hover:text-ink-primary cursor-pointer text-xs">
+          <summary className="hover:text-ink-primary cursor-pointer py-1.5 text-xs">
             How Stardust is earned
           </summary>
           <p className="mt-2">
@@ -199,7 +200,6 @@ export const StardustPanel = (shop: ShopProps) => {
         hidden={tab !== 'history'}
         className="w-full max-w-md"
       >
-        <h3 className="font-atlas tracking-atlas text-lavender-200 mb-3 text-base">History</h3>
         <History />
       </div>
     </div>
