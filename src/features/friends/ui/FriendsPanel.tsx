@@ -54,7 +54,12 @@ export const FriendsPanel = ({
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-6 pt-10 pb-10">
       <header className="flex flex-col items-center gap-1">
-        <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Friends</h2>
+        <h2
+          tabIndex={-1}
+          className="text-ink-secondary text-sm tracking-widest uppercase outline-none"
+        >
+          Friends
+        </h2>
       </header>
 
       {load === 'loading' && profile === null && (

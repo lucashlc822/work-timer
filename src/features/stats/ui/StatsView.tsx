@@ -60,7 +60,12 @@ export const StatsView = () => {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 pt-10 pb-10">
       <header className="flex flex-col items-center gap-4">
-        <h2 className="text-ink-secondary text-sm tracking-widest uppercase">Stats</h2>
+        <h2
+          tabIndex={-1}
+          className="text-ink-secondary text-sm tracking-widest uppercase outline-none"
+        >
+          Stats
+        </h2>
 
         <PeriodTabs kind={kind} onChange={pick} />
 

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useDialogFocus, useFocusIfLost } from './focus';
+import { useDialogFocus, useFocusHeading, useFocusIfLost } from './focus';
 
 afterEach(cleanup);
 
@@ -87,5 +87,53 @@ describe('useFocusIfLost', () => {
       </>,
     );
     expect(screen.getByLabelText('elsewhere')).toHaveFocus();
+  });
+});
+
+const Panel = ({ headings }: { headings: string[] }) => {
+  const body = useRef<HTMLDivElement>(null);
+  const back = useRef<HTMLButtonElement>(null);
+  useFocusHeading(body, back);
+  return (
+    <>
+      <div ref={body}>
+        {headings.map((h) => (
+          <h2 key={h} tabIndex={-1}>
+            {h}
+          </h2>
+        ))}
+        <button>First control</button>
+      </div>
+      <button ref={back}>Back</button>
+    </>
+  );
+};
+
+describe('useFocusHeading', () => {
+  it('focuses the panel title on mount, taking focus from the opener', () => {
+    render(
+      <>
+        <button>Opener</button>
+        <Panel headings={['Stats']} />
+      </>,
+    );
+    expect(screen.getByRole('heading', { name: 'Stats' })).toHaveFocus();
+  });
+
+  it('leaves the first control one Tab away', async () => {
+    const user = userEvent.setup();
+    render(<Panel headings={['Stats']} />);
+    await user.tab();
+    expect(screen.getByText('First control')).toHaveFocus();
+  });
+
+  it('focuses only the first heading', () => {
+    render(<Panel headings={['Stats', 'Other']} />);
+    expect(screen.getByRole('heading', { name: 'Stats' })).toHaveFocus();
+  });
+
+  it('falls back to the given control when there is no heading', () => {
+    render(<Panel headings={[]} />);
+    expect(screen.getByText('Back')).toHaveFocus();
   });
 });

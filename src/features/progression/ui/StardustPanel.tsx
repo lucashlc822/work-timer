@@ -122,7 +122,12 @@ export const StardustPanel = (shop: ShopProps) => {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-6 px-6 pt-10 pb-10">
       <header className="flex flex-col items-center gap-3">
-        <h2 className="font-atlas tracking-atlas text-lavender-200 text-lg">Stardust</h2>
+        <h2
+          tabIndex={-1}
+          className="font-atlas tracking-atlas text-lavender-200 text-lg outline-none"
+        >
+          Stardust
+        </h2>
         <p className="text-ink-primary text-4xl">
           <span aria-hidden className="text-star-warm mr-2">
             ✦

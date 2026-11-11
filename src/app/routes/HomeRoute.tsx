@@ -1,5 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -68,7 +76,7 @@ import {
 import { APP_NAME } from '@/shared/config';
 import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
-import { StarMark, Switch, useFocusIfLost } from '@/shared/ui';
+import { StarMark, Switch, useFocusHeading, useFocusIfLost } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
@@ -106,28 +114,48 @@ const PANEL_VIEWS: ReadonlySet<string> = new Set([
 
 /**
  * A panel over the dimmed sky: the content scrolls above a footer that holds
- * the Back button, so the button never sits on top of the content.
+ * the Back button, so the button never sits on top of the content. It opens
+ * on the panel's title, so the first control is one Tab away and Back is the
+ * last stop; with no title, on Back, so focus never falls to the page.
  */
-const PanelLayer = ({ children, back }: { children: ReactNode; back: ReactNode }) => (
-  <div className="bg-night-900/85 fixed inset-0 z-10 flex flex-col backdrop-blur-sm">
-    <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-    <footer className="border-night-700 flex justify-center border-t py-3">{back}</footer>
-  </div>
-);
+const PanelLayer = ({
+  children,
+  back,
+  backRef,
+}: {
+  children: ReactNode;
+  back: ReactNode;
+  backRef: RefObject<HTMLButtonElement | null>;
+}) => {
+  const content = useRef<HTMLDivElement>(null);
+  useFocusHeading(content, backRef);
+  return (
+    <div className="bg-night-900/85 fixed inset-0 z-10 flex flex-col backdrop-blur-sm">
+      <div ref={content} className="min-h-0 flex-1 overflow-y-auto">
+        {children}
+      </div>
+      <footer className="border-night-700 flex justify-center border-t py-3">{back}</footer>
+    </div>
+  );
+};
 
 /** "Back to timer" / "Back to friends": in a panel's footer, or floating over a view that doesn't scroll. */
 const BackButton = ({
   label,
   floating,
+  buttonRef,
   onClick,
 }: {
   label: string;
   floating: boolean;
+  buttonRef: RefObject<HTMLButtonElement | null>;
   onClick: () => void;
 }) => (
   <button
+    ref={buttonRef}
     type="button"
-    autoFocus
+    // A floating Back is the only control over a sky; in a panel the title is focused instead.
+    autoFocus={floating}
     onClick={onClick}
     className={`rounded-pill border-night-600 text-ink-secondary hover:text-ink-primary border px-5 py-2 text-xs transition-colors ${
       floating
@@ -389,10 +417,12 @@ const HomeScreen = ({ together }: { together: Together }) => {
     return () => document.removeEventListener('keydown', onKey);
   }, [view]);
 
+  const backRef = useRef<HTMLButtonElement>(null);
   const back = (
     <BackButton
       // Re-mounted per view, so autoFocus lands on it each time.
       key={view}
+      buttonRef={backRef}
       label={view === 'friend' ? 'Back to friends' : 'Back to timer'}
       floating={!inPanel}
       onClick={() => {
@@ -481,13 +511,13 @@ const HomeScreen = ({ together }: { together: Together }) => {
       </main>
 
       {view === 'stats' && (
-        <PanelLayer back={back}>
+        <PanelLayer back={back} backRef={backRef}>
           <StatsView />
         </PanelLayer>
       )}
 
       {view === 'stardust' && (
-        <PanelLayer back={back}>
+        <PanelLayer back={back} backRef={backRef}>
           <StardustPanel
             userId={account.userId}
             earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
@@ -499,7 +529,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'account' && (
-        <PanelLayer back={back}>
+        <PanelLayer back={back} backRef={backRef}>
           <AccountPanel
             email={account.email}
             sync={sync}
@@ -513,7 +543,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'friends' && (
-        <PanelLayer back={back}>
+        <PanelLayer back={back} backRef={backRef}>
           <FriendsPanel
             friends={friends}
             now={Date.now()}
@@ -527,7 +557,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
       )}
 
       {view === 'together' && (
-        <PanelLayer back={back}>
+        <PanelLayer back={back} backRef={backRef}>
           <TogetherPanel
             together={together}
             friends={friends.friends}

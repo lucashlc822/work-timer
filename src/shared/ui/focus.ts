@@ -71,3 +71,20 @@ export const useFocusIfLost = (target: RefObject<HTMLElement | null>, when = tru
     if (when && focusIsLost()) target.current?.focus();
   }, [target, when]);
 };
+
+/**
+ * On mount, focuses the first `h2` inside `container` (give it `tabIndex={-1}`),
+ * else `fallback`. Unlike useFocusIfLost it always takes focus: the view it
+ * opens on has just replaced the one that had it, and a panel's title is
+ * where a keyboard or screen-reader user should start reading, with the first
+ * control one Tab away.
+ */
+export const useFocusHeading = (
+  container: RefObject<HTMLElement | null>,
+  fallback: RefObject<HTMLElement | null>,
+) => {
+  useEffect(() => {
+    const heading = container.current?.querySelector<HTMLElement>('h2');
+    (heading ?? fallback.current)?.focus();
+  }, [container, fallback]);
+};

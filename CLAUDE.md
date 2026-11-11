@@ -746,6 +746,17 @@ rejected). Don't pre-populate this with guesses.
   would close the panel too. `Shop.test.tsx` and `e2e/web/shop.spec.ts` pin both
   directions.
 
+- **A panel opens on its title; a view with no title opens on its Back button**
+  (2026-11-11, the reviewer's L1). Stats, Stardust, Account, Friends and Focus
+  together are `PanelLayer`s in `app/routes/HomeRoute.tsx`, which calls
+  `useFocusHeading` (`shared/ui/focus.ts`): it focuses the panel's first `h2`
+  (`tabIndex={-1}`, `outline-none` because it is not a control), else the Back
+  button, so focus never falls to the page behind the inert timer. The first Tab
+  reaches the first control and Back is the last stop. Only the floating Back
+  (View sky, a friend's sky) keeps `autoFocus`. A new panel needs an `h2` as its
+  title and nothing else; closing still hands focus back to the opener
+  (`useFocusIfLost`).
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
