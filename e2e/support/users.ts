@@ -69,3 +69,16 @@ export const signedInClient = async (user: TestUser): Promise<SupabaseClient> =>
 };
 
 export const newId = (): string => randomUUID();
+
+/** Gives an account spendable Stardust with one ledger row the app doesn't produce itself. */
+export const seedStardust = async (user: TestUser, amount: number): Promise<void> => {
+  const { error } = await adminClient().from('ledger').insert({
+    id: newId(),
+    user_id: user.id,
+    reason: 'e2e',
+    delta: amount,
+    ref: 'e2e-seed',
+    created_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(`Couldn't seed Stardust for ${user.email}: ${error.message}`);
+};

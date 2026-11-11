@@ -202,3 +202,44 @@
   transform-origin: center;
   animation: sky-flare var(--duration-flare) var(--ease-gentle) both;
 }
+
+/*
+ * A shop purchase's reward (Stardust shop PR 3): the bought star flares once on
+ * its tile, and a sky or pack tile swells a touch. Same duration and easing as
+ * the sky's completion flare. Reduced motion shows neither: the card has already
+ * changed to Equip or Owned, which is the whole message.
+ */
+@keyframes shop-flare {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.35);
+  }
+}
+
+@keyframes shop-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.03);
+  }
+}
+
+.shop-flare {
+  animation: shop-flare var(--duration-flare) var(--ease-gentle) both;
+}
+
+.shop-pulse {
+  animation: shop-pulse var(--duration-flare) var(--ease-gentle) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-flare,
+  .shop-pulse {
+    animation: none !important;
+  }
+}

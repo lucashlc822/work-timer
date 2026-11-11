@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { backToTimer, openView, sessionsOnDevice, stardustPill, syncLine } from '../support/app';
 import { closeDevices, openDevice, renameTag, tagNames } from '../support/devices';
-import { adminClient, createUser, newId, type TestUser } from '../support/users';
+import { adminClient, createUser, newId, seedStardust, type TestUser } from '../support/users';
 
 /**
  * Two devices, one account. Each device is its own browser context with its
@@ -53,18 +53,6 @@ const seedTag = async (user: TestUser, name: string) => {
     color: 'mint',
     created_at: now,
     updated_at: now,
-  });
-  expect(error).toBeNull();
-};
-
-const seedStardust = async (user: TestUser, amount: number) => {
-  const { error } = await adminClient().from('ledger').insert({
-    id: newId(),
-    user_id: user.id,
-    reason: 'e2e',
-    delta: amount,
-    ref: 'e2e-seed',
-    created_at: new Date().toISOString(),
   });
   expect(error).toBeNull();
 };
@@ -225,6 +213,8 @@ test('the same shop item bought on both offline devices is deducted once', async
       await stardustPill(device.page).click();
       const ember = device.page.getByRole('listitem').filter({ hasText: 'Ember' });
       await ember.getByRole('button', { name: /^Buy/ }).click();
+      // Buy only asks; the second Buy, in the card, spends.
+      await ember.getByRole('button', { name: 'Buy', exact: true }).click();
       await expect(ember.getByRole('button', { name: /Equip|Equipped/ })).toBeVisible();
       await device.page.getByRole('button', { name: 'Back to timer' }).click();
       await expect(stardustPill(device.page)).toHaveText(/\b700 Stardust$/);

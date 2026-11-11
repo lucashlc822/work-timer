@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Shop } from './Shop';
@@ -51,6 +51,11 @@ const card = (name: string) => {
   return li;
 };
 
+const askToBuy = (name: string, price: string) =>
+  fireEvent.click(
+    within(card(name)).getByRole('button', { name: `Buy ${name} for ${price} Stardust` }),
+  );
+
 describe('the shop', () => {
   it('shows what is already equipped as a readable status, not a faded disabled button', () => {
     renderShop();
@@ -94,16 +99,6 @@ describe('the shop', () => {
     expect(within(crystal).queryByRole('button')).toBeNull();
   });
 
-  it('buying calls through with the item, and refusals are said gently', async () => {
-    mocks.balance = 442;
-    mocks.buyItem.mockResolvedValue({ ok: false, reason: 'insufficient' });
-    renderShop();
-
-    fireEvent.click(within(card('Ember')).getByRole('button', { name: /^Buy Ember/ }));
-    expect(mocks.buyItem).toHaveBeenCalledWith('u1', 'style.ember');
-    expect(await screen.findByText('Not enough Stardust yet.')).toBeTruthy();
-  });
-
   it('an owned style that is not worn offers Equip', () => {
     mocks.owned = new Set(['style.classic', 'style.ember', 'theme.night']);
     renderShop();
@@ -132,5 +127,145 @@ describe('the shop', () => {
     expect(renderStylePreview).toHaveBeenCalledWith('ember', 72);
     expect(renderThemePreview).toHaveBeenCalledWith('dusk', 'card');
     expect(renderPackPreview).toHaveBeenCalledWith('woodland', true);
+  });
+});
+
+describe('buying', () => {
+  beforeEach(() => {
+    mocks.balance = 442;
+  });
+
+  it('Buy only asks: it says what is left and spends nothing, with focus on the confirm button', () => {
+    renderShop();
+    askToBuy('Ember', '300');
+
+    const ember = card('Ember');
+    expect(within(ember).getByText(/Buy Ember for/).textContent).toContain('You’ll have');
+    expect(within(ember).getByText(/You’ll have/).textContent).toMatch(/142/);
+    expect(mocks.buyItem).not.toHaveBeenCalled();
+
+    const confirm = within(ember).getByRole('button', { name: 'Buy' });
+    expect(document.activeElement).toBe(confirm);
+    // The question is the button's description, heard as focus lands.
+    const described = confirm.getAttribute('aria-describedby');
+    expect(document.getElementById(described ?? '')?.textContent).toContain('Buy Ember for');
+  });
+
+  it('Not now spends nothing and puts focus back on Buy', () => {
+    renderShop();
+    askToBuy('Ember', '300');
+    fireEvent.click(within(card('Ember')).getByRole('button', { name: 'Not now' }));
+
+    expect(mocks.buyItem).not.toHaveBeenCalled();
+    expect(within(card('Ember')).queryByText(/You’ll have/)).toBeNull();
+    expect(document.activeElement).toBe(
+      within(card('Ember')).getByRole('button', { name: 'Buy Ember for 300 Stardust' }),
+    );
+  });
+
+  it('Escape does the same as Not now and does not reach the panel behind', () => {
+    const outside = vi.fn();
+    document.addEventListener('keydown', outside);
+    renderShop();
+    askToBuy('Ember', '300');
+
+    fireEvent.keyDown(within(card('Ember')).getByRole('button', { name: 'Buy' }), {
+      key: 'Escape',
+    });
+    expect(mocks.buyItem).not.toHaveBeenCalled();
+    expect(within(card('Ember')).queryByText(/You’ll have/)).toBeNull();
+    expect(document.activeElement).toBe(
+      within(card('Ember')).getByRole('button', { name: 'Buy Ember for 300 Stardust' }),
+    );
+    expect(outside).not.toHaveBeenCalled();
+
+    // With nothing being asked, Escape is not ours: it goes on to leave the panel.
+    fireEvent.keyDown(within(card('Ember')).getByRole('button', { name: /^Buy Ember/ }), {
+      key: 'Escape',
+    });
+    expect(outside).toHaveBeenCalledTimes(1);
+    document.removeEventListener('keydown', outside);
+  });
+
+  it('only one item asks at a time', () => {
+    renderShop();
+    askToBuy('Ember', '300');
+    askToBuy('Aurora', '400');
+
+    expect(screen.getAllByRole('button', { name: 'Not now' })).toHaveLength(1);
+    expect(within(card('Aurora')).getByRole('button', { name: 'Not now' })).toBeTruthy();
+    expect(within(card('Ember')).queryByRole('button', { name: 'Not now' })).toBeNull();
+    expect(document.activeElement).toBe(
+      within(card('Aurora')).getByRole('button', { name: 'Buy' }),
+    );
+  });
+
+  it('confirming buys once, says so politely, flares the star and lands focus on Equip', async () => {
+    mocks.buyItem.mockImplementation(() => {
+      mocks.balance = 142;
+      mocks.owned = new Set([...mocks.owned, 'style.ember']);
+      return Promise.resolve({ ok: true });
+    });
+    renderShop();
+    askToBuy('Ember', '300');
+    fireEvent.click(within(card('Ember')).getByRole('button', { name: 'Buy' }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(card('Ember')).getByRole('button', { name: 'Equip Ember' }),
+      ),
+    );
+    expect(mocks.buyItem).toHaveBeenCalledTimes(1);
+    expect(mocks.buyItem).toHaveBeenCalledWith('u1', 'style.ember');
+    expect(screen.getByText('Ember is yours.')).toBeTruthy();
+    expect(card('Ember').querySelector('.shop-flare')).not.toBeNull();
+    expect(card('Aurora').querySelector('.shop-flare')).toBeNull();
+  });
+
+  it('a pack bought lands focus on its Owned status and swells its tile', async () => {
+    mocks.balance = 1000;
+    mocks.buyItem.mockImplementation(() => {
+      mocks.owned = new Set([...mocks.owned, 'pack.woodland']);
+      return Promise.resolve({ ok: true });
+    });
+    renderShop();
+    askToBuy('Woodland pack', '800');
+    fireEvent.click(within(card('Woodland pack')).getByRole('button', { name: 'Buy' }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(within(card('Woodland pack')).getByText('Owned')),
+    );
+    expect(screen.getByText('Woodland pack is yours.')).toBeTruthy();
+    expect(card('Woodland pack').querySelector('.shop-pulse')).not.toBeNull();
+  });
+
+  it('a refusal is said gently, and focus goes back to Buy', async () => {
+    mocks.buyItem.mockResolvedValue({ ok: false, reason: 'insufficient' });
+    renderShop();
+    askToBuy('Ember', '300');
+    fireEvent.click(within(card('Ember')).getByRole('button', { name: 'Buy' }));
+
+    expect(await screen.findByText('Not enough Stardust yet.')).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(card('Ember')).getByRole('button', { name: 'Buy Ember for 300 Stardust' }),
+      ),
+    );
+    expect(screen.queryByText('Ember is yours.')).toBeNull();
+  });
+
+  it('a tier unlock asks the same way, in its row', () => {
+    mocks.balance = 5000;
+    renderShop();
+    fireEvent.click(
+      within(card('Medium constellations')).getByRole('button', {
+        name: 'Buy Medium constellations for 2,000 Stardust',
+      }),
+    );
+
+    const row = card('Medium constellations');
+    expect(within(row).getByText(/You’ll have/).textContent).toMatch(/3,000/);
+    expect(mocks.buyItem).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(within(row).getByRole('button', { name: 'Buy' }));
   });
 });
