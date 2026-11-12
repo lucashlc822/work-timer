@@ -263,7 +263,14 @@ const PreviewTile = ({
   );
 };
 
-/** One thing for sale: its picture, its name, then its price and what you can do. */
+/**
+ * One thing for sale: its picture, its name, then its price and what you can do.
+ *
+ * Asking "are you sure?" must not move the shop: the question takes the card's
+ * whole face in the same grid cell, while the usual face stays laid out but
+ * invisible and inert, so the card (and its row) keeps its height. A question
+ * taller than the card would grow it rather than be clipped.
+ */
 export const ShopCard = ({
   preview,
   tile,
@@ -275,27 +282,23 @@ export const ShopCard = ({
   return (
     <li
       onKeyDown={escapeCancels(asking, p.onCancel)}
-      className={`rounded-soft bg-night-800/70 flex flex-col overflow-hidden border transition-colors ${
+      className={`rounded-soft bg-night-800/70 grid overflow-hidden border transition-colors ${
         state.type === 'equipped'
           ? 'border-lavender-400'
           : 'border-night-600 hover:border-lavender-400/60'
       }`}
     >
-      <PreviewTile tile={tile} flare={flare}>
-        {preview}
-      </PreviewTile>
-      <div className="flex flex-1 flex-col gap-3 p-3">
-        <span className="text-ink-primary text-sm whitespace-nowrap">{item.name}</span>
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          {asking ? (
-            <ConfirmBuy
-              item={item}
-              balance={p.balance}
-              confirmRef={refs.confirmRef}
-              onConfirm={p.onConfirm}
-              onCancel={p.onCancel}
-            />
-          ) : (
+      <div
+        className={`col-start-1 row-start-1 flex flex-col ${asking ? 'invisible' : ''}`}
+        inert={asking}
+        aria-hidden={asking || undefined}
+      >
+        <PreviewTile tile={tile} flare={flare}>
+          {preview}
+        </PreviewTile>
+        <div className="flex flex-1 flex-col gap-3 p-3">
+          <span className="text-ink-primary text-sm whitespace-nowrap">{item.name}</span>
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
             <ShopAction
               item={item}
               state={state}
@@ -304,9 +307,20 @@ export const ShopCard = ({
               buyRef={refs.buyRef}
               settleRef={refs.settleRef}
             />
-          )}
+          </div>
         </div>
       </div>
+      {asking && (
+        <div className="col-start-1 row-start-1 flex flex-col justify-center p-3">
+          <ConfirmBuy
+            item={item}
+            balance={p.balance}
+            confirmRef={refs.confirmRef}
+            onConfirm={p.onConfirm}
+            onCancel={p.onCancel}
+          />
+        </div>
+      )}
     </li>
   );
 };

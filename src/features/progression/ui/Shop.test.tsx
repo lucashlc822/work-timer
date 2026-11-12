@@ -151,6 +151,28 @@ describe('buying', () => {
     expect(document.getElementById(described ?? '')?.textContent).toContain('Buy Ember for');
   });
 
+  it('while asking, the card’s usual face keeps its place but cannot be reached', () => {
+    renderShop();
+    const ember = card('Ember');
+    const own = within(ember).getByRole('button', { name: 'Buy Ember for 300 Stardust' });
+    askToBuy('Ember', '300');
+
+    // Out of the accessibility tree and inert, but still mounted: it holds the card's height.
+    expect(
+      within(card('Ember')).queryByRole('button', { name: 'Buy Ember for 300 Stardust' }),
+    ).toBeNull();
+    const kept = ember.querySelector('[inert]');
+    expect(kept).not.toBeNull();
+    expect(kept?.getAttribute('aria-hidden')).toBe('true');
+    expect(kept?.contains(own)).toBe(true);
+    // The question and its two buttons are reachable.
+    expect(within(card('Ember')).getByRole('button', { name: 'Buy' })).toBeTruthy();
+    expect(within(card('Ember')).getByRole('button', { name: 'Not now' })).toBeTruthy();
+
+    fireEvent.click(within(card('Ember')).getByRole('button', { name: 'Not now' }));
+    expect(card('Ember').querySelector('[inert]')).toBeNull();
+  });
+
   it('Not now spends nothing and puts focus back on Buy', () => {
     renderShop();
     askToBuy('Ember', '300');
