@@ -182,3 +182,49 @@ test('asking to buy does not move the shop, and the question fits its card', asy
   }
   expect(await purchases(user)).toEqual([]);
 });
+
+test('the three Stardust tabs share one width, so switching tabs moves nothing', async ({
+  page,
+}) => {
+  const user = await createUser('shop-tabs');
+  await page.goto('/');
+  await signIn(page, user);
+  await expectSignedIn(page);
+  await stardustPill(page).click();
+  await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
+
+  for (const size of [
+    { width: 1280, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(size);
+    await settleTransitions(page);
+    await test.step(`${size.width}px`, async () => {
+      const widths: number[] = [];
+      let barBefore: { x: number; width: number } | null = null;
+      for (const name of ['Shop', 'Goal & streak', 'History']) {
+        await page.getByRole('tab', { name, exact: true }).click();
+        const panel = page.getByRole('tabpanel', { name, exact: true });
+        await expect(panel).toBeVisible();
+        widths.push((await panel.boundingBox())!.width);
+        if (name === 'Shop') {
+          // At the shared width no card clips its name, price or button.
+          const clipped = await panel.evaluate((el) =>
+            Array.from(el.querySelectorAll('li'))
+              .filter((li) => li.scrollWidth > li.clientWidth)
+              .map((li) => li.textContent),
+          );
+          expect(clipped).toEqual([]);
+        }
+
+        const bar = (await page.getByRole('tablist', { name: 'Stardust' }).boundingBox())!;
+        barBefore ??= { x: bar.x, width: bar.width };
+        expect(Math.abs(bar.x - barBefore.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs(bar.width - barBefore.width)).toBeLessThanOrEqual(1);
+      }
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+      expect(Math.max(...widths)).toBeLessThanOrEqual(576 + 1);
+    });
+  }
+});
