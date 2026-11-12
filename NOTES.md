@@ -12,9 +12,44 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-11 — Released 0.9.0 (the Stardust panel redesign)
+
+**Status: published.** v0.9.0 is the Latest release (tag `v0.9.0`, commit `6b6c03d`, version bump #182). It went out at 03:44 UTC on 2026-11-12 (22:44 local on the 11th). The desktop update and the web version both came from it. Nothing in flight except the docs PR that adds this entry.
+
+### What shipped
+
+The Stardust panel redesign (#170–#173: three tabs, cards, ask-first Buy) and the reviewer's leftovers after it: #178 panels open on their title (L1), #179 the Buy question takes the card's face in place (L4), #180 the three tabs share one 576 px width, #181 a short last row of cards is centred. That clears every item on the reviewer's "left on purpose" list. Frontend only: nothing under `supabase/`, `src/shared/db`, `src/shared/sync` or `src-tauri/` changed since v0.8.0, so no migration, no Dexie change, `min_client_version` left empty.
+
+### Checked, with what was seen
+
+- Hosted database already had all 7 migrations (`migration list --linked`), and `db push --dry-run` said up to date. Nothing was pushed.
+- Bump PR #182 had all five CI jobs green. The `Release` run built the draft; `version` and `desktop` jobs passed.
+- Draft: four files, `tag_name` `v0.9.0` (re-read after the description PATCH, which named the tag), `latest.json` says 0.9.0 under `/download/v0.9.0/`, signature key id `8E3AF18012526DA8`. Installer 2,467,192 bytes, starts `MZ`, SHA-256 matched GitHub's digest.
+- **Packaged desktop app**: ran the draft's installer silently (`/S`, exit 0) over 0.8.0 and launched it with `--remote-debugging-port=9222`. It came up signed in with existing data, no service worker, the Stardust panel opened with focus on its "Stardust" heading, three tabs with Shop first, star styles in rows of 2 + 2 + 1 with each row centred on the list. Console: only the known `ipc.localhost` fallback warning.
+- After publishing: release list shows v0.9.0 Latest (not `untagged-…`); `Deploy web` succeeded on the tagged commit `6b6c03d`; https://starkeep.vercel.app returns 200 and serves a bundle containing 0.9.0 and the new panel's strings; `Starkeep-setup.exe` answers 206; `latest.json` at `/releases/latest/download/` says 0.9.0.
+
+### Not verified
+
+- **An installed 0.8.0 app being offered the update.** This machine's only install was upgraded by the check above, so "Starkeep 0.9.0 is ready" / "Restart to update" was not seen. The same check from the 0.8.0 release is also still unconfirmed.
+- Signing in on the live site (production accounts, not touched), a real screen reader, a non-Night theme equipped, the shop's purchase flow by eye on the packaged app.
+
+### Things learned that aren't in the code
+
+- **CI's Supabase-stack setup flakes on the runner**: a job ("e2e" on #180, "db" on master after the #182 merge) failed at "Start the local Supabase stack" with "failed to bind host port … address already in use" or "error from registry: Rate exceeded". No test ran. `gh run rerun <id> --failed` fixed it each time; the same code had passed on the PR.
+- **A rebase of two PRs that each append a test to the end of a spec file conflicts** and git interleaves the two tests. Take master's file and re-append the branch's test from its own commit rather than editing markers.
+- **Python isn't installed on this machine** (the Microsoft Store stub answers), so `RELEASING.md`'s key-id one-liner doesn't run here; the same decode works in Node (`Buffer.from(sig[1],'base64').subarray(2,10).reverse().toString('hex')`).
+- **Open quirk, measured not fixed:** in the packaged app's 480 px window the Goal & streak panel is 432 px wide while Shop and History are 417 px. Most likely the classic scrollbar the two taller tabs show and the short one doesn't (unconfirmed). It is invisible in the e2e (headless Chromium uses overlay scrollbars). `scrollbar-gutter: stable` on the panel's scroller would be the first thing to try.
+
+### Next
+
+- Confirm the update on a second installed 0.8.0 (or 0.7.0) app within the updater's ~6-hour cycle.
+- Optional, its own PR: the scrollbar width quirk above.
+
+---
+
 ## 2026-11-10 (later) — Stardust shop redesign merged (#170–#173); not released
 
-**Status: merged, not released.** `master` (`eaf2e16`) holds a three-part redesign of the Stardust panel, a reviewer-polish PR, and the reviewer's memory update (#174). `package.json` is still 0.8.0, so the redesign reaches nobody until the next release. Each code PR had all five CI jobs green before it was merged (master's own runs after the merges were not looked at).
+**Status: merged, not released.** **(Superseded 2026-11-11 — released as 0.9.0 together with the four reviewer fixes #178–#181; see the entry above.)** `master` (`eaf2e16`) holds a three-part redesign of the Stardust panel, a reviewer-polish PR, and the reviewer's memory update (#174). `package.json` is still 0.8.0, so the redesign reaches nobody until the next release. Each code PR had all five CI jobs green before it was merged (master's own runs after the merges were not looked at).
 
 ### Why
 
