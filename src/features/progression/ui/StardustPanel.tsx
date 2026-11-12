@@ -185,7 +185,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('shop')}
         aria-labelledby={tabId('shop')}
         hidden={tab !== 'shop'}
-        className="w-full"
+        className="w-full max-w-xl"
       >
         <Shop {...shop} />
       </div>
@@ -194,7 +194,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('goal')}
         aria-labelledby={tabId('goal')}
         hidden={tab !== 'goal'}
-        className="w-full max-w-md"
+        className="w-full max-w-xl"
       >
         <GoalAndStreak />
       </div>
@@ -203,7 +203,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('history')}
         aria-labelledby={tabId('history')}
         hidden={tab !== 'history'}
-        className="w-full max-w-md"
+        className="w-full max-w-xl"
       >
         <History />
       </div>
