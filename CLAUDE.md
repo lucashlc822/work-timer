@@ -736,7 +736,8 @@ rejected). Don't pre-populate this with guesses.
   owned, unlocked, buy, or short by N. A new state goes there, never as a second
   footer. Tier unlocks are a quiet "Shortcuts" list, not cards. **Buy never
   spends on one click:** it opens an in-card question naming the price and the
-  balance left, with Buy and Not now. Focus goes to the confirm button, back to
+  balance left, with Buy and Not now, in place of the card's face at the card's
+  own size (the usual face stays laid out but `inert`, so no row grows). Focus goes to the confirm button, back to
   Buy on Not now, Escape or a refusal, and onto Equip (or the Owned status)
   after a purchase. A polite live region says "Ember is yours." and the picture
   flares once (not under reduced motion). **Escape closes the question only:**

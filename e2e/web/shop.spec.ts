@@ -104,3 +104,81 @@ test('with reduced motion there is no flare animation', async ({ page }) => {
   await expect(flare).toHaveCount(1);
   expect(await flare.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
 });
+
+test('asking to buy does not move the shop, and the question fits its card', async ({ page }) => {
+  const user = await createUser('shop-steady');
+  await seedStardust(user, 10_000);
+  await page.goto('/');
+  await signIn(page, user);
+  await expectSignedIn(page);
+  await expect(stardustPill(page)).toHaveText(/\b10,000 Stardust$/, { timeout: 20_000 });
+  await stardustPill(page).click();
+  await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
+
+  // A card of each kind, and the heading that follows its collection.
+  const cases: Array<[string, string]> = [
+    ['Ember', 'Sky themes'],
+    ['Dusk', 'Constellation packs'],
+    ['Woodland pack', 'Shortcuts'],
+  ];
+  const sizes = [
+    { width: 1280, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 375, height: 812 },
+  ];
+
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    await settleTransitions(page);
+    for (const [name, next] of cases) {
+      await test.step(`${name} at ${size.width}px`, async () => {
+        const card = page.getByRole('listitem').filter({ hasText: name }).first();
+        const heading = page.getByRole('heading', { name: next, level: 3 });
+        await card.scrollIntoViewIfNeeded();
+
+        // Scroll-proof: the card's own height, and the gap from its top to the next heading.
+        const measure = async () =>
+          card.evaluate((el, headingText) => {
+            const h = Array.from(document.querySelectorAll('h3')).find(
+              (x) => x.textContent?.trim() === headingText,
+            );
+            const box = el.getBoundingClientRect();
+            return { height: box.height, gap: (h?.getBoundingClientRect().top ?? 0) - box.top };
+          }, next);
+        await expect(heading).toBeVisible();
+        const before = await measure();
+
+        await card.getByRole('button', { name: new RegExp(`^Buy ${name}`) }).click();
+        const question = card.locator('p');
+        const confirm = card.getByRole('button', { name: 'Buy', exact: true });
+        const notNow = card.getByRole('button', { name: 'Not now' });
+        await expect(confirm).toBeFocused();
+
+        const after = await measure();
+        expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+        expect(Math.abs(after.gap - before.gap)).toBeLessThanOrEqual(1);
+
+        // Everything of the question sits inside the card.
+        const cardBox = (await card.boundingBox())!;
+        for (const part of [question, confirm, notNow]) {
+          const box = (await part.boundingBox())!;
+          expect(box.x).toBeGreaterThanOrEqual(cardBox.x - 1);
+          expect(box.y).toBeGreaterThanOrEqual(cardBox.y - 1);
+          expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1);
+          expect(box.y + box.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
+        }
+
+        // The card's usual Buy cannot be reached while asking.
+        await expect(
+          card.getByRole('button', { name: new RegExp(`^Buy ${name} for`) }),
+        ).toHaveCount(0);
+
+        await notNow.click();
+        const back = await measure();
+        expect(Math.abs(back.height - before.height)).toBeLessThanOrEqual(1);
+        expect(Math.abs(back.gap - before.gap)).toBeLessThanOrEqual(1);
+      });
+    }
+  }
+  expect(await purchases(user)).toEqual([]);
+});
