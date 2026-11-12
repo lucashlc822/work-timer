@@ -128,18 +128,12 @@ export const Shop = ({
     onEquip: () => equip(item),
   });
 
-  const card = (item: CatalogueItem, preview: ReactNode, tile: Tile) => (
-    <ShopCard key={item.key} {...itemProps(item)} preview={preview} tile={tile} />
+  const card = (item: CatalogueItem, preview: ReactNode, tile: Tile, cell: string) => (
+    <ShopCard key={item.key} {...itemProps(item)} preview={preview} tile={tile} cell={cell} />
   );
 
   /** A kind of thing for sale: a heading, how much of it you have, its note, then its cards. */
-  const collection = (
-    kind: ItemKind,
-    title: string,
-    note: string,
-    grid: string,
-    cards: ReactNode,
-  ) => {
+  const collection = (kind: ItemKind, title: string, note: string, cards: ReactNode) => {
     const items = itemsOfKind(kind);
     const have = items.filter((i) => owned.has(i.key)).length;
     const id = `${base}-${kind}`;
@@ -154,7 +148,8 @@ export const Shop = ({
           </span>
         </div>
         <p className="text-ink-secondary text-xs">{note}</p>
-        <ul className={grid}>{cards}</ul>
+        {/* Cells carry half the gap as padding, so a short last row can be centred. */}
+        <ul className="-m-1.5 flex flex-wrap justify-center">{cards}</ul>
       </div>
     );
   };
@@ -165,7 +160,6 @@ export const Shop = ({
         'star-style',
         'Star styles',
         'A new style marks the stars you earn from now on. Stars already in your sky keep the style they were born with.',
-        'grid grid-cols-2 gap-3 sm:grid-cols-3',
         itemsOfKind('star-style').map((item) =>
           card(
             item,
@@ -173,6 +167,7 @@ export const Shop = ({
               ? null
               : renderStylePreview(item.styleKey, STYLE_PREVIEW_PX),
             'stars',
+            'basis-1/2 sm:basis-1/3',
           ),
         ),
       )}
@@ -181,12 +176,12 @@ export const Shop = ({
         'sky-theme',
         'Sky themes',
         'A theme re-colours the night behind your stars, and applies at once.',
-        'grid grid-cols-1 gap-3 sm:grid-cols-2',
         itemsOfKind('sky-theme').map((item) =>
           card(
             item,
             item.themeKey === undefined ? null : renderThemePreview(item.themeKey, 'card'),
             'sky',
+            'basis-full sm:basis-1/2',
           ),
         ),
       )}
@@ -195,12 +190,12 @@ export const Shop = ({
         'pack',
         'Constellation packs',
         "A pack adds new shapes to the picker: one easy, one medium and one hard. Constellations you've already started aren't affected.",
-        'grid grid-cols-1 gap-3 sm:grid-cols-2',
         itemsOfKind('pack').map((item) =>
           card(
             item,
             item.packKey === undefined ? null : renderPackPreview(item.packKey, true),
             'plain',
+            'basis-full sm:basis-1/2',
           ),
         ),
       )}

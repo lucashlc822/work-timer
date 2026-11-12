@@ -52,7 +52,7 @@ The purchase flow by eye (focus after a purchase, the flare; only computed style
 
 - **Release** when Lucas decides (`RELEASING.md`; this would be 0.9.0, as a minor bump with no migration).
 - **Still open from the 0.8.0 release:** confirm an installed 0.7.0 app is offered the update (not checkable on the machine that upgraded itself).
-- **Reviewer Lows left on purpose:** ~~L1, focus lands on "Back to timer" when any panel opens~~ (fixed 2026-11-11: a panel now opens on its title, see the PR for `fix/panel-focus-heading`); ~~L4, a card row grows when a question opens~~ (fixed 2026-11-11: the question takes the card's face in place, `fix/shop-question-in-place`); ~~the Shop tab is wider than the other two~~ (fixed 2026-11-11: all three tabs share `max-w-xl`, `fix/stardust-tab-width`); five styles in three columns leave one empty cell.
+- **Reviewer Lows left on purpose:** ~~L1, focus lands on "Back to timer" when any panel opens~~ (fixed 2026-11-11: a panel now opens on its title, see the PR for `fix/panel-focus-heading`); ~~L4, a card row grows when a question opens~~ (fixed 2026-11-11: the question takes the card's face in place, `fix/shop-question-in-place`); ~~the Shop tab is wider than the other two~~ (fixed 2026-11-11: all three tabs share `max-w-xl`, `fix/stardust-tab-width`); ~~five styles in three columns leave one empty cell~~ (fixed 2026-11-11: a short last row is centred, `fix/shop-last-row-centred`).
 - **CLAUDE.md "Decisions already made"** ~~doesn't yet record the shop's structure~~ — done 2026-11-10: the bullet "The Stardust panel is three tabs, a card shows one state, and Buy asks first" (tabs, one state per card from `shopState`, ask-first Buy, Escape closes the question only), #177.
 
 ---

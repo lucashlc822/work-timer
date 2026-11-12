@@ -737,7 +737,7 @@ rejected). Don't pre-populate this with guesses.
   footer. Tier unlocks are a quiet "Shortcuts" list, not cards. **Buy never
   spends on one click:** it opens an in-card question naming the price and the
   balance left, with Buy and Not now, in place of the card's face at the card's
-  own size (the usual face stays laid out but `inert`, so no row grows). Focus goes to the confirm button, back to
+  own size (the usual face stays laid out but `inert`, so no row grows). The cards sit in a wrapping, centred list (a transparent `li` cell per card carries half the gap as padding), so a short last row is centred, not left with an empty slot. Focus goes to the confirm button, back to
   Buy on Not now, Escape or a refusal, and onto Equip (or the Owned status)
   after a purchase. A polite live region says "Ember is yours." and the picture
   flares once (not under reduced motion). **Escape closes the question only:**
