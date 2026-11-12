@@ -72,9 +72,11 @@ describe('the shop', () => {
 
   it('rings the equipped card and no other', () => {
     renderShop();
-    expect(card('Classic').className).toContain('border-lavender-400');
-    expect(card('Classic').className).not.toContain('hover:');
-    expect(card('Ember').className).not.toContain(' border-lavender-400');
+    // The list item is a transparent cell; the ring is on the card inside it.
+    const ring = (name: string) => (card(name).firstElementChild as HTMLElement).className;
+    expect(ring('Classic')).toContain('border-lavender-400');
+    expect(ring('Classic')).not.toContain('hover:');
+    expect(ring('Ember')).not.toContain(' border-lavender-400');
   });
 
   it('says how much of each collection you own', () => {

@@ -228,3 +228,67 @@ test('the three Stardust tabs share one width, so switching tabs moves nothing',
     });
   }
 });
+
+test('a short last row of cards is centred, not left with an empty slot', async ({ page }) => {
+  const user = await createUser('shop-centred');
+  await page.goto('/');
+  await signIn(page, user);
+  await expectSignedIn(page);
+  await stardustPill(page).click();
+  await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
+
+  for (const size of [
+    { width: 1280, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(size);
+    await settleTransitions(page);
+    for (const group of ['Star styles', 'Sky themes', 'Constellation packs']) {
+      await test.step(`${group} at ${size.width}px`, async () => {
+        const list = page.getByRole('group', { name: group }).getByRole('list');
+        // Each row's extent, from its first card's left to its last card's right.
+        const rows = await list.evaluate((ul) => {
+          const mid = (b: DOMRect) => ({ left: b.left, right: b.right, top: Math.round(b.top) });
+          const cells = Array.from(ul.children).map((c) => mid(c.getBoundingClientRect()));
+          const byTop = new Map<number, { left: number; right: number }>();
+          for (const c of cells) {
+            const row = byTop.get(c.top);
+            byTop.set(c.top, {
+              left: Math.min(row?.left ?? c.left, c.left),
+              right: Math.max(row?.right ?? c.right, c.right),
+            });
+          }
+          const box = ul.getBoundingClientRect();
+          return {
+            centre: (box.left + box.right) / 2,
+            rows: Array.from(byTop.values()).map((r) => (r.left + r.right) / 2),
+            count: cells.length,
+          };
+        });
+        expect(rows.count).toBeGreaterThan(0);
+        for (const rowCentre of rows.rows) {
+          expect(Math.abs(rowCentre - rows.centre)).toBeLessThanOrEqual(2);
+        }
+
+        // The cards themselves: equal height within a row, and 12 px between neighbours.
+        const cards = await list.evaluate((ul) =>
+          Array.from(ul.children).map((c) => {
+            const b = c.firstElementChild!.getBoundingClientRect();
+            return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+          }),
+        );
+        for (let i = 1; i < cards.length; i++) {
+          const prev = cards[i - 1]!;
+          const cur = cards[i]!;
+          if (Math.abs(cur.top - prev.top) < 1) {
+            expect(Math.abs(cur.bottom - prev.bottom)).toBeLessThanOrEqual(1);
+            expect(Math.abs(cur.left - prev.right - 12)).toBeLessThanOrEqual(1);
+          } else {
+            expect(Math.abs(cur.top - prev.bottom - 12)).toBeLessThanOrEqual(1);
+          }
+        }
+      });
+    }
+  }
+});
