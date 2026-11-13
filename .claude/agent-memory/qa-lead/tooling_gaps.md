@@ -13,6 +13,9 @@ metadata:
   new vulnerability, or zip >= 9.0.0 in `cargo tree -i zip` (the ignores
   should then be dropped), is a finding. On a machine without it, report
   "Not run — tool missing" (`cargo install cargo-audit`), don't skip silently.
+- UPDATE 2026-11-13: audit.toml now ignores nothing and zip is gone from
+  Cargo.lock; a clean `cargo audit` exits 0 with "5 allowed warnings". Any
+  vulnerability is a finding; a returning `zip` means the updater feature changed.
 - Chrome and Edge are both installed (`C:\Program Files\Google\Chrome\...`,
   `C:\Program Files (x86)\Microsoft\Edge\...`), so `npm run perf:lighthouse`
   runs fine here — no gap to report for that step on this machine.
