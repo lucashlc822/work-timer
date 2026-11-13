@@ -39,17 +39,21 @@ missing. `.env.example` lists every name.
 
 ## Releasing a version
 
-1. **Migration first, if there is one.** `npx supabase db push` to the hosted
-   project *before* publishing. Migrations are backward compatible (CLAUDE.md), so
+1. **Migration first, if there is one.** `npx supabase db push --remote` to the
+   hosted project *before* publishing (it asks you to confirm; the CLI's
+   `--yes` is for CI only). **The `--remote` matters: since CLI v3 a bare
+   `db push` targets the local stack, so it would "succeed" and send nothing.**
+   Migrations are backward compatible (CLAUDE.md), so
    apps still on the previous version keep working against the new schema.
    `db push` sends migrations only. **Never run `supabase config push`**: it would
    send `supabase/config.toml`, whose auth rate limits are raised far above
    safe levels for the local end-to-end tests. The hosted project's auth settings
    are set in the dashboard.
 
-   Check before and after. `npx supabase migration list --linked` shows which
-   migrations the hosted project has, and `npx supabase db push --dry-run` lists
-   exactly what a push would send. Neither needs a database password. To see
+   Check before and after. `npx supabase migration list --remote` shows which
+   migrations the hosted project has, and `npx supabase db push --remote --dry-run`
+   lists exactly what a push would send. Neither needs a database password, and
+   both print a `Target:` line first: check it says the `starkeep` project. To see
    whether a new table or function is live, ask the hosted API with the
    publishable key from `.env.production.local`:
    ```bash

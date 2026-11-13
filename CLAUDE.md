@@ -160,6 +160,11 @@ in `NOTES.md`.
   config. Every email the local stack "sends" lands in the fake inbox at
   `http://127.0.0.1:54324` (its API: `/api/v1/messages`); Studio is at
   `http://127.0.0.1:54323`.
+- **The Supabase CLI is v3 (2026-11-12): commands default to the local stack.**
+  A hosted target needs `--remote` (it replaced `--linked`) and asks to confirm
+  (`--yes` is for CI). A bare `db push` therefore "succeeds" against the local
+  database and sends the hosted project nothing: read the `Target:` line it
+  prints first.
 - **The hosted free tier pauses after ~7 days with no activity.** The app keeps
   working offline and can't sync until the project is restored from the
   dashboard. Not a sync bug. `.github/workflows/keep-alive.yml` reads the

@@ -90,7 +90,8 @@ Done once, by the person who runs the server:
 
 1. Create a free project at supabase.com. Pick the region closest to the people using it.
 2. `npx supabase link --project-ref <ref>` (asks for the database password),
-   then `npx supabase db push` to apply the migrations.
+   then `npx supabase db push --remote` to apply the migrations (without
+   `--remote`, CLI v3 pushes to the local stack instead).
 3. Authentication → Sign In / Providers → Email: turn on **Confirm email**, set
    the minimum password length to 8.
 4. Authentication → Emails → SMTP: use Gmail (`smtp.gmail.com`, port 587, your
