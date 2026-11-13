@@ -24,15 +24,17 @@ interface TallyProps {
   instant?: boolean;
 }
 
-/** Counts up to `target` from zero once `run` turns on; the end at once when `instant`. */
+/**
+ * Counts up to `target` from zero once `run` turns on. The end at once, read
+ * straight from `target` at render (not copied in by an effect), when `instant`
+ * or reduced motion: the tally appears the moment its rewards load, and must
+ * never show a frame of "+0".
+ */
 const useCountUp = (target: number, run: boolean, instant: boolean, delayMs: number): number => {
-  const [shown, setShown] = useState(instant ? target : 0);
+  const still = instant || prefersReducedMotion();
+  const [shown, setShown] = useState(0);
   useEffect(() => {
-    if (instant || prefersReducedMotion()) {
-      setShown(target);
-      return;
-    }
-    if (!run) return;
+    if (still || !run) return;
     let frame = 0;
     const from = performance.now() + delayMs;
     const step = (t: number) => {
@@ -42,8 +44,8 @@ const useCountUp = (target: number, run: boolean, instant: boolean, delayMs: num
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, run, instant, delayMs]);
-  return shown;
+  }, [target, run, still, delayMs]);
+  return still ? target : shown;
 };
 
 /**
