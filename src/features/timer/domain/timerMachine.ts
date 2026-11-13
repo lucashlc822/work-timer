@@ -364,6 +364,12 @@ export const timerMachine = setup({
           target: 'idle',
           actions: assign({ session: null, ending: null, result: null, error: null }),
         },
+        // "Start another" on a result: the next session without the idle screen
+        // in between. Same clearing as DISMISS; the write is `starting`'s.
+        START: {
+          target: 'starting',
+          actions: assign({ session: null, ending: null, result: null, error: null }),
+        },
       },
     },
 

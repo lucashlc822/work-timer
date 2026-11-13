@@ -6,6 +6,7 @@ import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { reached, type MomentStage } from '../domain/moment';
 import type { FinishedResult } from '../domain/timerMachine';
 import { useMoment } from '../hooks/useMoment';
+import { SecondaryButton } from './SecondaryButton';
 import type { MomentInfo, ResultInfo, TimerSlots } from './slots';
 
 interface Props {
@@ -15,6 +16,11 @@ interface Props {
   slots: TimerSlots;
   /** False while another view covers the timer: the moment waits for it to show. */
   present?: boolean;
+  /**
+   * Starts the same length again. Offered on a completed solo countdown only
+   * (`label` says how long); absent, the button isn't drawn.
+   */
+  startAnother?: { label: string; disabled?: boolean; onStart: () => void } | undefined;
 }
 
 /**
@@ -32,7 +38,14 @@ interface Props {
  * else, so it can never land on a button that is still fading in; Enter and
  * Space on the focused Done always work. An early ending has no moment.
  */
-export const SessionResult = ({ result, error, onDone, slots, present = true }: Props) => {
+export const SessionResult = ({
+  result,
+  error,
+  onDone,
+  slots,
+  present = true,
+  startAnother,
+}: Props) => {
   const { ending } = result;
   const completed = ending.outcome === 'completed';
   const moment = useMoment('full', { present: present && completed });
@@ -117,6 +130,7 @@ export const SessionResult = ({ result, error, onDone, slots, present = true }: 
         </p>
       )}
 
+      {/* Done keeps the focus: Enter never starts a session by accident. */}
       <button
         ref={doneRef}
         type="button"
@@ -125,6 +139,20 @@ export const SessionResult = ({ result, error, onDone, slots, present = true }: 
       >
         Done
       </button>
+
+      {completed && (startAnother !== undefined || slots.resultActions !== undefined) && (
+        <div className={`flex flex-wrap items-center justify-center gap-2 ${part('tally')}`}>
+          {startAnother !== undefined && (
+            <SecondaryButton
+              onClick={startAnother.onStart}
+              disabled={startAnother.disabled ?? false}
+            >
+              {startAnother.label}
+            </SecondaryButton>
+          )}
+          {slots.resultActions?.(info)}
+        </div>
+      )}
     </div>
   );
 };
