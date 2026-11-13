@@ -208,6 +208,17 @@ test('the three Stardust tabs share one width, so switching tabs moves nothing',
         const panel = page.getByRole('tabpanel', { name, exact: true });
         await expect(panel).toBeVisible();
         widths.push((await panel.boundingBox())!.width);
+        // Headless Chromium has overlay scrollbars, so the widths above can't
+        // catch a classic 15 px bar on the tabs that scroll (Windows, the
+        // packaged app). Pin the cause: the panel's scroller reserves the gutter.
+        const gutter = await panel.evaluate((el) => {
+          let scroller = el.parentElement;
+          while (scroller && getComputedStyle(scroller).overflowY !== 'auto') {
+            scroller = scroller.parentElement;
+          }
+          return scroller ? getComputedStyle(scroller).scrollbarGutter : null;
+        });
+        expect(gutter).toBe('stable');
         if (name === 'Shop') {
           // At the shared width no card clips its name, price or button.
           const clipped = await panel.evaluate((el) =>

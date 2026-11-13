@@ -131,7 +131,9 @@ const PanelLayer = ({
   useFocusHeading(content, backRef);
   return (
     <div className="bg-night-900/85 fixed inset-0 z-10 flex flex-col backdrop-blur-sm">
-      <div ref={content} className="min-h-0 flex-1 overflow-y-auto">
+      {/* The gutter is always reserved: with classic scrollbars (Windows) a tab
+          that scrolls would otherwise be 15 px narrower than one that fits. */}
+      <div ref={content} className="min-h-0 flex-1 scrollbar-gutter-stable overflow-y-auto">
         {children}
       </div>
       <footer className="border-night-700 flex justify-center border-t py-3">{back}</footer>
