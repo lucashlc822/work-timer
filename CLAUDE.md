@@ -233,7 +233,10 @@ in `NOTES.md`.
   `e2e/web/a11y.spec.ts` (axe) scans every screen; `ENFORCE` in
   `e2e/support/a11y.ts` is true and nothing is acknowledged. `--color-ink-muted`
   is for text on night-900/800 only (not night-700). Bundle size
-  (`npm run perf:size`, against `e2e/perf-baseline.json`) and Lighthouse
+  (`npm run perf:size`, against `e2e/perf-baseline.json`, re-set at 0.9.0 =
+  281 kB of JS gzipped; **it only means something for a build that has
+  `.env.production.local`**: with no server address Vite drops the sync and
+  sign-in code, ~20% smaller, which is what CI builds) and Lighthouse
   (`npm run perf:lighthouse`, needs an installed Chrome or Edge) are report-only
   by design; Lighthouse scores on localhost are optimistic, so read them as a
   trend.
@@ -469,6 +472,14 @@ rejected). Don't pre-populate this with guesses.
   2026-10-13). `DesktopUpdatePrompt` offers "Restart to update" only when no
   session or Pomodoro run is in progress. Don't make it install silently: an
   update that relaunches the app mid-session destroys what the app protects.
+- **The updater is built without its `zip` feature** (2026-11-12, from the
+  qa-lead pass). `tauri-plugin-updater` turns it on by default, but it only
+  unpacks `.zip` (Windows) and compressed-AppImage (Linux) updates. Ours is a
+  plain NSIS `.exe` on Windows, and macOS unpacks `.app.tar.gz` with tar/flate2,
+  which the plugin always uses there. The feature only ever brought `zip`
+  advisories (four by then), so `src-tauri/.cargo/audit.toml` ignores nothing.
+  Don't re-enable default features; if updates ever ship as a `.zip`, that is
+  the moment to reconsider.
 - **There is no Windows code signing** (no paid services). First installs show a
   SmartScreen warning; the invitation message says so.
 - **The update-signing key is Lucas's, and is never regenerated casually.**
