@@ -19,7 +19,12 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
+# Without the default `zip` feature: it only unpacks `.zip` (Windows) and
+# compressed-AppImage (Linux) updates. Our Windows update is a plain NSIS
+# `.exe` (extract_exe), and macOS unpacks its `.app.tar.gz` with tar/flate2,
+# which the plugin always depends on there. Leaving it on only brought `zip`
+# advisories (RUSTSEC-2026-0367/0368/0369/0429). See CLAUDE.md, Decisions.
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
