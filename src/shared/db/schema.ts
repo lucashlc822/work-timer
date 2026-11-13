@@ -261,6 +261,12 @@ export const META_KEYS = {
    */
   lastSharedTarget: 'lastSharedTarget',
   /**
+   * Whether the soft chime plays when a session completes (session-complete
+   * redesign): `false` is off, absent or anything else is on. Per device,
+   * never synced: whether a sound suits is about the room this computer is in.
+   */
+  completionSound: 'completionSound',
+  /**
    * Sync (M5): per table, the newest `server_updated_at` already pulled
    * (`Partial<Record<table, string>>`). Server time, never this device's clock.
    */

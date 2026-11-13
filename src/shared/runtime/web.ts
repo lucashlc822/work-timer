@@ -89,7 +89,11 @@ const webCompletion = (notifications: NotificationPort): CompletionPort => {
         const timer = setTimeout(
           () => {
             armed = null;
-            void notifications.notify({ title: notice.title, body: notice.body });
+            const lookingAtIt =
+              notice.quietWhenFocused === true &&
+              document.visibilityState === 'visible' &&
+              document.hasFocus();
+            if (!lookingAtIt) void notifications.notify({ title: notice.title, body: notice.body });
             if (next !== undefined) schedule(next);
           },
           Math.max(0, notice.endsAt - Date.now()),

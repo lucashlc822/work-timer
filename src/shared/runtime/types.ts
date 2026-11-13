@@ -76,6 +76,13 @@ export interface CompletionNotice {
   body: string;
   /** Shown before the tray countdown, e.g. "Break · 4 min left". Omitted: "4 min left". */
   label?: string;
+  /**
+   * Skip the notice when the app's window is visible and focused as it fires:
+   * the person is looking at the result, which says it (and chimes) itself, so
+   * a system notification on top would only sound twice. Only for a notice the
+   * app's own screen replaces; omitted, the notice always shows.
+   */
+  quietWhenFocused?: boolean;
 }
 
 export interface CompletionPort {
