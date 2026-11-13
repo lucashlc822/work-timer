@@ -92,8 +92,19 @@ jobs:
 
       # How big the built app is, against e2e/perf-baseline.json. Report only:
       # it prints a table into the job summary and never fails the job.
+      #
+      # It rebuilds with placeholder server values on purpose. With no server
+      # address Vite drops the sync and sign-in code, so the build above is
+      # ~20% smaller than the app people download, and the report could never
+      # see that code grow. The values are never used (nothing runs this build,
+      # and `.invalid` can't resolve); they only keep the code in.
       - name: Bundle size (report only)
-        run: npm run perf:size
+        env:
+          VITE_SUPABASE_URL: https://ci-size-check.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_size_check_placeholder
+        run: |
+          npx vite build
+          npm run perf:size
 
       # The generated app icons are committed, so regenerating them must be a
       # no-op. A failure means the generator or the palette changed without
