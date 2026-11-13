@@ -328,6 +328,10 @@ test('a friend’s sky, its numbers, and what happens when the friendship ends',
 test('a friend sees you focusing, then on a break, within about 15 seconds', async ({
   browser,
 }) => {
+  // Four separate presence updates, each given up to 20 s (a friend's app
+  // looks every ~15 s): a passing run already takes ~52 s, so the default 60 s
+  // left no room on a slower or busier machine.
+  test.setTimeout(120_000);
   const ada = await createUser('fr-ada4');
   const bea = await createUser('fr-bea4');
   await setName(ada, 'Ada');
