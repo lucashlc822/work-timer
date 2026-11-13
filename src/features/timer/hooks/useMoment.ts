@@ -6,7 +6,10 @@ import { MOMENT_TIMELINE, type MomentKind, type MomentStage } from '../domain/mo
 
 export interface Moment {
   stage: MomentStage;
-  /** True once the person skipped it (Escape, a click), not when it ran out. */
+  /**
+   * Show the end at once: the person skipped it (Escape, a click), or reduced
+   * motion never played it. False when it simply ran its course.
+   */
   skipped: boolean;
   /** Jumps to `settled`. Safe to call at any stage. */
   skip: () => void;
@@ -49,7 +52,7 @@ export const useMoment = (
   const [stage, setStage] = useState<MomentStage>(() =>
     canStart ? (prefersReducedMotion() ? 'settled' : 'ignite') : 'waiting',
   );
-  const [skipped, setSkipped] = useState(false);
+  const [skipped, setSkipped] = useState(() => canStart && prefersReducedMotion());
   /** Wall-clock ms the timeline runs from; null when there is no timeline to run. */
   const [startedAt, setStartedAt] = useState<number | null>(null);
   /** Once true it never starts (again): started, or skipped before it could. */
@@ -73,6 +76,7 @@ export const useMoment = (
     onStartRef.current?.(now);
     if (prefersReducedMotion()) {
       setStage('settled');
+      setSkipped(true);
       return;
     }
     setStage('ignite');

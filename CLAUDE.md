@@ -717,6 +717,20 @@ rejected). Don't pre-populate this with guesses.
   starts at `settled`. An early ending has no moment. In e2e, `dismissResult`
   (`e2e/support/app.ts`) skips before pressing Done.
 
+- **The result's tally asks the reconciler, it never restates it** (session-complete
+  redesign PR 2, 2026-11-13). `sessionRewards` (`progression/domain/rewards.ts`)
+  lists what a session earned as the ledger ids `expectedRows` wants *with* it and
+  not *without* it, so the goal, streak and session lines can't drift from what is
+  paid. The constellation line comes from the sky (`useStarPlacement`'s
+  `completes`, joined in `app/resultRewards.tsx`); focus-together and shared
+  bonuses are server facts and stay in their own notes. A line whose row is
+  already in the ledger from **before** the session started is dropped (a goal
+  paid, then raised). Reconciler and tally share `rewardableSessions`. Read-only:
+  Stardust is still written only by the reconciler. The tally is `aria-hidden`;
+  `RewardSummary` says it as one sentence inside the result's status. Lines come
+  in `TALLY_STAGGER_MS` apart, only the total counts up, and "show the end at
+  once" is a real skip or reduced motion, never the moment simply running out.
+
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
   dimmed figure fades its lines and stars (`data-figure-body`), never its name:

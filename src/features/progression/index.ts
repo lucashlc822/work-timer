@@ -6,6 +6,8 @@ export { useBoughtTiers, useOwnedPacks, useStardustReconciler } from './hooks/us
 export { SHOP_PACK_KEYS, SHOP_STYLE_KEYS, SHOP_THEME_KEYS, styleName } from './domain/catalogue';
 export { ProgressLine } from './ui/ProgressLine';
 export { RewardNote } from './ui/RewardNote';
+export { RewardSummary, RewardTally } from './ui/RewardTally';
+export type { FinishedConstellation } from './domain/rewards';
 export { StardustPanel } from './ui/StardustPanel';
 export { StardustPill } from './ui/StardustPill';
 export { streakAt } from './domain/streak';

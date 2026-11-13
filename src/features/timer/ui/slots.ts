@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import type { MomentStage } from '../domain/moment';
+
 /**
  * Places in the timer's UI that the app can fill from other features.
  *
@@ -17,6 +19,16 @@ export interface ResultInfo {
   togetherId: string | null;
   /** Who ended a focus-together session early, when it wasn't you; null otherwise. */
   endedBy: string | null;
+}
+
+/**
+ * How far a result's completion moment has got (`domain/moment.ts`), for slot
+ * content that comes in with it. `skipped` covers reduced motion too: either
+ * way, show the end at once.
+ */
+export interface MomentInfo {
+  stage: MomentStage;
+  skipped: boolean;
 }
 
 /** The session on screen while it runs, for the app's lines about it. */
@@ -47,7 +59,12 @@ export interface TimerSlots {
   /** Replaces the default star on a *completed* result. */
   resultStar?: (result: ResultInfo) => ReactNode;
   /** Under the result text, for both outcomes. */
-  resultNote?: (result: ResultInfo) => ReactNode;
+  resultNote?: (result: ResultInfo, moment: MomentInfo) => ReactNode;
+  /**
+   * Inside the result's status region, after its text: one sentence a screen
+   * reader hears with "Session complete" (PR 2: what it earned). Visually hidden.
+   */
+  resultSummary?: (result: ResultInfo) => ReactNode;
   /** Under the "ends at" line while a session runs (M7: who you focus with). */
   running?: (session: RunningInfo) => ReactNode;
   /** Added to the end-early dialog (M7: that it ends the session for friends too). */

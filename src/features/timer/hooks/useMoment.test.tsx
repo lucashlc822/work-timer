@@ -101,6 +101,7 @@ describe('useMoment', () => {
     const onStart = vi.fn();
     const { result } = renderHook(() => useMoment('full', { present: true, onStart }));
     expect(result.current.stage).toBe('settled');
+    expect(result.current.skipped).toBe(true);
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 
