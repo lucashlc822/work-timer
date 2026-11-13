@@ -11,6 +11,7 @@ import {
   type FocusStatus,
   type TimerState,
 } from '../domain/focusStatus';
+import { serialQueue } from '../domain/serialQueue';
 
 /**
  * Shares "Focusing now" with friends (M7 phase 3): watches the timer's stored
@@ -52,6 +53,9 @@ export const useShareFocusStatus = (): void => {
   // idle start sends nothing.
   const sent = useRef<FocusStatus | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // Uploads leave one at a time, in the order the status changed: two changes
+  // inside one request's latency must not let the older one land last.
+  const [queue] = useState(serialQueue);
 
   useEffect(() => {
     if (timer === undefined) return;
@@ -61,7 +65,7 @@ export const useShareFocusStatus = (): void => {
     if (client === null) return;
 
     let current = true;
-    (status === null ? clearFocusStatus(client) : setFocusStatus(client, status)).then(
+    queue(() => (status === null ? clearFocusStatus(client) : setFocusStatus(client, status))).then(
       () => {
         if (current) sent.current = status;
       },
@@ -72,7 +76,7 @@ export const useShareFocusStatus = (): void => {
     return () => {
       current = false;
     };
-  }, [timer, attempt]);
+  }, [timer, attempt, queue]);
 
   useEffect(() => {
     const retry = () => {
