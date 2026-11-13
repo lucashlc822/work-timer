@@ -6,7 +6,7 @@ import {
   type LedgerRow,
   type WorkTimerDb,
 } from '@/shared/db';
-import { isSeeded, isSeededConstellation, stableId } from '@/shared/lib';
+import { isSeededConstellation, stableId } from '@/shared/lib';
 
 import { DEFAULT_STYLE_KEY, DEFAULT_THEME_KEY, itemByKey, ownedKeys } from '../domain/catalogue';
 import { clampDailyGoal, DEFAULT_DAILY_GOAL_MIN } from '../domain/economy';
@@ -17,6 +17,7 @@ import {
   type SharedCompletion,
   type TogetherWin,
 } from '../domain/reconcile';
+import { rewardableSessions } from '../domain/rewards';
 
 /**
  * Insert every ledger row that should exist and doesn't (M6). One read-write
@@ -36,7 +37,7 @@ export const reconcile = (
   db.transaction('rw', db.sessions, db.ledger, db.meta, async () => {
     // Every ended session, not just completed ones: an early ending's focus
     // still counts toward the day's goal.
-    const sessions = await db.sessions.filter((s) => s.outcome !== null && !isSeeded(s)).toArray();
+    const sessions = rewardableSessions(await db.sessions.toArray());
     const goalMin = await readDailyGoal(db);
     const expected = expectedRows({
       userId,

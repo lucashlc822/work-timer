@@ -21,6 +21,8 @@ export { ThemeSwatch } from './ui/ThemeSwatch';
 export { NewStarNote, StartHint } from './ui/SkyNotes';
 export { ConstellationStatus } from './ui/ConstellationStatus';
 export { useConstellationCompletions, useEarnedTiers } from './hooks/useSky';
+export { useStarPlacement } from './hooks/useStarPlacement';
+export type { StarPlacement } from './hooks/useStarPlacement';
 export type { ConstellationCompletion } from './hooks/useSky';
 
 /** Install the dev console helpers. A no-op, and tree-shaken, in production. */

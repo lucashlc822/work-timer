@@ -1,5 +1,6 @@
 import { startVerdict } from '../domain/derive';
 import { RULES, useSky } from '../hooks/useSky';
+import { useStarPlacement } from '../hooks/useStarPlacement';
 import { minimumLabel } from './describe';
 
 /**
@@ -8,38 +9,33 @@ import { minimumLabel } from './describe';
  * which re-derives the moment the timer writes the completion.
  */
 export const NewStarNote = ({ sessionId }: { sessionId: string }) => {
-  const sky = useSky();
-  if (sky === undefined) return null;
+  const placement = useStarPlacement(sessionId);
+  if (placement === undefined || placement === null) return null;
 
-  for (const c of sky.constellations) {
-    const index = c.stars.findIndex((s) => s.id === sessionId);
-    if (index === -1) continue;
-    const total = c.def.shape.points.length;
+  if (placement.kind === 'constellation') {
     return (
       <p className="text-ink-secondary text-sm">
-        {c.complete && index === total - 1 ? (
+        {placement.completes !== null ? (
           <>
-            <span className="text-mint-300">{c.def.name} is complete.</span> Choose your next
+            <span className="text-mint-300">{placement.name} is complete.</span> Choose your next
             constellation below.
           </>
         ) : (
           <>
-            Added to <span className="text-ink-primary">{c.def.name}</span>: {index + 1} of {total}
+            Added to <span className="text-ink-primary">{placement.name}</span>: {placement.index}{' '}
+            of {placement.total}
           </>
         )}
       </p>
     );
   }
 
-  const wandering = sky.wandering.find((w) => w.session.id === sessionId);
-  if (wandering === undefined) return null;
-  const target = sky.constellations.find((c) => c.choice.id === wandering.constellationId);
-
+  const { target, reason } = placement;
   const why =
-    wandering.reason === 'too-short' && target !== undefined
-      ? `${target.def.name} needs ${minimumLabel(RULES[target.def.tier].minSessionS)}.`
-      : wandering.reason === 'constellation-complete' && target !== undefined
-        ? `${target.def.name} was already complete.`
+    reason === 'too-short' && target !== null
+      ? `${target.name} needs ${minimumLabel(RULES[target.tier].minSessionS)}.`
+      : reason === 'constellation-complete' && target !== null
+        ? `${target.name} was already complete.`
         : 'Choose a constellation to start building one.';
 
   return <p className="text-ink-secondary text-sm">A wandering star. {why}</p>;

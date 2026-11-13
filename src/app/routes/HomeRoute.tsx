@@ -57,7 +57,6 @@ import {
 } from '@/features/friends';
 import {
   ProgressLine,
-  RewardNote,
   StardustPanel,
   StardustPill,
   styleName,
@@ -79,6 +78,7 @@ import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark, Switch, useFocusHeading, useFocusIfLost } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
+import { ResultRewardSummary, ResultTally } from '../resultRewards';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
 import { useSharedSky } from '../sharedSkyContext';
 import { useRememberTogetherNames } from '../togetherNames';
@@ -95,12 +95,15 @@ const timerSlots: TimerSlots = {
   resultStar: (result) => (
     <ResultStar sessionId={result.sessionId} seed={result.seed} focusS={result.actualFocusS} />
   ),
-  resultNote: (result) => (
-    <>
-      {result.outcome === 'completed' && <NewStarNote sessionId={result.sessionId} />}
-      <RewardNote outcome={result.outcome} actualFocusS={result.actualFocusS} />
-    </>
-  ),
+  resultNote: (result, moment) =>
+    result.outcome === 'completed' ? (
+      <>
+        <NewStarNote sessionId={result.sessionId} />
+        <ResultTally sessionId={result.sessionId} moment={moment} />
+      </>
+    ) : null,
+  resultSummary: (result) =>
+    result.outcome === 'completed' ? <ResultRewardSummary sessionId={result.sessionId} /> : null,
 };
 
 /** The views that scroll over the timer; each gets a footer for its Back button. */
@@ -378,9 +381,9 @@ const HomeScreen = ({ together }: { together: Together }) => {
         const room = roomOf(session.togetherId);
         return room === null ? null : <TogetherCancelNote room={room} me={me} />;
       },
-      resultNote: (result) => (
+      resultNote: (result, moment) => (
         <>
-          {timerSlots.resultNote?.(result)}
+          {timerSlots.resultNote?.(result, moment)}
           {result.togetherId !== null && (
             <TogetherResultNote
               room={roomOf(result.togetherId)}
