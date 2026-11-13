@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  dismissResult,
   backToTimer,
   expectSignedIn,
   openView,
@@ -63,7 +64,7 @@ test('the app opens offline, a session finishes offline, and it all uploads when
   await expect(page.getByRole('timer')).toBeVisible();
   await page.clock.fastForward('25:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(page);
   await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
 
   // The device says plainly that it is offline with changes waiting.

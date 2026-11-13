@@ -16,7 +16,7 @@ import {
   installDevTools,
   NewStarNote,
   PackPreview,
-  ResultStarGlyph,
+  ResultStar,
   SharedPicker,
   SharedStartHint,
   SkyBackdrop,
@@ -93,7 +93,7 @@ const timerSlots: TimerSlots = {
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   progressLine: () => <ProgressLine />,
   resultStar: (result) => (
-    <ResultStarGlyph sessionId={result.sessionId} seed={result.seed} focusS={result.actualFocusS} />
+    <ResultStar sessionId={result.sessionId} seed={result.seed} focusS={result.actualFocusS} />
   ),
   resultNote: (result) => (
     <>
@@ -479,6 +479,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
             sharedId={target}
             refocusStart={refocusStart}
             compact={aboveTimer}
+            present={!away}
           />
         </section>
 

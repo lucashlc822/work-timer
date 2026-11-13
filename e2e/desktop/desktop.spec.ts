@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  dismissResult,
   expectSignedIn,
   openAccount,
   openTagPicker,
@@ -81,7 +82,7 @@ test('a session finished on the desktop reaches the web, and a tag made on the w
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible({
       timeout: 120_000,
     });
-    await page.getByRole('button', { name: 'Done' }).click();
+    await dismissResult(page);
     await expect(stardustPill(page)).toHaveText(/\b1 Stardust$/);
 
     // The web device gets it without being told to.
