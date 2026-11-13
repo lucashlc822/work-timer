@@ -745,6 +745,30 @@ rejected). Don't pre-populate this with guesses.
   sit in the settled row and, like every part, are pressable from frame 0 (a pointer
   click first skips the moment).
 
+- **The completion chime is made in code, plays once, and the toast steps aside
+  for it** (session-complete redesign PR 4, 2026-11-13). `shared/lib/chime.ts`
+  rings three sine partials (880, 1320, 2430 Hz) with a 5 ms attack and a ~2.5 s
+  fade at a low peak: no audio file, so nothing to fetch and the CSP stays closed.
+  The `AudioContext` is **created when it plays and closed ~3 s later, never kept
+  open** (an open context holds an audio stream and can keep Windows from
+  sleeping); it needs no unlock on Start, and is skipped when
+  `navigator.userActivation.hasBeenActive` is false (a relaunch not yet clicked).
+  `useMoment`'s `onStart` calls `chimeIfWanted`: only if the moment starts within
+  `CHIME_WINDOW_MS` (10 s) of the session's end, so one that ended in the tray
+  never sounds on return, and only if `META_KEYS.completionSound` isn't `false` —
+  **per device, never synced, on by default**, switched in Account → "This
+  computer" (a section that always renders; "Launch at startup" is inside it only
+  where the host has autostart). **A completed solo countdown's notice is marked
+  `quietWhenFocused`**, and the host skips it when the window is visible, not
+  minimised and focused as it fires (`main_window_in_front` in `lib.rs`, called
+  from the deadline thread; web: `visibilityState` + `hasFocus()`), because the
+  moment and the chime say it. A Pomodoro block's and a break's notices are not
+  marked, so they always show (PR 6 revisits the block's). Known gap: with the
+  window focused but another view (the sky, a panel) open over the timer, the
+  moment waits and the toast is skipped, so that completion makes no sound.
+  `e2e/web/chime.spec.ts` swaps in a counting `AudioContext`; the desktop test
+  skips itself when Windows won't give a test window the foreground.
+
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
   dimmed figure fades its lines and stars (`data-figure-body`), never its name:

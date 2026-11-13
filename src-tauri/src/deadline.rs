@@ -90,6 +90,11 @@ pub struct Stage {
     body: String,
     /// Prefix for the tray countdown, e.g. "Break".
     label: Option<String>,
+    /// Skip the notification when the main window is visible and focused as the
+    /// stage ends: the app's own result says it (with a chime). Off by default,
+    /// so a webview that predates this field still gets its notice.
+    #[serde(default)]
+    quiet_when_focused: bool,
 }
 
 /// The tray tooltip while a stage counts down.
@@ -191,6 +196,9 @@ fn watch(app: AppHandle, generation: u64, stages: Vec<Stage>) {
                     armed.session_id = stages.peek().map(|next| next.session_id.clone());
                     crate::set_tooltip(&app, None);
                     drop(armed);
+                    if stage.quiet_when_focused && crate::main_window_in_front(&app) {
+                        break;
+                    }
                     #[cfg(debug_assertions)]
                     crate::native_log::notification(&stage.title, &stage.body);
                     let _ = app
@@ -248,7 +256,23 @@ mod tests {
             title: "t".into(),
             body: "b".into(),
             label: None,
+            quiet_when_focused: false,
         }
+    }
+
+    #[test]
+    fn a_stage_from_an_older_webview_still_notifies() {
+        // No `quietWhenFocused` key: the notice must keep showing.
+        let stage: Stage = serde_json::from_str(
+            r#"{"sessionId":"s","endsAt":5,"title":"t","body":"b","label":null}"#,
+        )
+        .unwrap();
+        assert!(!stage.quiet_when_focused);
+        let quiet: Stage = serde_json::from_str(
+            r#"{"sessionId":"s","endsAt":5,"title":"t","body":"b","quietWhenFocused":true}"#,
+        )
+        .unwrap();
+        assert!(quiet.quiet_when_focused);
     }
 
     #[test]

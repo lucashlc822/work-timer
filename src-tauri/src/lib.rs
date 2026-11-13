@@ -129,6 +129,19 @@ fn set_main_webview_visible(app: &tauri::AppHandle, visible: bool) {
     }
 }
 
+/// Whether the main window is on screen and has the keyboard focus: not in the
+/// tray, not minimised, not behind another window. Asked from the deadline's
+/// thread, so a completion notice can stay quiet for someone looking right at
+/// the result.
+pub fn main_window_in_front(app: &tauri::AppHandle) -> bool {
+    let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
+        return false;
+    };
+    window.is_visible().unwrap_or(false)
+        && !window.is_minimized().unwrap_or(true)
+        && window.is_focused().unwrap_or(false)
+}
+
 /// Bring the main window back from the tray, from a minimised state, or from
 /// behind other windows — whichever it happens to be in.
 fn show_main_window(app: &tauri::AppHandle) {

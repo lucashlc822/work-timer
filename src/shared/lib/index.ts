@@ -16,6 +16,8 @@ export {
   seedTagId,
 } from './seed';
 
+export { playChime } from './chime';
+
 export { isStandalone, onReducedMotionChange, prefersReducedMotion } from './platform';
 
 export { between, hashSeed, intBetween, mulberry32, pick, rngFromSeed } from './random';
