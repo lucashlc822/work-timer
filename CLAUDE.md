@@ -233,7 +233,10 @@ in `NOTES.md`.
   `e2e/web/a11y.spec.ts` (axe) scans every screen; `ENFORCE` in
   `e2e/support/a11y.ts` is true and nothing is acknowledged. `--color-ink-muted`
   is for text on night-900/800 only (not night-700). Bundle size
-  (`npm run perf:size`, against `e2e/perf-baseline.json`) and Lighthouse
+  (`npm run perf:size`, against `e2e/perf-baseline.json`, re-set at 0.9.0 =
+  281 kB of JS gzipped; **it only means something for a build that has
+  `.env.production.local`**: with no server address Vite drops the sync and
+  sign-in code, ~20% smaller, which is what CI builds) and Lighthouse
   (`npm run perf:lighthouse`, needs an installed Chrome or Edge) are report-only
   by design; Lighthouse scores on localhost are optimistic, so read them as a
   trend.
