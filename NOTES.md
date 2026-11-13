@@ -14,7 +14,7 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ## 2026-11-13 — The QA pass on 0.9.0, acted on: seven PRs merged, not released
 
-**Status: merged, not released.** `master` is at `dd47f10` (`package.json` still 0.9.0), with its own CI green on that commit. Lucas asked `qa-lead` (web only) to look over 0.9.0 on 2026-11-12; everything it found was turned into one PR each (#184–#190, `qa-lead` memory in #184, #191), merged in the order below, and a final `qa-lead` pass (web and desktop) found no regression and nothing Critical. Of the seven, #185, #186 and #188 change the desktop exe and #188 the web build too, so they reach people with the next release.
+**Status: merged, not released.** `master` held `dd47f10` after the seven PRs (`package.json` still 0.9.0), with its own CI green on that commit; one follow-up, #193 (the flaky test, below), came after. Lucas asked `qa-lead` (web only) to look over 0.9.0 on 2026-11-12; everything it found was turned into one PR each (#184–#190, `qa-lead` memory in #184 and #191), merged in the order below, and a final `qa-lead` pass (web and desktop) found no regression and nothing Critical. Of the seven, #185, #186 and #188 change the desktop exe and #188 the web build too, so they reach people with the next release.
 
 ### What the first pass found, and what became of it
 
@@ -31,19 +31,18 @@ Once this file passes ~1,000 lines, archive older entries to
 - **Opening the installed app for a measurement can show a result screen the user hasn't seen.** The installed 0.9.0 opened on "Session complete" for a focus-together session that ended while it was closed. It was left undismissed on purpose.
 - **A PR's green CI predates whatever merged after it.** Before merging a PR that shares a file with one just merged, trial-merge it (`git merge-tree --write-tree origin/master origin/<branch>`), and for `Cargo.lock` also run `cargo audit` on the combination. Master's CI after the last merge was the final check.
 - **GitHub reports `UNKNOWN` mergeability for ~20–30 s after a merge**; wait rather than treating it as a conflict.
-- **Pre-existing and not fixed: a flaky web test.** `e2e/web/friends.spec.ts:328` ("a friend sees you focusing, then on a break, within about 15 seconds") timed out once at the 60 s limit in the final pass (`browserContext.close … has been closed`, in its `finally`), then passed alone in 49.4 s, so a passing run already uses most of its budget. None of the seven PRs touched it or its helpers, and the first pass (72 of 72) and every CI run for these PRs passed it. It needs a longer `test.setTimeout` or shorter presence waits, as its own PR.
+- **The flaky web test was a real race in the app, fixed in #193.** `e2e/web/friends.spec.ts:328` ("a friend sees you focusing, then on a break, within about 15 seconds") timed out once in the final `qa-lead` pass, then passed alone in 49.4 s. It was pre-existing (none of the seven PRs touched it) and not just slow: `useShareFocusStatus` started an upload per status change and let them overlap, so "focus" and "break" (the test fast-forwards a 25-minute block, so they leave ~0.1 s apart) could land in either order and the older overwrote the newer. Reproduced first: the real test failed 1 run in 6 under 6-way load, and a temporary probe logging the uploads showed the break response arriving before the focus one in the failing runs (3 of 40). Real use is far narrower (a start and an end within a second on a slow connection leaves friends seeing "Focusing now" for up to 25 min). #193 adds `serialQueue` (`friends/domain`), sends uploads through it, and also gives that test its own 120 s limit (it waits on four presence updates and a passing run took ~52 s of 60). After: probe 0 of 40 failing, the real test 12 of 12, full web+API e2e 72/72. The probe was never committed.
 
 ### Checked, with what was seen
 
-`cargo audit` exit 0 with `ignore = []` and 5 warnings; `cargo tree -i zip` finds no package; lint, format, types clean; 984 unit tests pass; database 312/312; web e2e 71/72 (the flake above), accessibility scan clean; desktop e2e 6/6; Lighthouse 100 and 100; `npm audit --omit=dev` 0; `perf:size` "Within 10%" (281.1 vs 281.0 kB). Master's own CI green.
+`cargo audit` exit 0 with `ignore = []` and 5 warnings; `cargo tree -i zip` finds no package; lint, format, types clean; 984 unit tests pass; database 312/312; web e2e 71/72 (the flake above, since fixed: 72/72 on #193), accessibility scan clean; desktop e2e 6/6; Lighthouse 100 and 100; `npm audit --omit=dev` 0; `perf:size` "Within 10%" (281.1 vs 281.0 kB). Master's own CI green.
 
 ### Not verified
 
-macOS, as always. Installed 0.9.0 apps being offered a later update (they keep the zip-enabled updater until the next release is installed). A real `db push --remote` (no migration was pending; the first release that has one is the first real run, and its confirmation prompt has not been seen). The v3 CLI's behaviour on the hosted project beyond the read-only commands above.
+macOS, as always. Installed 0.9.0 apps being offered a later update (they keep the zip-enabled updater until the next release is installed). A real `db push --remote` (no migration was pending; the first release that has one is the first real run, and its confirmation prompt has not been seen). The v3 CLI's behaviour on the hosted project beyond the read-only commands above. For #193: a genuinely slow network (the bad upload order was reproduced by load on one machine, not by network delay).
 
 ### Next
 
-- Fix the flaky friends presence test, its own PR (`e2e/web/friends.spec.ts:328`).
 - At the next release, the first `db push --remote` and the first update installed by a zip-less build are the two live checks; RELEASING.md already says to read the `Target:` line.
 
 ---
