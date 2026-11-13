@@ -12,6 +12,41 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-13 — The QA pass on 0.9.0, acted on: seven PRs merged, not released
+
+**Status: merged, not released.** `master` held `dd47f10` after the seven PRs (`package.json` still 0.9.0), with its own CI green on that commit; one follow-up, #193 (the flaky test, below), came after. Lucas asked `qa-lead` (web only) to look over 0.9.0 on 2026-11-12; everything it found was turned into one PR each (#184–#190, `qa-lead` memory in #184 and #191), merged in the order below, and a final `qa-lead` pass (web and desktop) found no regression and nothing Critical. Of the seven, #185, #186 and #188 change the desktop exe and #188 the web build too, so they reach people with the next release.
+
+### What the first pass found, and what became of it
+
+- **Critical, RUSTSEC-2026-0429 (`zip` 4.6.1), fixed in #185.** Not a fourth entry in `src-tauri/.cargo/audit.toml`: `zip` is an optional *default* feature of `tauri-plugin-updater` (`default = [rustls-tls, system-proxy, zip]`). Its source shows Windows takes the zip path only `#[cfg(feature = "zip")]` and otherwise `extract_exe` (our plain NSIS `setup.exe`); macOS unpacks `.app.tar.gz` with tar/flate2, which it always depends on. `Cargo.toml` now has `default-features = false, features = ["rustls-tls", "system-proxy"]`; `zip`, `arbitrary` and `derive_arbitrary` left `Cargo.lock` and the three old ignores are gone (`ignore = []`). CLAUDE.md has the decision. **A real update was installed to prove the path:** two release builds of the branch (0.9.98 and 0.9.99, throwaway signing key, local endpoint), 0.9.98 installed, "Starkeep 0.9.99 is ready" appeared, Restart to update, and the installed exe became 0.9.99 and relaunched; then the published 0.9.0 installer (SHA-256 matched) was put back. The one-off spec was never committed.
+- **Rust warnings, #186.** `cargo update -p tokio -p rustix -p async-executor` (1.54.1, 1.1.6, 1.14.1) only, not a full update (that moves 150+ crates including Tauri plugins). Glib, zbus_names, zvariant(_derive) and proc-macro-error stay as warnings: Linux-only, owned by Tauri.
+- **Bundle growth, #187 (accepted) and #190.** JS gzipped 247.2 → 281.0 kB since the baseline of 2026-10-21. By release: v0.6.2 262.7, v0.7.0 265.8, v0.8.0 278.3 (**+12.5**, the sky upgrade), v0.9.0 281.0 (**+2.7**, the Stardust redesign). Lucas chose to re-baseline rather than split code. `perf-baseline.json` is now 287,783 / 8,329 / 278,274 bytes.
+- **Scrollbar width, #188.** Confirmed first in the installed 0.9.0 at 480 px: Shop and History panels 417 px with a 15 px classic scrollbar, Goal & streak 432 px with none. `scrollbar-gutter-stable` on `PanelLayer`'s scroller (`HomeRoute.tsx`); all three tabs are 417 px in WebView2. Every panel now sits ~7 px left of centre when nothing scrolls (accepted over `both-edges`). `shop.spec.ts` asserts the computed gutter (fails without the class).
+- **Supabase CLI 2.120 → 3.1, #189.** v3 makes commands default to the local stack. **A bare `db push` now pushes to the local database and sends the hosted project nothing**, so RELEASING.md step 1 would have "succeeded" without applying a migration. It and `supabase/README.md` now say `--remote` (`--linked` is deprecated, removed in v4), and CLAUDE.md records it. `config.toml` needed only `[auth.email]`/`[auth.sms]` `enable_signup` → `enabled`; it already had `[local_smtp]` and a `project_id`.
+
+### Things learned that aren't in the code
+
+- **CI measured the wrong app.** `npm run build` with no `VITE_SUPABASE_*` makes Vite drop the sync and sign-in code, so CI's size step read 224.1 kB while 281.0 kB ships, and could never have flagged any of the growth. A worktree build of an older tag without `.env.production.local` shows the same thing, which made my first per-release table wrong until I copied the file in. #190 gives only the size step placeholder values (`.invalid` host). Locally, a size figure needs `.env.production.local`.
+- **A bare `db push` can no longer be trusted to have reached the hosted project** (above): it exits 0 against the local database. Read the `Target:` line the CLI prints. `migration list --remote` and `db push --remote --dry-run` are read-only, need no password and no prompt (checked).
+- **Opening the installed app for a measurement can show a result screen the user hasn't seen.** The installed 0.9.0 opened on "Session complete" for a focus-together session that ended while it was closed. It was left undismissed on purpose.
+- **A PR's green CI predates whatever merged after it.** Before merging a PR that shares a file with one just merged, trial-merge it (`git merge-tree --write-tree origin/master origin/<branch>`), and for `Cargo.lock` also run `cargo audit` on the combination. Master's CI after the last merge was the final check.
+- **GitHub reports `UNKNOWN` mergeability for ~20–30 s after a merge**; wait rather than treating it as a conflict.
+- **The flaky web test was a real race in the app, fixed in #193.** `e2e/web/friends.spec.ts:328` ("a friend sees you focusing, then on a break, within about 15 seconds") timed out once in the final `qa-lead` pass, then passed alone in 49.4 s. It was pre-existing (none of the seven PRs touched it) and not just slow: `useShareFocusStatus` started an upload per status change and let them overlap, so "focus" and "break" (the test fast-forwards a 25-minute block, so they leave ~0.1 s apart) could land in either order and the older overwrote the newer. Reproduced first: the real test failed 1 run in 6 under 6-way load, and a temporary probe logging the uploads showed the break response arriving before the focus one in the failing runs (3 of 40). Real use is far narrower (a start and an end within a second on a slow connection leaves friends seeing "Focusing now" for up to 25 min). #193 adds `serialQueue` (`friends/domain`), sends uploads through it, and also gives that test its own 120 s limit (it waits on four presence updates and a passing run took ~52 s of 60). After: probe 0 of 40 failing, the real test 12 of 12, full web+API e2e 72/72. The probe was never committed.
+
+### Checked, with what was seen
+
+`cargo audit` exit 0 with `ignore = []` and 5 warnings; `cargo tree -i zip` finds no package; lint, format, types clean; 984 unit tests pass; database 312/312; web e2e 71/72 (the flake above, since fixed: 72/72 on #193), accessibility scan clean; desktop e2e 6/6; Lighthouse 100 and 100; `npm audit --omit=dev` 0; `perf:size` "Within 10%" (281.1 vs 281.0 kB). Master's own CI green.
+
+### Not verified
+
+macOS, as always. Installed 0.9.0 apps being offered a later update (they keep the zip-enabled updater until the next release is installed). A real `db push --remote` (no migration was pending; the first release that has one is the first real run, and its confirmation prompt has not been seen). The v3 CLI's behaviour on the hosted project beyond the read-only commands above. For #193: a genuinely slow network (the bad upload order was reproduced by load on one machine, not by network delay).
+
+### Next
+
+- At the next release, the first `db push --remote` and the first update installed by a zip-less build are the two live checks; RELEASING.md already says to read the `Target:` line.
+
+---
+
 ## 2026-11-11 — Released 0.9.0 (the Stardust panel redesign)
 
 **Status: published.** v0.9.0 is the Latest release (tag `v0.9.0`, commit `6b6c03d`, version bump #182). It went out at 03:44 UTC on 2026-11-12 (22:44 local on the 11th). The desktop update and the web version both came from it. Nothing in flight except the docs PR that adds this entry.
@@ -43,7 +78,7 @@ The Stardust panel redesign (#170–#173: three tabs, cards, ask-first Buy) and 
 ### Next
 
 - Confirm the update on a second installed 0.8.0 (or 0.7.0) app within the updater's ~6-hour cycle.
-- Optional, its own PR: the scrollbar width quirk above.
+- Optional, its own PR: the scrollbar width quirk above. **(Superseded 2026-11-13: fixed in #188.)**
 
 ---
 
