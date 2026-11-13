@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { backToTimer, openView, sessionsOnDevice, stardustPill, syncLine } from '../support/app';
+import {
+  dismissResult,
+  backToTimer,
+  openView,
+  sessionsOnDevice,
+  stardustPill,
+  syncLine,
+} from '../support/app';
 import { closeDevices, openDevice, renameTag, tagNames } from '../support/devices';
 import { adminClient, createUser, newId, seedStardust, type TestUser } from '../support/users';
 
@@ -156,7 +163,7 @@ test('a session finished offline on each device: both are kept, 50 Stardust, no 
       await expect(device.page.getByRole('timer')).toBeVisible();
       await device.page.clock.fastForward('25:01');
       await expect(device.page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-      await device.page.getByRole('button', { name: 'Done' }).click();
+      await dismissResult(device.page);
       await expect(stardustPill(device.page)).toHaveText(/\b25 Stardust$/);
     }
 
@@ -321,7 +328,7 @@ test('a session finished while a sync round is in flight still uploads without a
     await expect(device.page.getByRole('timer')).toBeVisible();
     await device.page.clock.fastForward('25:01');
     await expect(device.page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-    await device.page.getByRole('button', { name: 'Done' }).click();
+    await dismissResult(device.page);
     await device.page.waitForTimeout(3_500);
 
     // The round ends. The session should now go up on its own.

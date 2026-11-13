@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectSignedIn, openAccount, signIn, signOut } from '../support/app';
+import { dismissResult, expectSignedIn, openAccount, signIn, signOut } from '../support/app';
 import { settle } from '../support/devices';
 import { befriend, createRoom, setName } from '../support/friends';
 import { adminClient, createUser } from '../support/users';
@@ -77,7 +77,7 @@ test('a session keeps running hidden in the tray: tooltip counts down, the notic
   await expect.poll(visible, { timeout: 15_000 }).toBe('visible');
   await desktop.attach();
   await expect(desktop.page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await desktop.page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(desktop.page);
 
   // And it is a real, completed session on the server.
   await expect

@@ -699,8 +699,23 @@ rejected). Don't pre-populate this with guesses.
 - **The shop previews a style with the sky's own star** (View sky upgrade PR 8,
   2026-11-06). `StylePreview` (`sky/ui`) runs `starAppearance` -> `starForm` ->
   `AstroStar` at the `glow` tier with one fixed seed and a 25-minute session,
-  so two rows differ only by style. Static, decorative, no filter. The result
-  screen keeps `StarGlyph`, which matches the brand `StarMark`; don't switch it.
+  so two rows differ only by style. Static, decorative, no filter.
+
+- **A finished session plays a moment, and its star is the sky's star**
+  (session-complete redesign PR 1, 2026-11-13; supersedes "the result screen
+  keeps `StarGlyph`", which is gone). `ResultStar` (`sky/ui`) draws the session's
+  own seed, length and stamped style through `starAppearance` -> `starForm` ->
+  `AstroStar` at the `glow` tier, like the shop. `useMoment` plays a fixed
+  timeline (`timer/domain/moment.ts`: ignite, arrive, tally, settled): the star
+  ignites (`moment-ignite`), then the text, notes and buttons fade in by stage
+  (`moment-part`/`moment-pending`). Every part is in the DOM and Done has focus
+  from the first frame; only the look waits. It plays **once per finished result
+  in memory** (a reload never replays it), and waits while the window is hidden or
+  another view covers the timer (`present`); going away part-way skips to the end.
+  **Escape or a pointer click skips it, and a click that skips presses nothing**
+  (`detail > 0`); Enter/Space on the focused Done always work. Reduced motion
+  starts at `settled`. An early ending has no moment. In e2e, `dismissResult`
+  (`e2e/support/app.ts`) skips before pressing Done.
 
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or

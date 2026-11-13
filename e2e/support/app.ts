@@ -43,6 +43,20 @@ export const signOut = async (page: Page): Promise<void> => {
   await expectSignInScreen(page);
 };
 
+/**
+ * Escape skips a finished session's completion moment (a click while it plays
+ * only skips it, never presses what is under it). A no-op once it has settled.
+ */
+export const skipMoment = async (page: Page): Promise<void> => {
+  await page.keyboard.press('Escape');
+};
+
+/** "Done" on a session's result, skipping its completion moment first. */
+export const dismissResult = async (page: Page): Promise<void> => {
+  await skipMoment(page);
+  await page.getByRole('button', { name: 'Done' }).click();
+};
+
 /** The footer's Stardust balance, e.g. "25 Stardust". */
 export const stardustPill = (page: Page) =>
   page.getByRole('button', { name: /^\W*[\d,]+ Stardust$/ });

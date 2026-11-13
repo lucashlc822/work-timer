@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectSignedIn, openTagPicker, openView, signIn } from '../support/app';
+import { dismissResult, expectSignedIn, openTagPicker, openView, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -44,7 +44,7 @@ const finishTaggedSession = async (page: Page, tagName: string, constellation?: 
   await expect(page.getByRole('timer')).toContainText('25:00');
   await page.clock.fastForward('25:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(page);
 
   await openView(page, 'View sky');
   await expect(theStar(page)).toBeVisible();
@@ -216,7 +216,7 @@ const finishTheKite = async (page: Page) => {
     await expect(page.getByRole('timer')).toContainText('25:00');
     await page.clock.fastForward('25:01');
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-    await page.getByRole('button', { name: 'Done' }).click();
+    await dismissResult(page);
   }
 };
 

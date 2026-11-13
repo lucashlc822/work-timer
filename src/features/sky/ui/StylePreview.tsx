@@ -16,7 +16,7 @@ const BASE_R = 4.6;
  * buyer sees is the character the style will really have: its spike count and
  * angle, its corona, its ring. Every style gets the same seed and the same
  * length of session, so the only difference between two previews is the style.
- * The result screen keeps `StarGlyph`, which matches the brand mark.
+ * The result screen draws the same way (`ResultStar`), from the session's own seed.
  *
  * Static on purpose (no twinkle): a shop row is a place to compare, not watch.
  * Decorative: the row's own text names the style.

@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-import { expectSignedIn, openView, signIn, stardustPill, syncLine } from '../support/app';
+import {
+  dismissResult,
+  expectSignedIn,
+  openView,
+  signIn,
+  stardustPill,
+  syncLine,
+} from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { adminClient, createUser } from '../support/users';
 
@@ -46,7 +53,7 @@ test('a 25-minute session the clock carries to the end becomes a star and 25 Sta
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
   await expect(page.getByText('25 minutes of focus')).toBeVisible();
   await expect(page.getByText('+25 Stardust')).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(page);
 
   await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
 
@@ -119,6 +126,6 @@ test('a running session survives a reload and still finishes on schedule', async
 
   await page.clock.fastForward('05:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(page);
   await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
 });

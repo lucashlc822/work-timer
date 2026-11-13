@@ -243,3 +243,74 @@
     animation: none !important;
   }
 }
+
+/*
+ * A finished session's moment (session-complete redesign, PR 1). The new star
+ * grows from a point, its spikes turning into place as it brightens, and its
+ * halo swells and settles behind it. Played once, on the result screen only:
+ * never during a session. The class comes off when the moment settles or is
+ * skipped, which snaps it to the end; reduced motion never adds it.
+ */
+@keyframes moment-ignite {
+  0% {
+    opacity: 0;
+    transform: scale(0.15) rotate(-14deg);
+  }
+  35% {
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes moment-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.moment-ignite {
+  transform-origin: center;
+  animation: moment-ignite var(--duration-ignite) var(--ease-gentle) both;
+}
+
+.moment-halo {
+  transform-origin: center;
+  animation: moment-halo var(--duration-ignite) var(--ease-gentle) both;
+}
+
+/* A part of the result that is still to come in its moment. */
+.moment-pending {
+  opacity: 0;
+  transform: translateY(0.375rem);
+}
+
+/* Unlayered, so it wins over a utility's `transition`: keep the hover colours. */
+.moment-part {
+  transition:
+    opacity var(--duration-reveal) var(--ease-gentle),
+    transform var(--duration-reveal) var(--ease-gentle),
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+/* A control the keyboard is on is always fully there, whatever its stage. */
+.moment-part:focus-visible,
+.moment-part:has(:focus-visible) {
+  opacity: 1;
+  transform: none;
+}
