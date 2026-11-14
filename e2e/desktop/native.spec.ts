@@ -101,16 +101,18 @@ test('a session ending with the window in front raises no Windows notice: the re
   await settle(page);
   const before = (await nativeLog(page)).notifications.length;
 
+  // Windows may refuse to hand focus to a window started by a test; then there
+  // is nothing to assert, and saying so beats a pass that proved nothing. Asked
+  // before the session starts, and the test always signs out before it skips,
+  // so the tests after it start from the sign-in screen as they expect.
+  await invokeTauri(page, 'plugin:window|set_focus', { label: 'main' });
+  const focused = await invokeTauri<boolean>(page, 'plugin:window|is_focused', { label: 'main' });
+  if (!focused) await signOut(page);
+  test.skip(!focused, 'Windows would not give the test window the foreground.');
+
   await page.getByRole('radio', { name: '1 min (dev)' }).click();
   await page.getByRole('button', { name: 'Start 1 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
-
-  // Windows may refuse to hand focus to a window started by a test; then there
-  // is nothing to assert, and saying so beats a pass that proved nothing.
-  await invokeTauri(page, 'plugin:window|set_focus', { label: 'main' });
-  const focused = await invokeTauri<boolean>(page, 'plugin:window|is_focused', { label: 'main' });
-  test.skip(!focused, 'Windows would not give the test window the foreground.');
-
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible({
     timeout: 120_000,
   });
@@ -119,11 +121,12 @@ test('a session ending with the window in front raises no Windows notice: the re
   const stillFocused = await invokeTauri<boolean>(page, 'plugin:window|is_focused', {
     label: 'main',
   });
-  test.skip(!stillFocused, 'Another window took the foreground during the session.');
-  // The thread fired at the deadline and chose silence: nothing new in the log.
-  expect((await nativeLog(page)).notifications).toHaveLength(before);
+  const notices = (await nativeLog(page)).notifications;
   await dismissResult(page);
   await signOut(page);
+  test.skip(!stillFocused, 'Another window took the foreground during the session.');
+  // The thread fired at the deadline and chose silence: nothing new in the log.
+  expect(notices).toHaveLength(before);
 });
 
 test('hidden in the tray reads as Away to friends, and Online again once back (M7 presence)', async () => {
