@@ -3,14 +3,19 @@ import { useRef } from 'react';
 import { systemClock } from '@/shared/lib';
 import { StarMark, useFocusIfLost } from '@/shared/ui';
 
+import { db } from '@/shared/db';
+
+import { chimeIfWanted } from '../data/completionSound';
 import { formatDuration, formatTimeOfDay } from '../domain/format';
+import { reached, type MomentStage } from '../domain/moment';
 import { breakEndsAt, breakProgress, breakRemainingMs, isBreakOver } from '../domain/pomodoro';
 import type { FinishedResult } from '../domain/timerMachine';
 import type { PomodoroRun } from '../domain/types';
+import { useMoment } from '../hooks/useMoment';
 import { useTick } from '../hooks/useTick';
 import { CountdownDisplay } from './CountdownDisplay';
 import { SecondaryButton } from './SecondaryButton';
-import type { ResultInfo, TimerSlots } from './slots';
+import type { MomentInfo, ResultInfo, TimerSlots } from './slots';
 
 interface Props {
   run: PomodoroRun;
@@ -23,6 +28,8 @@ interface Props {
   onSkip: () => void;
   onStartNext: () => void;
   onEndRun: () => void;
+  /** False while another view covers the timer: the block's moment waits for it to show. */
+  present?: boolean;
 }
 
 /**
@@ -42,6 +49,7 @@ export const BreakScreen = ({
   onSkip,
   onStartNext,
   onEndRun,
+  present = true,
 }: Props) => {
   const brk = run.break;
   const now = systemClock.now();
@@ -65,7 +73,20 @@ export const BreakScreen = ({
           togetherId: result.session.togetherId,
           endedBy: result.endedBy,
         };
-  const star = info !== null ? slots.resultStar?.(info) : undefined;
+  // A block this window saw complete gets the lighter moment (session-complete
+  // PR 6): its star ignites and takes its place in the sky, with the chime. A
+  // break resumed after a reload has no result, so no moment and no chime.
+  const moment = useMoment('light', {
+    present: present && info !== null,
+    onStart: (at) => {
+      if (result !== null) void chimeIfWanted(db, result.ending.endedAt, at);
+    },
+  });
+  const momentInfo: MomentInfo = { stage: moment.stage, skipped: moment.skipped };
+  const playing = moment.stage !== 'waiting' && moment.stage !== 'settled';
+  const part = (from: MomentStage) =>
+    `moment-part ${reached(moment.stage, from) ? '' : 'moment-pending'}`;
+  const star = info !== null ? slots.resultStar?.(info, momentInfo) : undefined;
   // The run's tag, so a change here is what the next block will carry.
   const tagPicker = slots.tagPicker?.({
     value: run.tagId ?? null,
@@ -81,14 +102,23 @@ export const BreakScreen = ({
       className="flex w-full flex-col items-center gap-5 text-center focus:outline-none"
     >
       {info !== null && (
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative flex h-16 w-16 items-center justify-center">
-            {star ?? <StarMark size={48} className="relative" />}
+        <div className="flex flex-col items-center gap-2" data-stage={moment.stage}>
+          <div
+            className={`relative flex h-16 w-16 items-center justify-center ${
+              moment.stage === 'waiting' ? 'opacity-0' : ''
+            }`}
+          >
+            <div className={`h-full w-full ${playing ? 'moment-ignite' : ''}`}>
+              {star ?? <StarMark size={48} className="relative" />}
+            </div>
           </div>
-          <p role="status" className="text-ink-secondary text-xs">
+          <p role="status" className={`text-ink-secondary text-xs delay-200 ${part('ignite')}`}>
             Block {result!.session.runIndex ?? run.blocksDone} done ·{' '}
             {formatDuration(info.actualFocusS)} of focus
           </p>
+          <div className={`flex flex-col items-center gap-1 ${part('arrive')}`}>
+            {slots.blockNote?.(info, momentInfo)}
+          </div>
         </div>
       )}
 

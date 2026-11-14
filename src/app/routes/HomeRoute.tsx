@@ -57,6 +57,7 @@ import {
 } from '@/features/friends';
 import {
   ProgressLine,
+  RewardNote,
   StardustPanel,
   StardustPill,
   styleName,
@@ -80,7 +81,7 @@ import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { StarMark, Switch, useFocusHeading, useFocusIfLost } from '@/shared/ui';
 
 import { useAccount } from '../accountContext';
-import { ResultRewardSummary, ResultTally } from '../resultRewards';
+import { ResultRewardSummary, ResultTally, RunRewardSummary, RunTally } from '../resultRewards';
 import { renderFriendSky, summarizeFriend } from '../friendSlots';
 import { useSharedSky } from '../sharedSkyContext';
 import { useRememberTogetherNames } from '../togetherNames';
@@ -114,6 +115,17 @@ const timerSlots: TimerSlots = {
     ) : null,
   resultSummary: (result) =>
     result.outcome === 'completed' ? <ResultRewardSummary sessionId={result.sessionId} /> : null,
+  // Between Pomodoro blocks: where the star went and what the block earned. The
+  // whole run's tally waits for its summary.
+  blockNote: (result) =>
+    result.outcome === 'completed' ? (
+      <>
+        <NewStarNote sessionId={result.sessionId} />
+        <RewardNote outcome={result.outcome} actualFocusS={result.actualFocusS} />
+      </>
+    ) : null,
+  runNote: (run, moment) => <RunTally sessionIds={run.sessionIds} moment={moment} />,
+  runSummary: (run) => <RunRewardSummary sessionIds={run.sessionIds} />,
 };
 
 /** The views that scroll over the timer; each gets a footer for its Back button. */

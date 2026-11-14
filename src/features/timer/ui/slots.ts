@@ -31,6 +31,14 @@ export interface MomentInfo {
   skipped: boolean;
 }
 
+/** A Pomodoro run that has just ended, for the app's lines about it. */
+export interface RunInfo {
+  blocks: number;
+  focusS: number;
+  /** The completed blocks' sessions, oldest first. */
+  sessionIds: readonly string[];
+}
+
 /** The session on screen while it runs, for the app's lines about it. */
 export interface RunningInfo {
   sessionId: string;
@@ -65,6 +73,22 @@ export interface TimerSlots {
    * "See it in your sky"). Quiet buttons; the slot brings its own.
    */
   resultActions?: (result: ResultInfo) => ReactNode;
+  /**
+   * Under a Pomodoro block's "Block N done" between blocks: where the star went
+   * and what the block earned. Lighter than `resultNote`: no tally, which waits
+   * for the run summary (session-complete redesign PR 6).
+   */
+  blockNote?: (result: ResultInfo, moment: MomentInfo) => ReactNode;
+  /**
+   * Under a Pomodoro run's summary: everything the run earned (PR 6). The
+   * moment tells it when to come in.
+   */
+  runNote?: (run: RunInfo, moment: MomentInfo) => ReactNode;
+  /**
+   * Inside the run summary's status region, after its text: one sentence a
+   * screen reader hears with it (what the run earned). Visually hidden.
+   */
+  runSummary?: (run: RunInfo) => ReactNode;
   /**
    * Inside the result's status region, after its text: one sentence a screen
    * reader hears with "Session complete" (PR 2: what it earned). Visually hidden.

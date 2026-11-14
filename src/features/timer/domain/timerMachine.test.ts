@@ -118,7 +118,11 @@ const harness = (clock: TestClock = createTestClock(START), stored: PomodoroRun 
         return Promise.resolve(run);
       }),
       endRun: fromPromise<RunSummary, { runId: string }>(() => {
-        const summary = { blocks: run?.blocksDone ?? 0, focusS: (run?.blocksDone ?? 0) * 60 };
+        const summary = {
+          blocks: run?.blocksDone ?? 0,
+          focusS: (run?.blocksDone ?? 0) * 60,
+          sessionIds: [],
+        };
         run = null;
         return Promise.resolve(summary);
       }),
@@ -444,7 +448,11 @@ describe('timerMachine — Pomodoro', () => {
     h.actor.send({ type: 'END_RUN' });
     await waitFor(h.actor, (s) => s.matches('runSummary'));
 
-    expect(h.actor.getSnapshot().context.summary).toEqual({ blocks: 1, focusS: 60 });
+    expect(h.actor.getSnapshot().context.summary).toEqual({
+      blocks: 1,
+      focusS: 60,
+      sessionIds: [],
+    });
     expect(h.disarmedBreaks).toEqual([1]);
     expect(h.finished).toHaveLength(1);
 

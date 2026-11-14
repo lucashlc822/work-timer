@@ -6,7 +6,14 @@ export { MiniCountdown } from './ui/MiniCountdown';
 export { TimerProvider } from './ui/TimerProvider';
 export { CompletionSoundSwitch } from './ui/CompletionSoundSwitch';
 export { useTimer } from './ui/timerContext';
-export type { MomentInfo, ResultInfo, RunningInfo, TagPickerProps, TimerSlots } from './ui/slots';
+export type {
+  MomentInfo,
+  ResultInfo,
+  RunInfo,
+  RunningInfo,
+  TagPickerProps,
+  TimerSlots,
+} from './ui/slots';
 export { reached } from './domain/moment';
 export type { TimerSession, TimerStatus } from './hooks/useTimerSession';
 export type { FinishedResult } from './domain/timerMachine';

@@ -49,6 +49,26 @@ export const starPlacement = (sky: SkyState, sessionId: string): StarPlacement |
 };
 
 /**
+ * Where each of several sessions' stars went, live, in the order given: a
+ * Pomodoro run's blocks (session-complete redesign PR 6). Sessions with no star
+ * in your sky are left out.
+ */
+export const useStarPlacements = (sessionIds: readonly string[]): StarPlacement[] | undefined => {
+  const sky = useSky();
+  const key = sessionIds.join('|');
+  return useMemo(
+    () =>
+      sky === undefined
+        ? undefined
+        : key
+            .split('|')
+            .flatMap((id) => (id === '' ? [] : [starPlacement(sky, id)]))
+            .filter((p): p is StarPlacement => p !== null),
+    [sky, key],
+  );
+};
+
+/**
  * Where a just-finished session's star went, live: the result's "Added to"
  * line reads it, and `app/` hands its `completes` to progression for the
  * constellation bonus line. `undefined` while the sky loads; null when the

@@ -88,6 +88,11 @@ export interface RunSummary {
   /** Completed blocks — one star each. */
   blocks: number;
   focusS: number;
+  /**
+   * The completed blocks' session ids, in the order they were run: what the
+   * summary's reward tally is asked about (session-complete redesign PR 6).
+   */
+  sessionIds: string[];
 }
 
 /** The final fields written when a session stops being in flight. */
