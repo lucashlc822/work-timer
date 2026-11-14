@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDb, type WorkTimerDb } from '@/shared/db';
+import type * as SharedLib from '@/shared/lib';
 
 import { CHIME_WINDOW_MS } from '../domain/moment';
 import { chimeIfWanted, readCompletionSound, writeCompletionSound } from './completionSound';
 
 const played = vi.hoisted(() => vi.fn(() => true));
 vi.mock('@/shared/lib', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/shared/lib')>()),
+  ...(await importOriginal<typeof SharedLib>()),
   playChime: played,
 }));
 
