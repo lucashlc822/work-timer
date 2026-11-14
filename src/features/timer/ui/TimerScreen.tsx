@@ -39,6 +39,7 @@ export const TimerScreen = ({
   sharedId = null,
   refocusStart = 0,
   compact = false,
+  present = true,
 }: {
   slots?: TimerSlots;
   sharedId?: string | null;
@@ -50,6 +51,11 @@ export const TimerScreen = ({
    * window. Spacing only; nothing is hidden.
    */
   compact?: boolean;
+  /**
+   * False while another view covers the timer (the sky, a panel): a finished
+   * session's moment waits until the timer is back on screen.
+   */
+  present?: boolean;
 }) => {
   const timer = useTimer();
   const prefs = useTimerPrefs();
@@ -109,7 +115,15 @@ export const TimerScreen = ({
   }
 
   if (timer.status === 'finished' && timer.result !== null) {
-    return <SessionResult result={timer.result} error={timer.error} onDone={done} slots={slots} />;
+    return (
+      <SessionResult
+        result={timer.result}
+        error={timer.error}
+        onDone={done}
+        slots={slots}
+        present={present}
+      />
+    );
   }
 
   if (timer.status === 'runSummary' && timer.summary !== null) {

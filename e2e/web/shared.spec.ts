@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  dismissResult,
   backToTimer,
   expectSignedIn,
   openFriends,
@@ -94,7 +95,7 @@ const completeSession = async (page: Page) => {
   await expect(page.getByRole('timer')).toBeVisible();
   await page.clock.fastForward('25:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dismissResult(page);
 };
 
 const skyCaption = (page: Page, text: string | RegExp) =>

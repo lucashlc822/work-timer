@@ -7,6 +7,7 @@ import {
   openTagPicker,
   openView,
   signIn,
+  skipMoment,
 } from '../support/app';
 import { report, scan, settleTransitions, type Finding } from '../support/a11y';
 import { startClockInThePast } from '../support/clock';
@@ -84,6 +85,8 @@ test('the signed-in screens', async ({ page }, testInfo) => {
 
   await page.clock.fastForward('25:01');
   await page.getByRole('heading', { name: 'Session complete' }).waitFor();
+  // Its completion moment fades parts in; scan the settled result, not a half-faded one.
+  await skipMoment(page);
   await settleTransitions(page);
   findings.push(...(await scan(page, 'session result')));
   await page.getByRole('button', { name: 'Done' }).click();

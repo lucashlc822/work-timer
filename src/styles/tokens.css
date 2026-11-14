@@ -102,4 +102,8 @@
   --duration-draw: 1.6s;
   --duration-bloom: 3.2s;
   --duration-flare: 1.2s;
+  /* A finished session's moment: the new star igniting, then its result
+     revealing itself part by part. Its timeline is `timer/domain/moment.ts`. */
+  --duration-ignite: 1.4s;
+  --duration-reveal: 0.7s;
 }
