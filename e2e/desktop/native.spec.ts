@@ -114,6 +114,12 @@ test('a session ending with the window in front raises no Windows notice: the re
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible({
     timeout: 120_000,
   });
+  // A minute on a real desktop: if anything else took the foreground meanwhile,
+  // the notice rightly showed, and this run proves nothing either way.
+  const stillFocused = await invokeTauri<boolean>(page, 'plugin:window|is_focused', {
+    label: 'main',
+  });
+  test.skip(!stillFocused, 'Another window took the foreground during the session.');
   // The thread fired at the deadline and chose silence: nothing new in the log.
   expect((await nativeLog(page)).notifications).toHaveLength(before);
   await dismissResult(page);
