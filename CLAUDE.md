@@ -763,11 +763,9 @@ rejected). Don't pre-populate this with guesses.
   `quietWhenFocused`**, and the host skips it when the window is visible, not
   minimised and focused as it fires (`main_window_in_front` in `lib.rs`, called
   from the deadline thread; web: `visibilityState` + `hasFocus()`), because the
-  moment and the chime say it. A Pomodoro block's and a break's notices are not
-  marked, so they always show. (PR 6: a Pomodoro block's notice is now marked too,
-  since its break screen has the moment and chime; the break-over notice is not.)
-  Known gap: with the
-  window focused but another view (the sky, a panel) open over the timer, the
+  moment and the chime say it. A Pomodoro block's notice is marked too (PR 6: its
+  break screen has the moment and chime); the break-over notice never is, so it
+  always shows. Known gap: with the window focused but another view (the sky, a panel) open over the timer, the
   moment waits and the toast is skipped, so that completion makes no sound.
   `e2e/web/chime.spec.ts` swaps in a counting `AudioContext`; the desktop test
   skips itself when Windows won't give a test window the foreground.
