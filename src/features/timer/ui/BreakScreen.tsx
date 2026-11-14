@@ -102,7 +102,7 @@ export const BreakScreen = ({
       className="flex w-full flex-col items-center gap-5 text-center focus:outline-none"
     >
       {info !== null && (
-        <div className="flex flex-col items-center gap-2" data-stage={moment.stage}>
+        <div className="text-halo flex flex-col items-center gap-2" data-stage={moment.stage}>
           <div
             className={`relative flex h-16 w-16 items-center justify-center ${
               moment.stage === 'waiting' ? 'opacity-0' : ''

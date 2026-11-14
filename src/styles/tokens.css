@@ -106,4 +106,6 @@
      revealing itself part by part. Its timeline is `timer/domain/moment.ts`. */
   --duration-ignite: 1.4s;
   --duration-reveal: 0.7s;
+  /* A control's own colour change (hover), kept while a result part fades in. */
+  --duration-quick: 150ms;
 }
