@@ -198,7 +198,11 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
   await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
 });
 
-/** A new person who finishes all four stars of the Kite from the timer, never opening the sky. */
+/**
+ * A new person who finishes all four stars of the Kite from the timer, never
+ * opening the sky. The first three results are dismissed; the fourth is left
+ * on screen, its moment playing, for the test to look at.
+ */
 const finishTheKite = async (page: Page) => {
   const user = await createUser('sky-complete');
   await startClockInThePast(page);
@@ -216,51 +220,68 @@ const finishTheKite = async (page: Page) => {
     await expect(page.getByRole('timer')).toContainText('25:00');
     await page.clock.fastForward('25:01');
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-    await dismissResult(page);
+    if (i < 3) await dismissResult(page);
   }
 };
 
+/** Behind the timer: the hero sky's constellation moment (no `data-figure` there). */
+const heroBloom = (page: Page) => page.locator('[data-celebration="bloom"]');
+
 const kiteFigure = (page: Page) => page.locator('[data-figure][aria-label^="The Kite, complete"]');
 
-test('a constellation finished from the timer gets its moment when the sky opens, once, and never again (6.2)', async ({
+test('a constellation finished from the timer gets its moment right there, behind the result, once (6.2; session-complete PR 5, case 2)', async ({
   page,
 }) => {
   await finishTheKite(page);
 
+  // Behind the result: the lines draw in, a bloom swells, the stars flare.
+  await expect(heroBloom(page)).toHaveCount(1);
+  await expect(page.locator('line.sky-draw')).toHaveCount(4);
+  await expect(page.locator('.sky-flare')).toHaveCount(4);
+  await expect(page.getByText('The Kite is complete.')).toBeVisible();
+  await dismissResult(page);
+
+  // Recorded as it started: the full sky doesn't play it again.
   await openView(page, 'View sky');
   const figure = kiteFigure(page);
   await expect(figure).toBeVisible();
-  // The lines draw in, the figure traces itself, a bloom swells, the stars flare.
-  await expect(figure.locator('line.sky-draw')).toHaveCount(4);
-  await expect(figure.locator('[data-atlas] path.sky-draw').first()).toBeAttached();
-  await expect(figure.locator('[data-celebration="bloom"]')).toHaveCount(1);
-  await expect(figure.locator('.sky-flare')).toHaveCount(4);
-  await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');
-
-  // Reopening the sky, and reloading the page: it does not play again.
-  await page.getByRole('button', { name: 'Back to timer' }).click();
-  await openView(page, 'View sky');
-  await expect(figure).toBeVisible();
   await expect(figure.locator('.sky-draw, .sky-bloom, .sky-flare')).toHaveCount(0);
+  await expect(page.getByTestId('sky-announcer')).toHaveText('');
 
+  // Nor does a reload.
   await page.reload();
   await expectSignedIn(page);
   await openView(page, 'View sky');
   await expect(kiteFigure(page)).toBeVisible();
   await expect(kiteFigure(page).locator('.sky-draw, .sky-bloom, .sky-flare')).toHaveCount(0);
-  await expect(page.getByTestId('sky-announcer')).toHaveText('');
 });
 
-test('with reduced motion the moment shows its final state at once, and is still announced (6.6)', async ({
+test('opening the sky before the star arrives: the moment plays there instead, exactly once (session-complete PR 5, case 3)', async ({
+  page,
+}) => {
+  await finishTheKite(page);
+  // At once, before the result's moment reaches its arrival: the full sky celebrates.
+  await page.getByRole('button', { name: 'View sky' }).click();
+  const figure = kiteFigure(page);
+  await expect(figure.locator('[data-celebration="bloom"]')).toHaveCount(1);
+  await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');
+
+  // Back behind the result, the star has arrived, but its moment is not played twice.
+  await page.getByRole('button', { name: 'Back to timer' }).click();
+  await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
+  await expect(heroBloom(page)).toHaveCount(0);
+});
+
+test('with reduced motion the moment shows its final state at once, and is still announced (6.6; behind the result since session-complete PR 5)', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await finishTheKite(page);
 
-  await openView(page, 'View sky');
-  const figure = kiteFigure(page);
-  await expect(figure.locator('line.sky-draw')).toHaveCount(4);
-  await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');
+  // Behind the result, at once: every line already drawn, nothing to wait for.
+  await expect(page.locator('line.sky-draw')).toHaveCount(4);
+  await expect(page.getByText('The Kite is complete.')).toBeVisible();
+  const figure = page.locator('svg[aria-hidden="true"]');
 
   // No waiting: no delay, an instant animation, and every line already fully drawn.
   const lines = await figure.locator('line.sky-draw').evaluateAll((els) =>

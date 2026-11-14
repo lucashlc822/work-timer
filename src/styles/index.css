@@ -63,16 +63,19 @@
     /* A completion moment shows its final state at once: no waiting on a delay. */
     .sky-draw,
     .sky-bloom,
-    .sky-flare {
+    .sky-flare,
+    .sky-arrive {
       animation-delay: 0s !important;
     }
   }
 }
 
 /*
- * Sky animations. Used only in the full-sky view, never behind a running
- * timer, so an hours-long session does not pay for a continuously repainting
- * SVG layer. The reduced-motion rule above neutralises both.
+ * Sky animations. The continuous ones (twinkle, shimmer) are used only in the
+ * full-sky view, never behind a running timer, so an hours-long session does
+ * not pay for a continuously repainting SVG layer. Behind the timer only
+ * one-shot animations play, and only after a session ends (its star arriving,
+ * its constellation's moment). The reduced-motion rule above neutralises all.
  */
 @keyframes sky-twinkle {
   0%,
@@ -201,6 +204,32 @@
   transform-box: fill-box;
   transform-origin: center;
   animation: sky-flare var(--duration-flare) var(--ease-gentle) both;
+}
+
+/*
+ * A finished session's star taking its place behind the timer (session-complete
+ * redesign, PR 5): it grows from a point, overshoots in a bloom of light, and
+ * settles. `both` keeps it hidden until its delay (the light flying to it).
+ */
+@keyframes sky-arrive {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sky-arrive {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-arrive var(--duration-flare) var(--ease-gentle) both;
 }
 
 /*

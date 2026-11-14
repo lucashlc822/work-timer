@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 import { db } from '@/shared/db';
 
+import { announceArrival, currentArrival } from '../domain/arrival';
 import { starAppearance } from '../domain/starAppearance';
 import { starForm } from '../domain/starForm';
 import { AstroStar } from './AstroStar';
@@ -38,13 +39,50 @@ export const ResultStar = ({
   seed,
   focusS,
   size = '100%',
+  arrival,
 }: {
   sessionId: string;
   seed: string;
   focusS: number;
   /** Px, or a CSS length; by default it fills the box the timer gives it. */
   size?: number | string;
+  /**
+   * The result's moment, as far as the sky needs it: once `arrived`, this star
+   * is announced to the hero sky behind (`domain/arrival.ts`), which lights it
+   * in its place. `instant` (skipped, reduced motion) shows it there at once.
+   * Absent, nothing arrives (a Pomodoro block, until it has its own moment).
+   */
+  arrival?: { arrived: boolean; instant: boolean };
 }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const arrived = arrival?.arrived ?? false;
+  const instant = arrival?.instant ?? false;
+  useEffect(() => {
+    if (!arrived) return;
+    const box = svgRef.current?.getBoundingClientRect();
+    const from =
+      box === undefined || box.width === 0
+        ? null
+        : { x: box.x, y: box.y, width: box.width, height: box.height };
+    announceArrival({ sessionId, from, instant });
+    // Measured once, when it arrives; `instant` changing later (a skip) doesn't re-fly it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrived, sessionId]);
+  // A skip part-way through finishes the arrival too.
+  useEffect(() => {
+    const now = currentArrival();
+    if (instant && now !== null && now.sessionId === sessionId && !now.instant) {
+      announceArrival({ ...now, instant: true });
+    }
+  }, [instant, sessionId]);
+  // The result going takes the arrival with it.
+  useEffect(
+    () => () => {
+      if (currentArrival()?.sessionId === sessionId) announceArrival(null);
+    },
+    [sessionId],
+  );
+
   const id = `result-${useId()}`;
   const style = useLiveQuery(
     async () => (await db.sessions.get(sessionId))?.starStyle ?? null,
@@ -54,6 +92,7 @@ export const ResultStar = ({
   const form = starForm(look, focusS, style, RESULT_STAR_R, RESULT_STAR_TIER);
   return (
     <svg
+      ref={svgRef}
       width={size}
       height={size}
       viewBox={`0 0 ${RESULT_STAR_BOX} ${RESULT_STAR_BOX}`}

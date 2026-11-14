@@ -67,6 +67,7 @@ import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import {
   CompletionSoundSwitch,
+  reached,
   TimerProvider,
   TimerScreen,
   useTimer,
@@ -93,8 +94,16 @@ const timerSlots: TimerSlots = {
   tagPicker: (props) => <TagPicker {...props} />,
   startHint: (plannedS) => <StartHint plannedS={plannedS} />,
   progressLine: () => <ProgressLine />,
-  resultStar: (result) => (
-    <ResultStar sessionId={result.sessionId} seed={result.seed} focusS={result.actualFocusS} />
+  resultStar: (result, moment) => (
+    <ResultStar
+      sessionId={result.sessionId}
+      seed={result.seed}
+      focusS={result.actualFocusS}
+      // When the moment reaches `arrive`, the star takes its place in the sky behind.
+      {...(moment !== undefined && {
+        arrival: { arrived: reached(moment.stage, 'arrive'), instant: moment.skipped },
+      })}
+    />
   ),
   resultNote: (result, moment) =>
     result.outcome === 'completed' ? (
@@ -287,8 +296,10 @@ const HomeScreen = ({ together }: { together: Together }) => {
       ? clearMeta(db, META_KEYS.lastSharedTarget)
       : writeMeta(db, META_KEYS.lastSharedTarget, id));
   }, []);
-  // Behind the timer: what is running, or else what the next session is for.
-  const focusId = timer.session?.sharedId ?? target;
+  // Behind the timer: the session on screen (running, or its result) shows the
+  // constellation it was for, its own when that's null; only with no session
+  // does the next session's target show.
+  const focusId = timer.session !== null ? timer.session.sharedId : target;
 
   // While a Friends screen is open, proposals arrive as quickly as friend requests do.
   const { refresh: refreshShared } = shared;

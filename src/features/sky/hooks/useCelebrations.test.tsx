@@ -5,7 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createDb, META_KEYS, readMeta, writeMeta, type WorkTimerDb } from '@/shared/db';
 
 import type { FinishedConstellation } from '../domain/celebrate';
-import { CELEBRATION_STAGGER_MS, useCelebrations } from './useCelebrations';
+import {
+  CELEBRATION_STAGGER_MS,
+  HERO_CELEBRATION_DELAY_MS,
+  useCelebrations,
+} from './useCelebrations';
 
 const opened: WorkTimerDb[] = [];
 const withDb = (): WorkTimerDb => {
@@ -70,6 +74,48 @@ describe('useCelebrations', () => {
     await settle();
     expect(again.result.current.size).toBe(0);
     expect(await seenOf(db)).toEqual(['kite']);
+  });
+
+  it('behind the timer, plays just the one an arriving star finished, after the light lands (PR 5)', async () => {
+    const db = withDb();
+    await writeMeta(db, META_KEYS.celebratedConstellations, ['old']);
+    const finished = [done('old', 1), done('waiting', 2), done('kite', 3)];
+    const hero = renderHook(() => useCelebrations(db, finished, { only: 'kite' }));
+    await waitFor(() => expect(hero.result.current.get('kite')).toBe(HERO_CELEBRATION_DELAY_MS));
+    // Recorded at once; the other unseen one still waits for the full sky.
+    await waitFor(async () => expect(await seenOf(db)).toEqual(['old', 'kite']));
+    expect(hero.result.current.has('waiting')).toBe(false);
+    hero.unmount();
+
+    const full = renderHook(() => useCelebrations(db, finished, true));
+    await waitFor(() => expect(full.result.current.has('waiting')).toBe(true));
+    expect(full.result.current.has('kite')).toBe(false);
+  });
+
+  it('stops a moment when the view changes, so the other view never replays it (PR 5, case 3)', async () => {
+    const db = withDb();
+    await writeMeta(db, META_KEYS.celebratedConstellations, []);
+    const finished = [done('kite', 3)];
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean | { only: string } }) =>
+        useCelebrations(db, finished, enabled),
+      { initialProps: { enabled: true as boolean | { only: string } } },
+    );
+    await waitFor(() => expect(result.current.has('kite')).toBe(true));
+
+    // Back behind the result, where its star has just arrived: not again.
+    rerender({ enabled: { only: 'kite' } });
+    await settle();
+    expect(result.current.size).toBe(0);
+  });
+
+  it('behind the timer, plays nothing for one already seen, and keeps the first-run rule', async () => {
+    const db = withDb();
+    const first = renderHook(() => useCelebrations(db, [done('kite', 3)], { only: 'kite' }));
+    // No record yet: this is the first run, so everything finished is recorded unplayed.
+    await waitFor(async () => expect(await seenOf(db)).toEqual(['kite']));
+    await settle();
+    expect(first.result.current.size).toBe(0);
   });
 
   it('plays at most three, a beat apart, newest first, and records the rest', async () => {

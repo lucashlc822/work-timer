@@ -69,7 +69,7 @@ export const SessionResult = ({
     togetherId: result.session.togetherId,
     endedBy: result.endedBy,
   };
-  const customStar = completed ? slots.resultStar?.(info) : undefined;
+  const customStar = completed ? slots.resultStar?.(info, momentInfo) : undefined;
   // The button that ended the session (or the countdown) is gone; land on Done.
   const doneRef = useRef<HTMLButtonElement>(null);
   useFocusIfLost(doneRef);

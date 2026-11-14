@@ -1,4 +1,12 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 
 import {
   LAVENDER_300,
@@ -6,6 +14,7 @@ import {
   MINT_300,
   NIGHT_900,
   ROSE_300,
+  STAR_WHITE,
 } from '../../../../design-tokens.mjs';
 import { hashSeed } from '@/shared/lib';
 
@@ -26,6 +35,7 @@ import {
   wanderingPosition,
   type Placement,
 } from '../domain/layout';
+import { arrivalPath, FLIGHT_MS, type Arrival } from '../domain/arrival';
 import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
 import { starForm, type TierStyle } from '../domain/starForm';
@@ -64,8 +74,10 @@ interface Props {
   /** The constellation being looked at: it stays bright while the others dim. */
   activeFigureId?: string | null;
   /**
-   * Full mode only: constellations playing their completion moment now, by id,
-   * with the delay (ms) before each starts (View sky upgrade PR 6).
+   * Constellations playing their completion moment now, by id, with the delay
+   * (ms) before each starts (View sky upgrade PR 6). In the full sky any unseen
+   * one; behind the timer only the one a just-finished session completed
+   * (session-complete redesign PR 5).
    */
   celebrating?: ReadonlyMap<string, number>;
   /**
@@ -76,6 +88,12 @@ interface Props {
   reserveTop?: number;
   /** Full mode only: the sky's accessible name. Your own is "Your sky"; a friend's is theirs. */
   label?: string;
+  /**
+   * Hero only: a finished session's star arriving (session-complete redesign,
+   * PR 5). It lights up in its place, the line that joins it draws in, and, if
+   * the result's star is clear of it, light flies there from the result first.
+   */
+  arriving?: Arrival;
 }
 
 /** Air left between a header over the sky and the first figure. */
@@ -137,7 +155,9 @@ const NO_SHARED: readonly SharedState[] = [];
  *
  * Two modes. **Hero** sits behind the timer: just the constellation being
  * built (or the latest one), static, non-interactive, so a long session costs
- * nothing to repaint. **Full** is the "View sky" mode: every constellation in a
+ * nothing to repaint. Only after a session ends does it move, once: the new
+ * star arriving (`arriving`) and, if it finished the figure, its moment
+ * (`celebrating`, session-complete redesign PR 5). **Full** is the "View sky" mode: every constellation in a
  * grid, labelled, focusable, with twinkle and shimmer.
  *
  * Colours are concrete hex values from the token mirror, never `var(...)`: an
@@ -158,7 +178,10 @@ export const ConstellationLayer = ({
   celebrating,
   reserveTop,
   label = 'Your sky',
+  arriving,
 }: Props) => {
+  // Arrival is behind the timer only.
+  const arrive = mode === 'full' ? undefined : arriving;
   // useId output contains `:` or `«»`, which are fragile inside url(#...).
   const glowId = `sky${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const full = mode === 'full';
@@ -238,15 +261,17 @@ export const ConstellationLayer = ({
           >
             {description !== undefined && <desc>{description}</desc>}
             {full && <HitArea x={x} y={y} />}
-            <g opacity={full ? 0.8 : 0.5}>
-              <AstroStar
-                x={x}
-                y={y}
-                form={form}
-                color={look.color}
-                brightness={look.brightness}
-                id={`${glowId}-w-${session.id}`}
-              />
+            <g opacity={full ? 0.8 : 0.5} data-sky-star={session.id}>
+              <Arriving arrive={arrive} sessionId={session.id} at={[x, y]} color={look.color}>
+                <AstroStar
+                  x={x}
+                  y={y}
+                  form={form}
+                  color={look.color}
+                  brightness={look.brightness}
+                  id={`${glowId}-w-${session.id}`}
+                />
+              </Arriving>
             </g>
             {full && <FocusRing x={x} y={y} r={Math.max(1, form.radius)} />}
           </g>
@@ -273,7 +298,8 @@ export const ConstellationLayer = ({
             state.choice.id !== activeFigureId
           }
           active={full && state.choice.id === activeFigureId}
-          celebrate={full ? celebrating?.get(state.choice.id) : undefined}
+          celebrate={celebrating?.get(state.choice.id)}
+          arrive={arrive}
         />
       ))}
     </svg>
@@ -543,6 +569,7 @@ const Figure = ({
   dimmed,
   active,
   celebrate,
+  arrive,
 }: {
   state: ConstellationState;
   box: Placement;
@@ -557,6 +584,8 @@ const Figure = ({
   active: boolean;
   /** When set, its completion moment plays, starting after this many ms. */
   celebrate: number | undefined;
+  /** Hero only: a star arriving, maybe one of this figure's (PR 5). */
+  arrive: Arrival | undefined;
 }) => {
   const { def, stars, complete } = state;
   // A stopped shared constellation fades like an abandoned one of your own.
@@ -565,6 +594,18 @@ const Figure = ({
   const points = def.shape.points.map((p) => toPixels(p, box));
   const filled = (i: number) => i < stars.length;
   const earnedEdges = def.shape.edges.filter(([a, b]) => filled(a) && filled(b));
+  // The star arriving in this figure, if it is one: its line draws in as it lights.
+  // (A completion moment draws every line itself, so then it is left to that.)
+  const arrivingAt =
+    arrive === undefined || arrive.instant || celebrate !== undefined
+      ? -1
+      : stars.findIndex((s) => s.id === arrive.sessionId);
+  const arriveDelay =
+    arrive === undefined || arrivingAt === -1
+      ? 0
+      : arrivalPath(arrive.from, toPixels(def.shape.points[arrivingAt]!, box)) === 'fly'
+        ? FLIGHT_MS
+        : 0;
   // How near it is to done: a shared one needs only what it was agreed to need.
   const needed = isShared(state) ? state.starsNeeded : points.length;
   const fill = complete || needed === 0 ? 1 : Math.min(1, stars.length / needed);
@@ -741,7 +782,13 @@ const Figure = ({
                   className: 'sky-draw',
                   style: { animationDelay: `${celebrate + i * EDGE_STAGGER_MS}ms` },
                 }
-              : { className: full && style === 'nebula' ? 'sky-shimmer' : undefined })}
+              : arrivingAt !== -1 && (a === arrivingAt || b === arrivingAt)
+                ? {
+                    pathLength: 1,
+                    className: 'sky-draw',
+                    style: { animationDelay: `${arriveDelay}ms` },
+                  }
+                : { className: full && style === 'nebula' ? 'sky-shimmer' : undefined })}
           />
         ))}
 
@@ -786,19 +833,27 @@ const Figure = ({
               >
                 {/* The stars flare once as the last line lands. */}
                 <g
+                  data-sky-star={session.id}
                   {...(celebrate !== undefined && {
                     className: 'sky-flare',
                     style: { animationDelay: `${celebrate + linesMs}ms` },
                   })}
                 >
-                  <AstroStar
-                    x={x}
-                    y={y}
-                    form={form}
+                  <Arriving
+                    arrive={celebrate === undefined ? arrive : undefined}
+                    sessionId={session.id}
+                    at={[x, y]}
                     color={look.color}
-                    brightness={look.brightness}
-                    id={`${glowId}-${session.id}`}
-                  />
+                  >
+                    <AstroStar
+                      x={x}
+                      y={y}
+                      form={form}
+                      color={look.color}
+                      brightness={look.brightness}
+                      id={`${glowId}-${session.id}`}
+                    />
+                  </Arriving>
                 </g>
               </g>
               {/* Outside the twinkle, so the ring never fades with the star. */}
@@ -808,5 +863,78 @@ const Figure = ({
         })}
       </g>
     </g>
+  );
+};
+
+/**
+ * A star taking its place behind the timer (session-complete redesign, PR 5).
+ * Wraps the star's drawing; does nothing unless `arrive` names this session.
+ *
+ * It lights up from a point (`sky-arrive`). When the result's star is clear of
+ * it (`arrivalPath`), a mote of the star's own light first flies there from the
+ * result, and the star lights as it lands. Skipped or reduced motion
+ * (`arrive.instant`): neither, the star is simply there. One-shot CSS and one
+ * Web Animation after a session ends, never while one runs, so the hero still
+ * costs nothing to repaint behind a running timer.
+ */
+const Arriving = ({
+  arrive,
+  sessionId,
+  at,
+  color,
+  children,
+}: {
+  arrive: Arrival | undefined;
+  sessionId: string;
+  at: readonly [number, number];
+  color: string;
+  children: ReactNode;
+}) => {
+  const mine = arrive !== undefined && arrive.sessionId === sessionId && !arrive.instant;
+  const from = mine ? arrive.from : null;
+  const fly = mine && arrivalPath(from, at) === 'fly';
+  const mote = useRef<SVGGElement>(null);
+  const [x, y] = at;
+
+  useLayoutEffect(() => {
+    const el = mote.current;
+    if (!fly || el === null || from === null || typeof el.animate !== 'function') return;
+    const dx = from.x + from.width / 2 - x;
+    const dy = from.y + from.height / 2 - y;
+    const easing =
+      getComputedStyle(document.documentElement).getPropertyValue('--ease-gentle').trim() ||
+      'ease-out';
+    const flight = el.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(1.4)`, opacity: 0 },
+        { opacity: 1, offset: 0.12 },
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 1, offset: 0.92 },
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 0 },
+      ],
+      { duration: FLIGHT_MS, easing, fill: 'forwards' },
+    );
+    return () => flight.cancel();
+    // One flight per arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fly, sessionId]);
+
+  if (!mine) return <>{children}</>;
+  return (
+    <>
+      {fly && (
+        <g ref={mote} data-arrival="mote" opacity={0}>
+          <circle cx={x} cy={y} r={10} fill={color} opacity={0.18} />
+          <circle cx={x} cy={y} r={5} fill={color} opacity={0.45} />
+          <circle cx={x} cy={y} r={2.5} fill={STAR_WHITE} opacity={0.95} />
+        </g>
+      )}
+      <g
+        data-arrival="star"
+        className="sky-arrive"
+        style={{ animationDelay: `${fly ? FLIGHT_MS : 0}ms` }}
+      >
+        {children}
+      </g>
+    </>
   );
 };
