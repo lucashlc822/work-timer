@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
   type RefObject,
@@ -13,11 +14,13 @@ import {
 import { db } from '@/shared/db';
 
 import type { StarDetails } from '../data/starDetails';
+import { currentArrival, subscribeArrival, type Arrival } from '../domain/arrival';
 import { isShared, type SharedState } from '../domain/shared';
 import type { ConstellationState, SkyState } from '../domain/types';
 import { useElementSize } from '../hooks/useElementSize';
 import { useEquippedTheme } from '../hooks/useEquippedTheme';
 import { useSky } from '../hooks/useSky';
+import { starPlacement } from '../hooks/useStarPlacement';
 import { useCelebrations } from '../hooks/useCelebrations';
 import { useStarDetails } from '../hooks/useStarDetails';
 import { AmbientCanvas } from './AmbientCanvas';
@@ -86,6 +89,7 @@ export const SkyView = ({
   celebrating,
   label,
   reserveTop,
+  arriving = null,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -115,6 +119,11 @@ export const SkyView = ({
   celebrating?: ReadonlyMap<string, number>;
   /** The full sky's accessible name; a friend's is theirs. Defaults to "Your sky". */
   label?: string;
+  /**
+   * Hero only: a finished session's star arriving in its place (session-complete
+   * redesign, PR 5). Only your own sky passes this.
+   */
+  arriving?: Arrival | null;
   /**
    * Pixels covered from the top by something laid over the sky, like a friend's
    * header. Stars and figures are laid out below it and cards keep clear of it.
@@ -295,7 +304,8 @@ export const SkyView = ({
           {...(shared !== undefined && { shared })}
           {...(focusId !== undefined && { focusId })}
           {...(full && { onStar, describeStar, onFigure, describeFigure, activeFigureId })}
-          {...(full && celebrating !== undefined && { celebrating })}
+          {...(celebrating !== undefined && { celebrating })}
+          {...(!full && arriving !== null && { arriving })}
           {...(label !== undefined && { label })}
           {...(reserveTop !== undefined && { reserveTop })}
         />
@@ -415,7 +425,17 @@ export const SkyBackdrop = ({
           ),
     [sky, shared],
   );
-  const celebrating = useCelebrations(db, finished, full);
+  // A finished session's star arriving behind the timer (PR 5). If it is the
+  // star that finished its constellation, that one celebrates there and then.
+  const arrival = useSyncExternalStore(subscribeArrival, currentArrival, () => null);
+  const placed =
+    !full && arrival !== null && sky !== undefined ? starPlacement(sky, arrival.sessionId) : null;
+  const completes = placed?.kind === 'constellation' ? (placed.completes?.choiceId ?? null) : null;
+  const celebrating = useCelebrations(
+    db,
+    finished,
+    full ? true : completes !== null ? { only: completes } : false,
+  );
 
   return (
     <SkyView
@@ -423,6 +443,7 @@ export const SkyBackdrop = ({
       themeKey={useEquippedTheme()}
       mode={mode}
       celebrating={celebrating}
+      arriving={full ? null : arrival}
       {...(shared !== undefined && { shared })}
       {...(focusId !== undefined && { focusId })}
       {...(details !== undefined && { details })}

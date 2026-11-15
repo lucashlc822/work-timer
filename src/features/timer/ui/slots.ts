@@ -57,7 +57,7 @@ export interface TimerSlots {
   /** Under the start hint on the idle screen: today's progress and streak. */
   progressLine?: () => ReactNode;
   /** Replaces the default star on a *completed* result. */
-  resultStar?: (result: ResultInfo) => ReactNode;
+  resultStar?: (result: ResultInfo, moment?: MomentInfo) => ReactNode;
   /** Under the result text, for both outcomes. */
   resultNote?: (result: ResultInfo, moment: MomentInfo) => ReactNode;
   /**

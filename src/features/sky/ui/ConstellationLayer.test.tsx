@@ -9,6 +9,7 @@ import { tierRules } from '../domain/tiers';
 import type { CompletedSession, ConstellationChoice } from '../domain/types';
 import { CAPTION_ALPHA, CAPTION_ALPHA_ACTIVE } from '../domain/captionLayout';
 import { figureFootprint, gridPlacements } from '../domain/layout';
+import { FLIGHT_MS, type Arrival } from '../domain/arrival';
 import { ConstellationLayer } from './ConstellationLayer';
 
 afterEach(() => {
@@ -517,9 +518,73 @@ describe('ConstellationLayer', () => {
       expect(container.querySelector('[data-celebration]')).toBeNull();
     });
 
-    it('never plays behind the timer', () => {
-      const { container } = celebrate(0, 'hero');
-      expect(container.querySelector('.sky-draw, .sky-bloom, .sky-flare')).toBeNull();
+    it('plays behind the timer only when handed one (PR 5: the arriving star finished it)', () => {
+      // The Arrow is the hero; the Kite (c1) is not drawn there, so its moment can't show.
+      expect(celebrate(0, 'hero').container.querySelector('.sky-bloom')).toBeNull();
+      cleanup();
+      const { container } = render(
+        <ConstellationLayer
+          sky={sky()}
+          mode="hero"
+          width={1200}
+          height={800}
+          celebrating={new Map([['c2', 700]])}
+        />,
+      );
+      expect(container.querySelector('[data-celebration="bloom"]')).not.toBeNull();
+      expect(container.querySelectorAll('line.sky-draw')).toHaveLength(1);
+    });
+  });
+
+  describe('a finished session arriving behind the timer (session-complete PR 5)', () => {
+    // The Arrow's second star (s13) is the one just earned; its first is s12.
+    const arrive = (
+      over: Partial<Arrival> = {},
+      mode: 'hero' | 'full' = 'hero',
+    ): ReturnType<typeof render> =>
+      render(
+        <ConstellationLayer
+          sky={sky()}
+          mode={mode}
+          width={1200}
+          height={800}
+          arriving={{ sessionId: 's13', from: null, instant: false, ...over }}
+        />,
+      );
+    const starOf = (container: HTMLElement, id: string) =>
+      container.querySelector(`[data-sky-star="${id}"]`)!;
+
+    it('lights the new star in its place and draws the line that joins it', () => {
+      const { container } = arrive();
+      expect(starOf(container, 's13').querySelector('.sky-arrive')).not.toBeNull();
+      expect(starOf(container, 's12').querySelector('.sky-arrive')).toBeNull();
+      const drawn = container.querySelectorAll('line.sky-draw');
+      expect(drawn).toHaveLength(1);
+      expect(drawn[0]!.getAttribute('pathLength')).toBe('1');
+      // Measured from nowhere: no flight, it lights where it is at once.
+      expect(container.querySelector('[data-arrival="mote"]')).toBeNull();
+    });
+
+    it('flies light there first when the result’s star is clear of it', () => {
+      const { container } = arrive({ from: { x: 0, y: 700, width: 80, height: 80 } });
+      expect(container.querySelector('[data-arrival="mote"]')).not.toBeNull();
+      const lit = container.querySelector<SVGElement>('[data-arrival="star"]')!;
+      expect(parseFloat(lit.style.animationDelay)).toBe(FLIGHT_MS);
+    });
+
+    it('shows the end at once when the moment was skipped (or motion is reduced)', () => {
+      const { container } = arrive({
+        instant: true,
+        from: { x: 0, y: 700, width: 80, height: 80 },
+      });
+      expect(container.querySelector('.sky-arrive, [data-arrival], line.sky-draw')).toBeNull();
+      expect(starOf(container, 's13')).not.toBeNull();
+    });
+
+    it('does nothing in the full sky, or for a star it doesn’t draw', () => {
+      expect(arrive({}, 'full').container.querySelector('[data-arrival]')).toBeNull();
+      cleanup();
+      expect(arrive({ sessionId: 'nope' }).container.querySelector('[data-arrival]')).toBeNull();
     });
   });
 

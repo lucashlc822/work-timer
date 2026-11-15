@@ -670,8 +670,9 @@ rejected). Don't pre-populate this with guesses.
   **even behind the timer** (`useCelebrations` with `enabled` false), otherwise
   a constellation finished before the sky is first opened would be swallowed
   into it. At most three play at once, newest first, 1.2 s apart; the rest are
-  recorded silently. Only your own full sky celebrates: never behind the timer,
-  never a friend's sky. Reduced motion shows the end state at once (the
+  recorded silently. Only your own sky celebrates, never a friend's; behind the
+  timer only the one a just-finished session completed, as its star arrives
+  (session-complete PR 5, below), never during a session. Reduced motion shows the end state at once (the
   reduced-motion rule zeroes these animations' delays). Known, accepted: a
   shared constellation finished before the update whose data arrives after the
   first-run record may play once.
@@ -768,6 +769,29 @@ rejected). Don't pre-populate this with guesses.
   moment waits and the toast is skipped, so that completion makes no sound.
   `e2e/web/chime.spec.ts` swaps in a counting `AudioContext`; the desktop test
   skips itself when Windows won't give a test window the foreground.
+
+- **A finished session's star arrives in the sky behind the result** (session-complete
+  redesign PR 5, 2026-11-14). When the result's moment reaches `arrive`,
+  `ResultStar` announces it through a small module store in `sky/domain/arrival.ts`
+  (`announceArrival`, read by `SkyBackdrop` with `useSyncExternalStore`; cleared
+  when the result goes): the sky's two halves meet there, not through `app/`. The
+  hero lights that star in its place (`sky-arrive`) and draws only the line that
+  joins it (`sky-draw`); wandering stars light the same way. **A mote of the star's
+  own light flies there first only when the target is clearly outside the result's
+  star** (`arrivalPath`, `FLIGHT_CLEARANCE` 16 px, `FLIGHT_MS` 700): the result sits
+  over the hero figure, so a target behind it simply lights in place. Skipped or
+  reduced motion (`instant`): no flight, no ignite, the star is just there. **If that
+  star finished its constellation, its moment plays behind the result**:
+  `useCelebrations(…, { only: id })` decides, plays (after
+  `HERO_CELEBRATION_DELAY_MS`) and records just that one, so the full sky never
+  replays it; the first-run rule is unchanged, and anything else unseen still
+  waits for the full sky. Moving between the full sky and the hero stops whatever
+  was playing, so opening View sky mid-moment shows it once, there, and not again
+  on the way back. A shared constellation's star isn't in the hero until the server
+  confirms it, so it simply doesn't arrive. Behind the timer this is one-shot CSS
+  and one Web Animation after a session ends; nothing moves while one runs.
+  `focusId` follows the session on screen exactly (`timer.session.sharedId`, null
+  for your own), not the next session's target.
 
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
