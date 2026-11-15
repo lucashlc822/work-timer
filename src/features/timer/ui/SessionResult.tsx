@@ -1,6 +1,9 @@
 import { useRef, type MouseEvent } from 'react';
 
+import { db } from '@/shared/db';
 import { StarMark, useFocusIfLost } from '@/shared/ui';
+
+import { chimeIfWanted } from '../data/completionSound';
 
 import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { reached, type MomentStage } from '../domain/moment';
@@ -48,7 +51,11 @@ export const SessionResult = ({
 }: Props) => {
   const { ending } = result;
   const completed = ending.outcome === 'completed';
-  const moment = useMoment('full', { present: present && completed });
+  const moment = useMoment('full', {
+    present: present && completed,
+    // The chime belongs to the moment: once, as it starts, if this device wants it.
+    onStart: (at) => void chimeIfWanted(db, ending.endedAt, at),
+  });
   const stage: MomentStage = completed ? moment.stage : 'settled';
   const momentInfo: MomentInfo = { stage, skipped: !completed || moment.skipped };
   const playing = stage !== 'waiting' && stage !== 'settled';

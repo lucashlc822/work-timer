@@ -4,6 +4,7 @@
 export { TimerScreen } from './ui/TimerScreen';
 export { MiniCountdown } from './ui/MiniCountdown';
 export { TimerProvider } from './ui/TimerProvider';
+export { CompletionSoundSwitch } from './ui/CompletionSoundSwitch';
 export { useTimer } from './ui/timerContext';
 export type { MomentInfo, ResultInfo, RunningInfo, TagPickerProps, TimerSlots } from './ui/slots';
 export { reached } from './domain/moment';

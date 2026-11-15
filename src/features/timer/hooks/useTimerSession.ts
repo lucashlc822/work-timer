@@ -106,6 +106,8 @@ const completionNotice = (
       endsAt,
       title: APP_NAME,
       body: `Session complete — ${formatDuration(session.plannedDurationS)} of focus.`,
+      // The result's moment says it, with a chime, to someone looking at the app.
+      quietWhenFocused: true,
     };
   }
 

@@ -184,6 +184,31 @@ describe('web completion', () => {
     expect(construct).toHaveBeenCalledWith('Done', { body: 'b' });
   });
 
+  it('stays quiet for a notice the screen replaces while the page is visible and focused', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const construct = grantedNotification();
+    const page = { visibilityState: 'visible', hasFocus: () => true };
+    vi.stubGlobal('document', page);
+    const runtime = await getRuntime();
+    const notice = { title: 'Done', body: 'b', quietWhenFocused: true };
+
+    await runtime.completion.arm({ sessionId: 's1', endsAt: 61_000, ...notice });
+    vi.advanceTimersByTime(60_000);
+    expect(construct).not.toHaveBeenCalled();
+
+    // The same notice with the page in the background still shows.
+    page.hasFocus = () => false;
+    await runtime.completion.arm({ sessionId: 's2', endsAt: 121_000, ...notice });
+    vi.advanceTimersByTime(60_000);
+    expect(construct).toHaveBeenCalledTimes(1);
+
+    // And a notice that never asked to be quiet shows even when focused.
+    page.hasFocus = () => true;
+    await runtime.completion.arm({ sessionId: 's3', endsAt: 181_000, title: 'T', body: 'b' });
+    vi.advanceTimersByTime(60_000);
+    expect(construct).toHaveBeenCalledTimes(2);
+  });
+
   it('stays silent after a disarm', async () => {
     vi.useFakeTimers({ now: 1_000 });
     const construct = grantedNotification();

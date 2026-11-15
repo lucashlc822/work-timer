@@ -66,6 +66,7 @@ import {
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TagPicker } from '@/features/tags';
 import {
+  CompletionSoundSwitch,
   TimerProvider,
   TimerScreen,
   useTimer,
@@ -556,7 +557,7 @@ const HomeScreen = ({ together }: { together: Together }) => {
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
             privacySettings={<OnlineToggle friends={friends} />}
-            deviceSettings={<AutostartToggle />}
+            deviceSettings={<DeviceSettings />}
           />
         </PanelLayer>
       )}
@@ -637,7 +638,8 @@ const HomeScreen = ({ together }: { together: Together }) => {
   );
 };
 
-const AutostartToggle = () => {
+/** "This computer": the sound everywhere, and launch at startup where the host has it. */
+const DeviceSettings = () => {
   const [autostart, setAutostart] = useState<AutostartPort | null>(null);
   const [enabled, setEnabled] = useState(false);
 
@@ -655,9 +657,8 @@ const AutostartToggle = () => {
     };
   }, []);
 
-  if (autostart === null) return null;
-
   const toggle = async () => {
+    if (autostart === null) return;
     await autostart.setEnabled(!enabled);
     setEnabled(await autostart.isEnabled());
   };
@@ -665,7 +666,10 @@ const AutostartToggle = () => {
   return (
     <section className="bg-night-800/70 border-night-600 rounded-soft flex flex-col gap-3 border p-4 text-sm">
       <h3 className="text-ink-primary">This computer</h3>
-      <Switch label="Launch at startup" checked={enabled} onChange={() => void toggle()} />
+      <CompletionSoundSwitch />
+      {autostart !== null && (
+        <Switch label="Launch at startup" checked={enabled} onChange={() => void toggle()} />
+      )}
     </section>
   );
 };

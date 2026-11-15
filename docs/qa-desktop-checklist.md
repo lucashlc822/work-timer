@@ -21,6 +21,11 @@ app (or `npm run tauri:dev`):
       Windows toast appears: "Starkeep", "Session complete — 1 minute of focus."
 - [ ] It appears with the window closed to the tray, and with it minimised.
 - [ ] With Focus Assist / Do Not Disturb on, Windows holds it: expected, not a bug.
+- [ ] With the window open and in front when the session ends there is **no**
+      toast: the result plays its moment and a soft chime sounds instead.
+- [ ] Account → "This computer" → "Completion sound" off: no chime. On: it
+      sounds once, softly, with the window in front; not when the app was
+      reopened long after the session ended.
 
 ## Window
 
