@@ -93,12 +93,20 @@ export const SessionResult = ({
           stage === 'waiting' ? 'opacity-0' : ''
         }`}
       >
-        {completed && (
+        {completed ? (
           <div
             aria-hidden="true"
             className={`bg-mint-300/20 rounded-pill absolute inset-2 blur-2xl ${
               playing ? 'moment-halo' : ''
             }`}
+          />
+        ) : (
+          // Over the sky's figure, the dim star would sit on its lines: a soft dark
+          // backing sets it apart.
+          <div
+            aria-hidden="true"
+            data-testid="early-backing"
+            className="bg-night-900/80 rounded-pill absolute inset-3 blur-xl"
           />
         )}
         {customStar !== undefined ? (

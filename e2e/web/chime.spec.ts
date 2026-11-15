@@ -82,6 +82,10 @@ test('the switch turns it off, and stays off after a reload (PR 4, cases 2 and 5
   await openAccount(page);
   const sound = page.getByRole('checkbox', { name: 'Completion sound' });
   await expect(sound).toBeChecked();
+  // Says what it is, and that it is this computer's.
+  await expect(
+    page.getByText('A soft chime when a session finishes. Only on this computer.'),
+  ).toBeVisible();
   await sound.click();
   await expect(sound).not.toBeChecked();
   await backToTimer(page);

@@ -122,6 +122,18 @@ describe('SessionResult announcements', () => {
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 
+  it('sets the dim early-ending star on a dark backing, so the figure behind does not cross it', () => {
+    const early = render(
+      <SessionResult result={finished('cancelled')} error={null} onDone={() => {}} slots={{}} />,
+    );
+    expect(early.getByTestId('early-backing')).toBeInTheDocument();
+    cleanup();
+    const done = render(
+      <SessionResult result={finished('completed')} error={null} onDone={() => {}} slots={{}} />,
+    );
+    expect(done.queryByTestId('early-backing')).toBeNull();
+  });
+
   it('offers neither on an early ending', () => {
     render(
       <SessionResult

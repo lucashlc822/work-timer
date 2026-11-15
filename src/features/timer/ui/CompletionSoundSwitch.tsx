@@ -14,10 +14,15 @@ export const CompletionSoundSwitch = () => {
   const on = useLiveQuery(() => readCompletionSound(db), []);
   if (on === undefined) return null;
   return (
-    <Switch
-      label="Completion sound"
-      checked={on}
-      onChange={(next) => void writeCompletionSound(db, next)}
-    />
+    <>
+      <Switch
+        label="Completion sound"
+        checked={on}
+        onChange={(next) => void writeCompletionSound(db, next)}
+      />
+      <p className="text-ink-muted text-xs">
+        A soft chime when a session finishes. Only on this computer.
+      </p>
+    </>
   );
 };

@@ -325,7 +325,7 @@
 /* A part of the result that is still to come in its moment. */
 .moment-pending {
   opacity: 0;
-  transform: translateY(0.375rem);
+  transform: translateY(calc(var(--spacing) * 1.5));
 }
 
 /* Unlayered, so it wins over a utility's `transition`: keep the hover colours. */
@@ -333,8 +333,20 @@
   transition:
     opacity var(--duration-reveal) var(--ease-gentle),
     transform var(--duration-reveal) var(--ease-gentle),
-    color 150ms ease,
-    background-color 150ms ease;
+    color var(--duration-quick) var(--ease-gentle),
+    background-color var(--duration-quick) var(--ease-gentle);
+}
+
+/*
+ * Small text over the hero constellation (the break screen's block note): a
+ * soft dark halo, from the night-900 token, so a figure's thin line passing
+ * behind a word never costs it its contrast. The sky's captions do the same.
+ */
+.text-halo {
+  text-shadow:
+    0 0 4px var(--color-night-900),
+    0 0 8px var(--color-night-900),
+    0 0 2px var(--color-night-900);
 }
 
 /* A control the keyboard is on is always fully there, whatever its stage. */

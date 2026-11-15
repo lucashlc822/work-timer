@@ -91,6 +91,11 @@ describe('BreakScreen: the block lighter moment (session-complete PR 6)', () => 
     expect(container.querySelector('.moment-ignite, .moment-pending')).toBeNull();
   });
 
+  it('sets the block note in a dark halo, clear of a figure behind it', () => {
+    const { container } = renderBreak();
+    expect(container.querySelector('[data-stage]')).toHaveClass('text-halo');
+  });
+
   it('has no tally and no Start another: only the block note', () => {
     renderBreak();
     expect(screen.queryByText(/Start another/)).toBeNull();
