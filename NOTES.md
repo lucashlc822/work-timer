@@ -12,6 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-15 — Session-complete redesign: six PRs and a review pass merged, not released
+
+**Status: merged, not released.** #194–#200 are on `master`; `package.json` is still 0.9.0. Lucas held 0.10.0 to make finishing a session feel more premium and make people want another. The plan was six stacked PRs (plan file `~/.claude/plans/i-want-to-hold-squishy-zebra.md`), then a `ui-ux-reviewer` pass whose four fixes became #200. All were merged one at a time on Lucas's word, each retargeted to `master` after its base merged (branches not deleted, since deleting one closes the PR stacked on it).
+
+### What changed, and the choices behind it
+
+Lucas picked all four pieces, a moment that plays by itself and is skippable, a chime that is on by default, a lighter version for Pomodoro blocks, and no Windows toast when the window is focused.
+
+- **#194 Moment:** `timer/domain/moment.ts` is a fixed timeline (ignite, arrive, tally, settled). `useMoment` drives it. The result's star is the sky's own star (`ResultStar`, replacing `StarGlyph`).
+- **#195 Tally:** it asks the reconciler's own rules (`sessionRewards`, `rewardableSessions`) rather than restating them, so it can't drift from what is paid.
+- **#196 Start another and See it in your sky.**
+- **#197 Chime and toast:** a code-made chime with a per-device switch (`META_KEYS.completionSound`), and `quietWhenFocused` on notices (Rust `deadline.rs` and `lib.rs`).
+- **#198 Arrival:** the new star arrives in the hero sky behind the result (`sky/domain/arrival.ts`).
+- **#199 Pomodoro:** a lighter moment per block, and a run summary that tallies the whole run.
+- **#200 Review fixes:** four of the reviewer's findings (M1, M2, L4, L5).
+
+The decisions are recorded in CLAUDE.md, so they are not repeated here.
+
+### Things learned that aren't in the code
+
+- **Known gap, accepted:** with the window focused but another view (the sky, a panel) open over the timer, the moment waits and the toast is skipped, so that completion makes no sound. It is written in CLAUDE.md.
+- **A tally test flaked** with one frame of "+0". The fix is that `useCountUp` reads the end value at render when motion is instant, and it was its own commit on #195's branch.
+- **The desktop focus test was flaky and, when it skipped, left the app signed in**, which broke the next test. It now asks for focus before starting, checks focus again at the deadline, and signs out before skipping. A mutation test showed it is not vacuous.
+- **Opening the sky mid-moment played the celebration twice.** The e2e caught it. `useCelebrations` now clears what is playing when moving between the full sky and the hero.
+- **The result overlaps the hero figure,** so the arrival flies a mote only when the target is clearly outside the result's star (`arrivalPath`) and otherwise lights it in place.
+
+### Checked, with what was seen
+
+CI green on every PR (changes, db, desktop, e2e, web). Each PR added unit and e2e cases (`moment`, `tally`, `startanother`, `chime`, `arrival` and `pomodoro` specs, plus a desktop focused-window test). The reviewer pass is what produced #200's fixes.
+
+### Not verified
+
+- The chime by ear on real speakers.
+- How the animation feels in the installed desktop app.
+- macOS.
+- The tallest result (goal, streak and constellation lines together), never observed.
+- Contrast after #200's text halo, which was judged by eye and not re-measured.
+- A real shared-constellation session end to end.
+
+Left unfixed on purpose from the review: L2 copy, L3 progress wording and L6, an unexplained first-Escape oddity.
+
+### Next
+
+- Listen to the chime once on real speakers (`docs/qa-desktop-checklist.md` has the by-ear checks).
+- Lucas decides when to cut 0.10.0 (`RELEASING.md`). It needs a version bump with `npm run version:set`.
+
+---
+
+
 ## 2026-11-13 — The QA pass on 0.9.0, acted on: seven PRs merged, not released
 
 **Status: merged, not released.** `master` held `dd47f10` after the seven PRs (`package.json` still 0.9.0), with its own CI green on that commit; one follow-up, #193 (the flaky test, below), came after. Lucas asked `qa-lead` (web only) to look over 0.9.0 on 2026-11-12; everything it found was turned into one PR each (#184–#190, `qa-lead` memory in #184 and #191), merged in the order below, and a final `qa-lead` pass (web and desktop) found no regression and nothing Critical. Of the seven, #185, #186 and #188 change the desktop exe and #188 the web build too, so they reach people with the next release.
@@ -277,7 +326,7 @@ card on hover/focus · #148 side fix, wandering-star label · #149 constellation
 card + dimming · #150 and #151 engraved figures for all 15 catalogue shapes ·
 #152 once-per-device completion moment · #153 living sky (Milky Way, shooting
 stars, parallax) · #154 shop previews use the sky's own star (`StylePreview`;
-the result screen deliberately keeps `StarGlyph`).
+the result screen deliberately keeps `StarGlyph`). **(Superseded 2026-11-15 — the result now draws the sky's own star through `ResultStar`; `StarGlyph` is gone.)**
 
 Each decision is recorded in CLAUDE.md "Decisions already made"; each PR body has
 its acceptance table and what was not verified. Not repeated here.
