@@ -104,6 +104,38 @@ describe('SessionResult announcements', () => {
     expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
   });
 
+  it('offers Start another and the app’s own actions on a completed result, leaving focus on Done', () => {
+    const onStart = vi.fn();
+    render(
+      <SessionResult
+        result={finished('completed')}
+        error={null}
+        onDone={() => {}}
+        slots={{ resultActions: () => <button type="button">See it in your sky</button> }}
+        startAnother={{ label: 'Start another · 1 min', onStart }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'See it in your sky' })).toBeInTheDocument();
+    // A keyboard activation (detail 0) goes through even while the moment plays.
+    fireEvent.click(screen.getByRole('button', { name: 'Start another · 1 min' }), { detail: 0 });
+    expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers neither on an early ending', () => {
+    render(
+      <SessionResult
+        result={finished('cancelled')}
+        error={null}
+        onDone={() => {}}
+        slots={{ resultActions: () => <button type="button">See it in your sky</button> }}
+        startAnother={{ label: 'Start another · 1 min', onStart: () => {} }}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Start another/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'See it in your sky' })).toBeNull();
+  });
+
   it('announces an error as an alert', () => {
     render(
       <SessionResult

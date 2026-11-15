@@ -731,6 +731,20 @@ rejected). Don't pre-populate this with guesses.
   in `TALLY_STAGGER_MS` apart, only the total counts up, and "show the end at
   once" is a real skip or reduced motion, never the moment simply running out.
 
+- **A result can start another session; Done keeps the focus** (session-complete
+  redesign PR 3, 2026-11-13). "Start another · N min" (`TimerScreen`'s
+  `startAnother`) is offered on a **completed solo countdown** only: not after an
+  early ending, a Pomodoro block (it continues through its break) or a
+  focus-together session (those start in a lobby). It starts the same planned
+  length with the tag and target now on the idle screen, through the same
+  `launch` as Start — so `slots.beforeStart` ("start on your own?") still asks —
+  and the machine takes `START` from `finished` (clearing the old result, like
+  `DISMISS`). **It is never auto-focused**: Done keeps focus, so Enter never
+  starts a session by accident. "See it in your sky" is the app's `resultActions`
+  slot; it opens the sky through `openView`, so Back returns to that button. Both
+  sit in the settled row and, like every part, are pressable from frame 0 (a pointer
+  click first skips the moment).
+
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
   dimmed figure fades its lines and stars (`data-figure-body`), never its name:

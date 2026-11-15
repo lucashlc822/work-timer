@@ -6,6 +6,7 @@ import { useFocusIfLost } from '@/shared/ui';
 import { DEFAULT_MINUTES, minutesToSeconds } from '../domain/durations';
 import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { cancelledEnding, plannedEndAt, progress, remainingMs } from '../domain/session';
+import type { SessionDraft } from '../domain/types';
 import { useTick } from '../hooks/useTick';
 import { pomodoroLimits, useTimerPrefs } from '../hooks/useTimerPrefs';
 import { useTimer } from './timerContext';
@@ -110,9 +111,45 @@ export const TimerScreen = ({
     [setTag, setTagId],
   );
 
+  // Start pressed, from the idle screen or from a result ("Start another"): the
+  // draft is what was on screen then, and `slots.beforeStart` may still say no.
+  const launch = async (draft: SessionDraft) => {
+    setLandOnStart(false);
+    if (slots.beforeStart !== undefined) {
+      setAsking(true);
+      const go = await slots.beforeStart().finally(() => setAsking(false));
+      if (!go) return;
+    }
+    timer.start(draft);
+  };
+
   if (timer.status === 'loading' || !prefs.loaded) {
     return <p className="text-ink-secondary text-sm">Opening…</p>;
   }
+
+  // The same length again, with the tag and target now showing on the idle
+  // screen. Only after a completed solo countdown: a together session starts in
+  // a lobby, and a Pomodoro block continues through its break.
+  const finishedSession = timer.status === 'finished' ? timer.result : null;
+  const canStartAnother =
+    finishedSession !== null &&
+    finishedSession.ending.outcome === 'completed' &&
+    finishedSession.session.mode === 'countdown' &&
+    finishedSession.session.togetherId === null;
+  const startAnother =
+    canStartAnother && finishedSession !== null
+      ? {
+          label: `Start another · ${Math.max(1, Math.round(finishedSession.session.plannedDurationS / 60))} min`,
+          disabled: asking,
+          onStart: () =>
+            void launch({
+              mode: 'countdown',
+              plannedDurationS: finishedSession.session.plannedDurationS,
+              tagId: prefs.tagId,
+              sharedId,
+            }),
+        }
+      : undefined;
 
   if (timer.status === 'finished' && timer.result !== null) {
     return (
@@ -122,6 +159,7 @@ export const TimerScreen = ({
         onDone={done}
         slots={slots}
         present={present}
+        startAnother={startAnother}
       />
     );
   }
@@ -217,19 +255,17 @@ export const TimerScreen = ({
   const starting = timer.status === 'starting' || asking;
   const pomodoro = prefs.mode === 'pomodoro';
   const plannedS = pomodoro ? prefs.settings.focusS : minutesToSeconds(minutes);
-  const begin = async () => {
-    setLandOnStart(false);
-    // The draft is what was on screen when Start was pressed.
-    const draft = pomodoro
-      ? ({ mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId } as const)
-      : ({ mode: 'countdown', plannedDurationS: plannedS, tagId: prefs.tagId, sharedId } as const);
-    if (slots.beforeStart !== undefined) {
-      setAsking(true);
-      const go = await slots.beforeStart().finally(() => setAsking(false));
-      if (!go) return;
-    }
-    timer.start(draft);
-  };
+  const begin = () =>
+    launch(
+      pomodoro
+        ? ({ mode: 'pomodoro', settings: prefs.settings, tagId: prefs.tagId, sharedId } as const)
+        : ({
+            mode: 'countdown',
+            plannedDurationS: plannedS,
+            tagId: prefs.tagId,
+            sharedId,
+          } as const),
+    );
   return (
     // Fills the section and anchors the card to its top, not its middle: the
     // card changes height with the mode and the Custom slider, and a centred

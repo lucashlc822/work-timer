@@ -274,6 +274,23 @@ describe('timerMachine', () => {
     expect(actor.getSnapshot().context.session).toBeNull();
   });
 
+  it('starts another session straight from a result, clearing the old one', async () => {
+    const { actor, clock } = harness();
+    actor.send({ type: 'START', draft: countdown() });
+    await waitFor(actor, (s) => s.matches('running'));
+    const first = actor.getSnapshot().context.session!.id;
+    clock.advance(60_000);
+    actor.send({ type: 'TICK_DUE' });
+    await waitFor(actor, (s) => s.matches('finished'));
+
+    actor.send({ type: 'START', draft: countdown() });
+    expect(actor.getSnapshot().matches('starting')).toBe(true);
+    expect(actor.getSnapshot().context.result).toBeNull();
+    await waitFor(actor, (s) => s.matches('running'));
+    expect(actor.getSnapshot().context.session!.id).not.toBe(first);
+    expect(actor.getSnapshot().context.error).toBeNull();
+  });
+
   it('goes back to idle with an error when the start write fails', async () => {
     const machine = timerMachine.provide({
       actors: {

@@ -61,6 +61,11 @@ export interface TimerSlots {
   /** Under the result text, for both outcomes. */
   resultNote?: (result: ResultInfo, moment: MomentInfo) => ReactNode;
   /**
+   * Beside "Start another" on a completed result: further ways on from it (PR 3:
+   * "See it in your sky"). Quiet buttons; the slot brings its own.
+   */
+  resultActions?: (result: ResultInfo) => ReactNode;
+  /**
    * Inside the result's status region, after its text: one sentence a screen
    * reader hears with "Session complete" (PR 2: what it earned). Visually hidden.
    */

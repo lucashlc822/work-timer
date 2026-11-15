@@ -173,6 +173,17 @@ const BackButton = ({
 );
 
 /** A footer navigation button: no outline, so the row reads as links, not choices. */
+/** "See it in your sky", on a finished session's result; same look as the timer's other quiet buttons. */
+const SkyLink = ({ onOpen }: { onOpen: () => void }) => (
+  <button
+    type="button"
+    onClick={onOpen}
+    className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+  >
+    See it in your sky
+  </button>
+);
+
 const NAV_BUTTON =
   'rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 px-3 py-1.5 text-xs transition-colors';
 
@@ -381,6 +392,8 @@ const HomeScreen = ({ together }: { together: Together }) => {
         const room = roomOf(session.togetherId);
         return room === null ? null : <TogetherCancelNote room={room} me={me} />;
       },
+      // The sky opens over the result; Back lands on this button again.
+      resultActions: () => <SkyLink onOpen={() => openView('sky')} />,
       resultNote: (result, moment) => (
         <>
           {timerSlots.resultNote?.(result, moment)}
