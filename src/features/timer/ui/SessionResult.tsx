@@ -6,7 +6,7 @@ import { formatDuration, formatTimeOfDay } from '../domain/format';
 import { reached, type MomentStage } from '../domain/moment';
 import type { FinishedResult } from '../domain/timerMachine';
 import { useMoment } from '../hooks/useMoment';
-import type { ResultInfo, TimerSlots } from './slots';
+import type { MomentInfo, ResultInfo, TimerSlots } from './slots';
 
 interface Props {
   result: FinishedResult;
@@ -37,6 +37,7 @@ export const SessionResult = ({ result, error, onDone, slots, present = true }: 
   const completed = ending.outcome === 'completed';
   const moment = useMoment('full', { present: present && completed });
   const stage: MomentStage = completed ? moment.stage : 'settled';
+  const momentInfo: MomentInfo = { stage, skipped: !completed || moment.skipped };
   const playing = stage !== 'waiting' && stage !== 'settled';
   const part = (from: MomentStage) => `moment-part ${reached(stage, from) ? '' : 'moment-pending'}`;
 
@@ -97,6 +98,7 @@ export const SessionResult = ({ result, error, onDone, slots, present = true }: 
         <p className="text-ink-secondary text-sm">{formatDuration(ending.actualFocusS)} of focus</p>
         <p className="text-ink-secondary text-xs">
           {completed ? 'Finished' : 'Ended'} at {formatTimeOfDay(ending.endedAt)}
+          {slots.resultSummary?.(info)}
         </p>
       </div>
 
@@ -106,7 +108,7 @@ export const SessionResult = ({ result, error, onDone, slots, present = true }: 
             Run ended — {result.runBlocksKept} {result.runBlocksKept === 1 ? 'star' : 'stars'} kept
           </p>
         )}
-        {slots.resultNote?.(info)}
+        {slots.resultNote?.(info, momentInfo)}
       </div>
 
       {error !== null && (
