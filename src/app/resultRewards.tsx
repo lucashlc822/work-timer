@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { RewardSummary, RewardTally, type FinishedConstellation } from '@/features/progression';
-import { useStarPlacement } from '@/features/sky';
+import { useStarPlacement, useStarPlacements } from '@/features/sky';
 import { reached, type MomentInfo } from '@/features/timer';
 
 import { useAccount } from './accountContext';
@@ -15,6 +15,46 @@ const useFinished = (sessionId: string): readonly FinishedConstellation[] => {
   const placement = useStarPlacement(sessionId);
   const completes = placement?.kind === 'constellation' ? placement.completes : null;
   return useMemo(() => (completes === null ? [] : [completes]), [completes]);
+};
+
+/** The constellations a run's blocks finished: usually none, at most a few. */
+const useFinishedBy = (sessionIds: readonly string[]): readonly FinishedConstellation[] => {
+  const placements = useStarPlacements(sessionIds);
+  return useMemo(
+    () =>
+      (placements ?? []).flatMap((p) =>
+        p.kind === 'constellation' && p.completes !== null ? [p.completes] : [],
+      ),
+    [placements],
+  );
+};
+
+/** What a whole Pomodoro run earned, under its summary; comes in with the moment's tally. */
+export const RunTally = ({
+  sessionIds,
+  moment,
+}: {
+  sessionIds: readonly string[];
+  moment: MomentInfo;
+}) => {
+  const { account } = useAccount();
+  const finished = useFinishedBy(sessionIds);
+  return (
+    <RewardTally
+      userId={account.userId}
+      sessionIds={sessionIds}
+      finished={finished}
+      reveal={reached(moment.stage, 'tally')}
+      instant={moment.skipped}
+    />
+  );
+};
+
+/** The run's tally as one sentence, inside the summary's status region. */
+export const RunRewardSummary = ({ sessionIds }: { sessionIds: readonly string[] }) => {
+  const { account } = useAccount();
+  const finished = useFinishedBy(sessionIds);
+  return <RewardSummary userId={account.userId} sessionIds={sessionIds} finished={finished} />;
 };
 
 /** The tally under a completed result; it comes in when the moment reaches its tally. */

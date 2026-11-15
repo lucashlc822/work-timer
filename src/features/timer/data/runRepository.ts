@@ -135,10 +135,14 @@ export const endRun = (db: WorkTimerDb, runId: string): Promise<RunSummary> =>
   });
 
 export const summariseRun = async (db: WorkTimerDb, runId: string): Promise<RunSummary> => {
-  const blocks = await db.sessions
-    .filter((row) => row.runId === runId && row.outcome === 'completed')
-    .toArray();
-  return { blocks: blocks.length, focusS: blocks.reduce((sum, row) => sum + row.actualFocusS, 0) };
+  const blocks = (
+    await db.sessions.filter((row) => row.runId === runId && row.outcome === 'completed').toArray()
+  ).sort((a, b) => a.startedAt - b.startedAt);
+  return {
+    blocks: blocks.length,
+    focusS: blocks.reduce((sum, row) => sum + row.actualFocusS, 0),
+    sessionIds: blocks.map((row) => row.id),
+  };
 };
 
 export interface TimerPrefs {

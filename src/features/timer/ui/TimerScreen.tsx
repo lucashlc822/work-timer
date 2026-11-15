@@ -165,7 +165,7 @@ export const TimerScreen = ({
   }
 
   if (timer.status === 'runSummary' && timer.summary !== null) {
-    return <RunSummary summary={timer.summary} onDone={done} />;
+    return <RunSummary summary={timer.summary} onDone={done} slots={slots} present={present} />;
   }
 
   if ((timer.status === 'onBreak' || timer.status === 'breakOver') && timer.run !== null) {
@@ -180,6 +180,7 @@ export const TimerScreen = ({
         onSkip={timer.skipBreak}
         onStartNext={timer.startNext}
         onEndRun={timer.endRun}
+        present={present}
       />
     );
   }

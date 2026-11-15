@@ -215,7 +215,11 @@ describe('between blocks', () => {
 
     const summary = await endRun(db, runId);
 
-    expect(summary).toEqual({ blocks: 1, focusS: DEFAULT_POMODORO.focusS });
+    expect(summary).toEqual({
+      blocks: 1,
+      focusS: DEFAULT_POMODORO.focusS,
+      sessionIds: [before[0]!.id],
+    });
     expect(await peekActiveRun(db)).toBeUndefined();
     expect(await db.sessions.toArray()).toEqual(before);
     // Idempotent.

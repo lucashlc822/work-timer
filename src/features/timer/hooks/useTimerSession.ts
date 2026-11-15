@@ -118,6 +118,9 @@ const completionNotice = (
     endsAt,
     title: APP_NAME,
     body: `Focus block done — ${minutes(next.durationS)}-min break.`,
+    // The break screen's moment and chime say it to someone looking at the app
+    // (PR 6); the break's own notice, later, always shows.
+    quietWhenFocused: true,
     then: breakNotice(after, next),
   };
 };

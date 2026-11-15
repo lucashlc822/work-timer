@@ -763,9 +763,9 @@ rejected). Don't pre-populate this with guesses.
   `quietWhenFocused`**, and the host skips it when the window is visible, not
   minimised and focused as it fires (`main_window_in_front` in `lib.rs`, called
   from the deadline thread; web: `visibilityState` + `hasFocus()`), because the
-  moment and the chime say it. A Pomodoro block's and a break's notices are not
-  marked, so they always show (PR 6 revisits the block's). Known gap: with the
-  window focused but another view (the sky, a panel) open over the timer, the
+  moment and the chime say it. A Pomodoro block's notice is marked too (PR 6: its
+  break screen has the moment and chime); the break-over notice never is, so it
+  always shows. Known gap: with the window focused but another view (the sky, a panel) open over the timer, the
   moment waits and the toast is skipped, so that completion makes no sound.
   `e2e/web/chime.spec.ts` swaps in a counting `AudioContext`; the desktop test
   skips itself when Windows won't give a test window the foreground.
@@ -792,6 +792,21 @@ rejected). Don't pre-populate this with guesses.
   and one Web Animation after a session ends; nothing moves while one runs.
   `focusId` follows the session on screen exactly (`timer.session.sharedId`, null
   for your own), not the next session's target.
+
+- **A Pomodoro block gets a lighter moment; the run summary tells it all** (session-complete
+  redesign PR 6, 2026-11-14). A block this window saw complete plays
+  `useMoment('light')` on the break screen (ignite 0, arrive 700, settled 1600 ms): its
+  `ResultStar` ignites and announces its arrival to the hero sky like a result's,
+  with the chime, "Block N done", where the star went and "+N Stardust"
+  (`slots.blockNote`). **No tally and no Start another**: the break is the next
+  step, and its buttons are never part-faded or swallowed by a click (only Escape
+  skips). A break resumed after a reload has no result, so **no moment and no
+  chime**. The run summary plays the full moment (`RunSummary`, `StarMark`
+  ignites) and `slots.runNote` tells everything the run earned: `RunSummary`
+  carries the completed blocks' `sessionIds` (oldest first, from `summariseRun`) and
+  the tally asks the reconciler about all of them at once, merged into one focus line,
+  with any goal, streak or constellation bonus the run reached. A run with no
+  completed block has no moment and no tally.
 
 - **A constellation's caption keeps its own opacity and wraps to its cell** (View
   sky upgrade follow-up, 2026-11-06, from the `ui-ux-reviewer`). An unfinished or
