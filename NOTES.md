@@ -12,9 +12,46 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-16 — Released 0.10.0 (the session-complete redesign)
+
+**Status: published.** v0.10.0 is the Latest release (tag `v0.10.0`, commit `4e75761`, version bump #202). It went out at 03:48 UTC on 2026-11-17 (22:48 local on the 16th), on Lucas's "publish the release". The desktop update and the web version both came from it. Nothing in flight except the docs PR that adds this entry.
+
+### What shipped
+
+The session-complete redesign (#194–#200) and the 0.9.0 QA follow-ups (#184–#193): 46 commits past `v0.9.0`. The decisions are in CLAUDE.md. **Server side: nothing.** `supabase/migrations` is unchanged since v0.9.0, the only schema-file change is the per-device `META_KEYS.completionSound` (no Dexie version bump, never synced), and `min_client_version` stays empty. The exe did change (`deadline.rs`, `lib.rs`, and the updater built without `zip` from #185), so this is the first release built with the zip-less updater and the first after the Supabase CLI v3 move.
+
+### Checked, with what was seen
+
+- **Hosted database (read-only):** `migration list --remote` and `db push --remote --dry-run` both printed `Target: project starkeep (…) · production`; all 7 migrations applied, "Remote database is up to date."
+- **Bump PR #202:** exactly the five version files, 6 lines. All five CI jobs green after one re-run (see below).
+- **Draft:** `version` and `desktop` jobs green; four files; `tag_name` `v0.10.0` (re-read after the description PATCH, which named the tag); `latest.json` says 0.10.0 under `/download/v0.10.0/`; signature key id `8E3AF18012526DA8` (the RELEASING one-liner ran fine here). Installer 2,441,905 bytes, starts `MZ`, SHA-256 `c359bede…950d` matched GitHub's digest (and `Starkeep-setup.exe` is the same file).
+- **Packaged desktop app:** ran the draft's installer silently (`/S`, exit 0) over 0.9.0. The exe reported 0.10.0, and the app came up signed in with existing data (180 Stardust, "Backed up · synced just now"), no service worker, "Completion sound" in Account → "This computer". Console: only the known `ipc.localhost` fallback warning.
+- **After publishing:** release list shows v0.10.0 Latest; `Deploy web` succeeded on the tagged commit `4e75761`; https://starkeep.vercel.app returns 200 and serves a bundle containing `0.10.0` and "Start another"; `Starkeep-setup.exe` answers 206; `latest.json` at `/releases/latest/download/` says 0.10.0.
+
+### Not verified
+
+- **An installed 0.9.0 app being offered 0.10.0.** This machine's only install was upgraded by the check above, so "Starkeep 0.10.0 is ready" / "Restart to update" was not seen. It is also the zip-less updater's first live check (#185 proved the install path with a local build, not a published release).
+- **A completed session on the installed app** (the moment, tally and chime). I stopped before running one: a completed session is permanent on the real account (synced, visible to friends, immutable), and Lucas published without asking for it.
+- **The by-ear checks** in `docs/qa-desktop-checklist.md` (chime on real speakers, no toast with the window in front). Lucas chose to skip them.
+- A real `db push --remote` (nothing was pending, so only the dry run was seen), signing in on the live site, macOS.
+
+### Things learned that aren't in the code
+
+- **Two tally e2e tests failed on #202's first CI run and passed on the re-run.** `tally.spec.ts:38` and `:49` could not find "Today 25 of 60 min" and "Focus · 25 min". The run began at 01:45 UTC; the tests start the page's clock 120 minutes back (~23:45 on the previous day), so a 25-minute session ends after midnight and its focus splits across two days. The re-run, started at about 02:55 UTC, passed. **That is the CLAUDE.md "near midnight" note, reasoned from the times and the pass on re-run; not reproduced, and not checked against master.** A change that only moved version strings could not have caused it. If it recurs outside 00:00–03:00 UTC, treat it as a real bug.
+- **Master's last full-suite CI is #199's.** #200's master run was cancelled when #201 landed, and #201's was docs-only (24 s), so the final code's full run is its PR's own and #202's.
+- **`--remote-debugging-port=9222` as a command-line argument to `starkeep.exe` did not open the port.** It opened only with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=9222'` in the environment. Inspection used a throwaway Node script over the DevTools websocket (Node 24 has a global `WebSocket`); it was not committed.
+- **A just-launched installed app holds the debug port open until quit.** It was left running on the Account panel after the check.
+
+### Next
+
+- Check the 0.9.0 → 0.10.0 update offer on any install still on 0.9.0 ("Starkeep 0.10.0 is ready", Restart to update, no SmartScreen warning). Record it here.
+- Listen to the chime once on real speakers.
+
+---
+
 ## 2026-11-15 — Session-complete redesign: six PRs and a review pass merged, not released
 
-**Status: merged, not released.** #194–#200 are on `master`; `package.json` is still 0.9.0. Lucas held 0.10.0 to make finishing a session feel more premium and make people want another. The plan was six stacked PRs (plan file `~/.claude/plans/i-want-to-hold-squishy-zebra.md`), then a `ui-ux-reviewer` pass whose four fixes became #200. All were merged one at a time on Lucas's word, each retargeted to `master` after its base merged (branches not deleted, since deleting one closes the PR stacked on it).
+**Status: merged, not released.** **(Superseded 2026-11-16 — released as 0.10.0, see above.)** #194–#200 are on `master`; `package.json` is still 0.9.0. Lucas held 0.10.0 to make finishing a session feel more premium and make people want another. The plan was six stacked PRs (plan file `~/.claude/plans/i-want-to-hold-squishy-zebra.md`), then a `ui-ux-reviewer` pass whose four fixes became #200. All were merged one at a time on Lucas's word, each retargeted to `master` after its base merged (branches not deleted, since deleting one closes the PR stacked on it).
 
 ### What changed, and the choices behind it
 
