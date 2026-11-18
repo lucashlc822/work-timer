@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  dismissResult,
   backToTimer,
-  expectSignedIn,
+  dismissResult,
+  goHome,
+  goToTimer,
   openFriends,
   openView,
   sessionsOnDevice,
@@ -91,6 +92,7 @@ const addSharedSession = async (user: TestUser, sharedId: string, endedMinutesAg
 
 /** Runs one 25-minute session to completion on a page whose clock is in the past. */
 const completeSession = async (page: Page) => {
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
   await page.clock.fastForward('25:01');
@@ -139,21 +141,25 @@ test('propose, accept, and a session goes only where it was aimed (S2.2, S3.3, S
 
     // Ada's own constellation: the Arrow, with one star.
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
+    await goHome(a.page);
     await a.page.getByRole('button', { name: 'Choose a constellation' }).click();
     await a.page
       .getByRole('dialog')
       .getByRole('button', { name: /^The Arrow/ })
       .click();
     await completeSession(a.page);
+    await goHome(a.page);
     await expect(a.page.getByRole('button', { name: /^Building The Arrow · 1 of / })).toBeVisible();
 
     // S3.3: a session aimed at the Kite leaves the Arrow at 1.
+    await goToTimer(a.page);
     const target = a.page.getByLabel('Working on');
     await expect(target).toBeVisible({ timeout: 20_000 });
     await target.selectOption({ label: 'The Kite with Bea' });
     await expect(a.page.getByText('Adds star 1 of 4 to The Kite with Bea')).toBeVisible();
     await completeSession(a.page);
+    await goHome(a.page);
     await expect(a.page.getByRole('button', { name: /^Building The Arrow · 1 of / })).toBeVisible();
 
     await openView(a.page, 'View sky');
@@ -171,7 +177,7 @@ test('propose, accept, and a session goes only where it was aimed (S2.2, S3.3, S
 
     // S4.1: Bea's sky shows the same constellation with Ada's star.
     await b.page.reload();
-    await expectSignedIn(b.page);
+    await goToTimer(b.page);
     await openView(b.page, 'View sky');
     await expect(skyCaption(b.page, 'The Kite · with Ada · 1/4')).toBeVisible({ timeout: 20_000 });
     await backToTimer(b.page);
@@ -207,13 +213,13 @@ test('finishing it pays each of them the tier bonus once (S5.2)', async ({ brows
 
     // Ada's device would see it on its next look (every two minutes); a reload looks now.
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
     await expect.poll(() => sharedRows(ada!), { timeout: 60_000 }).toEqual([{ delta: 25 }]);
 
     // Reloading pays nothing more.
     for (const page of [a.page, b.page]) {
       await page.reload();
-      await expectSignedIn(page);
+      await goToTimer(page);
     }
     await a.page.waitForTimeout(3_000);
     for (const user of [ada!, bea!]) expect(await sharedRows(user)).toEqual([{ delta: 25 }]);
@@ -239,7 +245,7 @@ test('unfriending freezes it in both skies; offline it simply isn’t drawn (S6.
 
     await unfriend(bea!);
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
     await openView(a.page, 'View sky');
     await expect(skyCaption(a.page, 'The Kite · with Bea · stopped')).toBeVisible({
       timeout: 20_000,
@@ -250,7 +256,7 @@ test('unfriending freezes it in both skies; offline it simply isn’t drawn (S6.
     // S8.2: with the server unreachable it is just absent; no error, the timer works.
     await a.page.route('**/rest/v1/rpc/my_shared', (route) => route.abort());
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
     await openView(a.page, 'View sky');
     await expect(skyCaption(a.page, /with Bea/)).toHaveCount(0);
     await expect(a.page.getByRole('alert')).toHaveCount(0);

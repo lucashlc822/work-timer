@@ -1,6 +1,6 @@
 import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
-import { backToTimer, expectSignedIn, openTagPicker, openView, signIn, syncLine } from './app';
+import { backToTimer, goToTimer, openTagPicker, openView, signIn, syncLine } from './app';
 import { startClockInThePast } from './clock';
 import type { TestUser } from './users';
 
@@ -27,7 +27,7 @@ export const openDevice = async (
   }
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
   return { context, page };
 };

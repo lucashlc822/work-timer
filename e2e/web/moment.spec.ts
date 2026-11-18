@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectSignedIn, signIn } from '../support/app';
+import { goToTimer, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -39,7 +39,8 @@ const finishASession = async (page: Page, name: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
   await recordStages(page);
@@ -64,7 +65,7 @@ test('Escape skips the moment and nothing else (PR 1, case 2)', async ({ page })
   expect(await stages(page)).not.toContain('tally');
   // Still the result, on the timer view.
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'View sky' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
 });
 
 test('a click mid-moment only skips it; the next one presses Done (PR 1, case 3)', async ({

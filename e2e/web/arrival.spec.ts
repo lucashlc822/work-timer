@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, signIn } from '../support/app';
+import { dismissResult, goHome, goToTimer, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -18,7 +18,8 @@ test('the new star lights up in its constellation and the line that joins it dra
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+  await goHome(page);
   await page.getByRole('button', { name: 'Choose a constellation' }).click();
   await page
     .getByRole('dialog')
@@ -26,6 +27,7 @@ test('the new star lights up in its constellation and the line that joins it dra
     .click();
 
   for (let i = 0; i < 2; i++) {
+    await goToTimer(page);
     await page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(page.getByRole('timer')).toContainText('25:00');
     await page.clock.fastForward('25:01');

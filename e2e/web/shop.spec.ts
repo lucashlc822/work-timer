@@ -1,7 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { report, scan, settleTransitions, type Finding } from '../support/a11y';
-import { backToTimer, expectSignedIn, signIn, stardustPill } from '../support/app';
+import {
+  backToTimer,
+  expectSignedIn,
+  expectStardust,
+  goHome,
+  signIn,
+  stardustPill,
+} from '../support/app';
 import { adminClient, createUser, seedStardust, type TestUser } from '../support/users';
 
 /**
@@ -27,7 +34,8 @@ const openShop = async (page: Page, label: string) => {
   await page.goto('/');
   await signIn(page, user);
   await expectSignedIn(page);
-  await expect(stardustPill(page)).toHaveText(/\b1,000 Stardust$/, { timeout: 20_000 });
+  await expectStardust(page, /\b1,000 Stardust$/, { timeout: 20_000 });
+  await goHome(page);
   await stardustPill(page).click();
   await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
   await settleTransitions(page);
@@ -55,7 +63,7 @@ test('Buy asks first; Escape closes the question, not the panel; nothing is spen
   // With nothing being asked, Escape is the panel's again: it leaves, as it always has.
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
-  await expect(stardustPill(page)).toHaveText(/\b1,000 Stardust$/);
+  await expectStardust(page, /\b1,000 Stardust$/);
 });
 
 test('Not now spends nothing and puts focus back on Buy', async ({ page }) => {
@@ -90,7 +98,7 @@ test('confirming buys once: a polite message, a flare, focus on Equip, one ledge
   await expect(ember.getByText('Equipped')).toBeVisible();
 
   await backToTimer(page);
-  await expect(stardustPill(page)).toHaveText(/\b700 Stardust$/);
+  await expectStardust(page, /\b700 Stardust$/);
 });
 
 test('with reduced motion there is no flare animation', async ({ page }) => {
@@ -111,7 +119,8 @@ test('asking to buy does not move the shop, and the question fits its card', asy
   await page.goto('/');
   await signIn(page, user);
   await expectSignedIn(page);
-  await expect(stardustPill(page)).toHaveText(/\b10,000 Stardust$/, { timeout: 20_000 });
+  await expectStardust(page, /\b10,000 Stardust$/, { timeout: 20_000 });
+  await goHome(page);
   await stardustPill(page).click();
   await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
 
@@ -190,6 +199,7 @@ test('the three Stardust tabs share one width, so switching tabs moves nothing',
   await page.goto('/');
   await signIn(page, user);
   await expectSignedIn(page);
+  await goHome(page);
   await stardustPill(page).click();
   await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
 
@@ -245,6 +255,7 @@ test('a short last row of cards is centred, not left with an empty slot', async 
   await page.goto('/');
   await signIn(page, user);
   await expectSignedIn(page);
+  await goHome(page);
   await stardustPill(page).click();
   await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
 

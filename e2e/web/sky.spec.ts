@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, openTagPicker, openView, signIn } from '../support/app';
+import { dismissResult, goHome, goToTimer, openTagPicker, openView, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -23,21 +23,26 @@ const finishTaggedSession = async (page: Page, tagName: string, constellation?: 
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
 
   const panel = await openTagPicker(page);
   await panel.getByRole('textbox', { name: 'New tag name' }).fill(tagName);
   await panel.getByRole('button', { name: 'Add' }).click();
   if (await panel.isVisible()) await page.keyboard.press('Escape');
+  // If the picker had already closed itself, that Escape went home: come back.
+  await goToTimer(page);
   await expect(page.getByRole('button', { name: tagName, exact: true })).toBeVisible();
 
   if (constellation !== undefined) {
+    await goHome(page);
     await page.getByRole('button', { name: 'Choose a constellation' }).click();
     await page
       .getByRole('dialog')
       .getByRole('button', { name: new RegExp(`^${constellation}`) })
       .click();
   }
+
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   // Wait until it is really running before moving the clock on.
@@ -82,7 +87,7 @@ test('a focused star shows its card; Escape closes it, and only a second Escape 
   await finishTaggedSession(page, 'Reading');
 
   // The Back button has focus on arrival; the star is the stop before it.
-  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(theStar(page)).toBeFocused();
   await expect(card(page)).toBeVisible();
@@ -100,11 +105,11 @@ test('a focused star shows its card; Escape closes it, and only a second Escape 
   // First Escape: the card goes, the sky stays.
   await page.keyboard.press('Escape');
   await expect(card(page)).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeVisible();
 
-  // Second Escape: back to the timer, focus on the button that opened the sky.
+  // Second Escape: back home, focus on the button that opened the sky.
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'View sky', exact: true })).toBeFocused();
 });
 
@@ -171,7 +176,7 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
 
   // 4.2: reached with the keyboard. A constellation is one Tab stop, its caption:
   // from Back it is one stop back, and its star is not a stop of its own.
-  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(caption).toBeFocused();
   const card = page.getByTestId('constellation-card');
@@ -193,9 +198,9 @@ test('a constellation’s caption opens its card from the keyboard, and is a big
   // First Escape closes the card, second leaves the sky.
   await page.keyboard.press('Escape');
   await expect(card).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 });
 
 /**
@@ -208,7 +213,7 @@ const finishTheKite = async (page: Page) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goHome(page);
 
   await page.getByRole('button', { name: 'Choose a constellation' }).click();
   await page
@@ -216,6 +221,7 @@ const finishTheKite = async (page: Page) => {
     .getByRole('button', { name: /^The Kite/ })
     .click();
   for (let i = 0; i < 4; i++) {
+    await goToTimer(page);
     await page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(page.getByRole('timer')).toContainText('25:00');
     await page.clock.fastForward('25:01');
@@ -250,7 +256,7 @@ test('a constellation finished from the timer gets its moment right there, behin
 
   // Nor does a reload.
   await page.reload();
-  await expectSignedIn(page);
+  await goToTimer(page);
   await openView(page, 'View sky');
   await expect(kiteFigure(page)).toBeVisible();
   await expect(kiteFigure(page).locator('.sky-draw, .sky-bloom, .sky-flare')).toHaveCount(0);
@@ -261,7 +267,10 @@ test('opening the sky before the star arrives: the moment plays there instead, e
 }) => {
   await finishTheKite(page);
   // At once, before the result's moment reaches its arrival: the full sky celebrates.
-  await page.getByRole('button', { name: 'View sky' }).click();
+  // By keyboard: Enter presses the result's sky link without skipping the moment.
+  const skyLink = page.getByRole('button', { name: 'See it in your sky' });
+  await skyLink.focus();
+  await skyLink.press('Enter');
   const figure = kiteFigure(page);
   await expect(figure.locator('[data-celebration="bloom"]')).toHaveCount(1);
   await expect(page.getByTestId('sky-announcer')).toHaveText('The Kite is complete.');

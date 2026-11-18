@@ -7,11 +7,36 @@ import type { TestUser } from './users';
  * names, never by CSS classes, so a restyle doesn't break a test.
  */
 
-/** The signed-in app is showing (its footer's Account button is the landmark). */
+/**
+ * The signed-in app is showing: home's main navigation, or the timer page's
+ * Home button (a launch mid-session restores the timer page).
+ */
 export const expectSignedIn = async (page: Page): Promise<void> => {
-  await expect(page.getByRole('button', { name: 'Account', exact: true })).toBeVisible({
+  await expect(page.getByRole('navigation', { name: 'Main' }).or(homeButton(page))).toBeVisible({
     timeout: 15_000,
   });
+};
+
+/** The timer page's way back to home. */
+export const homeButton = (page: Page) => page.getByRole('button', { name: 'Home', exact: true });
+
+/** Home's call to action: "Start focusing", or "Return to focus" mid-session. */
+export const focusButton = (page: Page) =>
+  page.getByRole('button', { name: /^(Start focusing|Return to focus)$/ });
+
+/** Opens the timer page from home; a no-op if it is already showing. */
+export const goToTimer = async (page: Page): Promise<void> => {
+  await expectSignedIn(page);
+  if (await homeButton(page).isVisible()) return;
+  await focusButton(page).click();
+  await expect(homeButton(page)).toBeVisible();
+};
+
+/** Goes home from the timer page; a no-op if home is already showing. */
+export const goHome = async (page: Page): Promise<void> => {
+  await expectSignedIn(page);
+  if (await homeButton(page).isVisible()) await homeButton(page).click();
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 };
 
 export const expectSignInScreen = async (page: Page): Promise<void> => {
@@ -33,6 +58,7 @@ export const signIn = async (page: Page, user: Pick<TestUser, 'email' | 'passwor
 };
 
 export const openAccount = async (page: Page): Promise<void> => {
+  await goHome(page);
   await page.getByRole('button', { name: 'Account', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible();
 };
@@ -57,12 +83,23 @@ export const dismissResult = async (page: Page): Promise<void> => {
   await page.getByRole('button', { name: 'Done' }).click();
 };
 
-/** The footer's Stardust balance, e.g. "25 Stardust". */
+/** Home's Stardust balance, e.g. "25 Stardust" (call `goHome` first). */
 export const stardustPill = (page: Page) =>
   page.getByRole('button', { name: /^\W*[\d,]+ Stardust$/ });
 
+/** Goes home and checks the Stardust balance there. */
+export const expectStardust = async (
+  page: Page,
+  text: RegExp,
+  options?: { timeout?: number },
+): Promise<void> => {
+  await goHome(page);
+  await expect(stardustPill(page)).toHaveText(text, options);
+};
+
 /** Opens the timer's tag picker and returns its panel. */
 export const openTagPicker = async (page: Page) => {
+  await goToTimer(page);
   const panel = page.getByRole('dialog', { name: 'Choose a tag' });
   if (!(await panel.isVisible())) {
     await page.getByRole('button', { name: 'No tag', exact: true }).click();
@@ -73,25 +110,30 @@ export const openTagPicker = async (page: Page) => {
 
 /** The footer's Stardust balance as a number. */
 export const stardustBalance = async (page: Page): Promise<number> => {
+  await goHome(page);
   const text = (await stardustPill(page).textContent()) ?? '';
   return Number(text.replace(/[^\d]/g, ''));
 };
 
-/** Opens a footer view ("Stats", "Account", ...). */
+/** Opens one of home's views ("Stats", "Account", ...), going home first. */
 export const openView = async (page: Page, name: 'View sky' | 'Stats' | 'Account') => {
+  await goHome(page);
   await page.getByRole('button', { name, exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Back to timer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to home' })).toBeVisible();
 };
 
 /** Opens the Friends panel. The pill's name carries the waiting-request count, if any. */
 export const openFriends = async (page: Page): Promise<void> => {
+  await goHome(page);
   await page.getByRole('button', { name: /^Friends(,|$)/ }).click();
   await expect(page.getByRole('heading', { name: 'Friends', level: 2 })).toBeVisible();
 };
 
+/** Closes a view opened from home with its Back button, then opens the timer page. */
 export const backToTimer = async (page: Page): Promise<void> => {
-  await page.getByRole('button', { name: 'Back to timer' }).click();
-  await expect(page.getByRole('button', { name: /^Start / })).toBeVisible();
+  await page.getByRole('button', { name: /^Back to (home|timer)$/ }).click();
+  await goToTimer(page);
+  await expect(page.getByRole('button', { name: /^Start (\d+ min|Pomodoro)$/ })).toBeVisible();
 };
 
 /** The sync line in the Account panel ("Backed up · synced just now", "Offline", ...). */

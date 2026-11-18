@@ -3,6 +3,7 @@
  */
 export { TimerScreen } from './ui/TimerScreen';
 export { MiniCountdown } from './ui/MiniCountdown';
+export { TimerGlance } from './ui/TimerGlance';
 export { TimerProvider } from './ui/TimerProvider';
 export { CompletionSoundSwitch } from './ui/CompletionSoundSwitch';
 export { useTimer } from './ui/timerContext';

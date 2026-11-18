@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test';
 
 import {
   dismissResult,
-  expectSignedIn,
+  expectStardust,
+  goToTimer,
   openAccount,
   openTagPicker,
   passwordField,
   sessionsOnDevice,
   signIn,
   signOut,
-  stardustPill,
 } from '../support/app';
 import { closeDevices, openDevice, settle, tagNames } from '../support/devices';
 import { waitForCode } from '../support/inbox';
@@ -53,14 +53,14 @@ test('sign up with the emailed code, sign out, and sign back in on the desktop',
   await page.getByRole('button', { name: 'Create account' }).click();
   await page.getByLabel('6-digit code').fill(await waitForCode(email, { since }));
   await page.getByRole('button', { name: 'Confirm' }).click();
-  await expectSignedIn(page);
+  await goToTimer(page);
   await openAccount(page);
   await expect(page.getByText(email)).toBeVisible();
-  await page.getByRole('button', { name: 'Back to timer' }).click();
+  await page.getByRole('button', { name: 'Back to home' }).click();
 
   await signOut(page);
   await signIn(page, { email, password: TEST_PASSWORD });
-  await expectSignedIn(page);
+  await goToTimer(page);
   await signOut(page);
 });
 
@@ -71,22 +71,23 @@ test('a session finished on the desktop reaches the web, and a tag made on the w
   const page = desktop.page;
   const user = await createUser('desktop-sync');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
   const web = await openDevice(browser, WEB, user);
   try {
     // A real one-minute session on the desktop.
     await page.getByRole('radio', { name: '1 min (dev)' }).click();
+    await goToTimer(page);
     await page.getByRole('button', { name: 'Start 1 min' }).click();
     await expect(page.getByRole('timer')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible({
       timeout: 120_000,
     });
     await dismissResult(page);
-    await expect(stardustPill(page)).toHaveText(/\b1 Stardust$/);
+    await expectStardust(page, /\b1 Stardust$/);
 
     // The web device gets it without being told to.
-    await expect(stardustPill(web.page)).toHaveText(/\b1 Stardust$/, { timeout: 30_000 });
+    await expectStardust(web.page, /\b1 Stardust$/, { timeout: 30_000 });
     await expect.poll(() => sessionsOnDevice(web.page), { timeout: 20_000 }).toBe(1);
 
     // And the other way: a tag made on the web appears in the desktop's picker.

@@ -620,7 +620,7 @@ rejected). Don't pre-populate this with guesses.
   star's accessible name stays the short `starLabel`. It stays 250 ms after
   the pointer leaves and while the pointer is on it (WCAG 1.4.13). While a card
   is open, `SkyView` listens for Escape on the window in the capture phase and
-  stops it: one press closes the card, the next leaves the sky (HomeRoute's
+  stops it: one press closes the card, the next leaves the sky (HomeScreen's
   document listener). A friend's sky shows only time, length and style — never
   their tags, runs or companions — and prefers cards below the star, clear of
   its header. "Block N of M" counts the blocks the run *completed*; an open run
@@ -765,8 +765,10 @@ rejected). Don't pre-populate this with guesses.
   from the deadline thread; web: `visibilityState` + `hasFocus()`), because the
   moment and the chime say it. A Pomodoro block's notice is marked too (PR 6: its
   break screen has the moment and chime); the break-over notice never is, so it
-  always shows. Known gap: with the window focused but another view (the sky, a panel) open over the timer, the
-  moment waits and the toast is skipped, so that completion makes no sound.
+  always shows. Known gap: with the window focused but a view (the sky, a panel) open over the
+  page, the moment waits and the toast is skipped, so that completion makes no
+  sound. (Finishing while on home is not the gap: the timer page comes forward
+  and the moment plays.)
   `e2e/web/chime.spec.ts` swaps in a counting `AudioContext`; the desktop test
   skips itself when Windows won't give a test window the foreground.
 
@@ -865,21 +867,43 @@ rejected). Don't pre-populate this with guesses.
   after a purchase. A polite live region says "Ember is yours." and the picture
   flares once (not under reduced motion). **Escape closes the question only:**
   the card's `onKeyDown` stops propagation before the event reaches the
-  `document` keydown listener in `app/routes/HomeRoute.tsx`, so that listener
+  `document` keydown listener in `app/routes/home/HomeScreen.tsx`, so that listener
   must stay a bubble-phase `document` one; in capture or on `window` one Escape
   would close the panel too. `Shop.test.tsx` and `e2e/web/shop.spec.ts` pin both
   directions.
 
 - **A panel opens on its title; a view with no title opens on its Back button**
   (2026-11-11, the reviewer's L1). Stats, Stardust, Account, Friends and Focus
-  together are `PanelLayer`s in `app/routes/HomeRoute.tsx`, which calls
+  together are `PanelLayer`s in `app/routes/home/HomeScreen.tsx`, which calls
   `useFocusHeading` (`shared/ui/focus.ts`): it focuses the panel's first `h2`
   (`tabIndex={-1}`, `outline-none` because it is not a control), else the Back
   button, so focus never falls to the page behind the inert timer. The first Tab
   reaches the first control and Back is the last stop. Only the floating Back
   (View sky, a friend's sky) keeps `autoFocus`. A new panel needs an `h2` as its
   title and nothing else; closing still hands focus back to the opener
-  (`useFocusIfLost`).
+  (`useFocusIfLost`). Back says which page it returns to: "Back to home" or
+  "Back to timer".
+
+- **Home is its own page; the timer is one press away** (premium-motion PR 3,
+  2026-11-17; supersedes "the main window: the timer in front of your sky"). The
+  main window has two pages, home and timer (`app/navigation.ts`, pure and
+  tested), with the overlays (sky, panels, a friend's sky) over either. Home
+  holds the call to action, the progress line and the footer (constellation,
+  Stardust, navigation); the timer page holds the timer and a Home button, and
+  its title is an sr-only `h2` "Focus". **Launch opens home, unless a session,
+  break, result or lobby is in progress: then the timer page is restored**, and
+  nothing is shown until the timer has read the store, so home never flashes
+  first. Going home mid-session is allowed (the call to action becomes "Return to
+  focus" with `TimerGlance`'s minute-resolution "Focusing · 18 min left"); **any
+  change into an in-progress status brings the timer page forward** (a session
+  starting, one finishing while you were home, a break ending, joining a room).
+  `TimerScreen` stays mounted (hidden) on home, `present` false, so its moment
+  waits for the timer page. Escape closes an overlay; with none, it goes home
+  only from the idle timer page, and never when the press belongs to an open
+  dialog, popover or text field (decided in the capture phase, before any of
+  their handlers can close them). Focus: home → timer lands on the `h2`, timer →
+  home on the call to action, a launch focuses nothing. A short window
+  (`max-height: 640px`) uses the timer's compact spacing so 380×560 fits.
 
 - **Motion (motion.dev) animates anything CSS can't, and the app's motion is
   "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectSignedIn, signIn } from '../support/app';
+import { goToTimer, signIn } from '../support/app';
 import { closeDevices, openDevice } from '../support/devices';
 import { befriend, createRoom, rpc, setName } from '../support/friends';
 import { adminClient, createUser, signedInClient, type TestUser } from '../support/users';
@@ -175,7 +175,7 @@ test('finishing together earns a star each and +10 Stardust once (3.2, 3.5)', as
     }
     for (const page of [a.page, b.page]) {
       await page.reload();
-      await expectSignedIn(page);
+      await goToTimer(page);
     }
 
     const bonusRows = async (user: TestUser) => {
@@ -191,7 +191,7 @@ test('finishing together earns a star each and +10 Stardust once (3.2, 3.5)', as
     }
     // Reconciling again never pays twice.
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
     await a.page.waitForTimeout(3_000);
     expect(await bonusRows(ada!)).toEqual([{ delta: 10 }]);
   } finally {
@@ -265,7 +265,7 @@ test('an invitation lapses after ten minutes, and nobody joins after the start (
       .eq('id', lapsing);
     expect(error).toBeNull();
     await b.page.reload();
-    await expectSignedIn(b.page);
+    await goToTimer(b.page);
     await b.page.waitForTimeout(2_000);
     await expect(banner).toBeHidden();
     const late = await (
@@ -351,6 +351,7 @@ test('a room that starts while another of your devices runs a session says so th
 
   try {
     // Bea's second device is already focusing on its own.
+    await goToTimer(b2.page);
     await b2.page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(endsAtLine(b2.page)).toBeVisible();
     const soloEnds = await endsAtLine(b2.page).innerText();
@@ -473,7 +474,7 @@ test('a lobby that ends without starting says so gently, then the timer is back 
       .eq('id', lapsing);
     expect(error).toBeNull();
     await b.page.reload();
-    await expectSignedIn(b.page);
+    await goToTimer(b.page);
     await expect(note).toContainText('The invite ran out before it started.', {
       timeout: 10_000,
     });
@@ -503,7 +504,7 @@ test('a signed-in person with no friends sees no "Focus with friends"', async ({
   const [loner] = await people('Lone');
   await page.goto(BASE);
   await signIn(page, loner!);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Focus with friends' })).toBeHidden();
 });

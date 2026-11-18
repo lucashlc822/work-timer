@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
 
 import { launchDesktop, type Desktop } from '../desktop/launch';
 import { invokeTauri } from '../desktop/tauri';
-import { expectSignedIn, signIn } from '../support/app';
+import { goToTimer, signIn } from '../support/app';
 import { localStack } from '../support/localStack';
 import { createUser } from '../support/users';
 
@@ -141,7 +141,7 @@ test('a newer release is offered between sessions, and never during one', async 
     // Signed in and idle: still offered.
     const user = await createUser('update');
     await signIn(page, user);
-    await expectSignedIn(page);
+    await goToTimer(page);
     await expect(notice).toBeVisible();
     await expect(page.getByRole('button', { name: 'Restart to update' })).toBeVisible();
 

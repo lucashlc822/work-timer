@@ -8,13 +8,10 @@ import { useAccount } from '../accountContext';
 import { HomeScreen } from './home/HomeScreen';
 
 /**
- * The main window: the timer in front of your night sky.
- *
- * "View sky", "Stats" and the Stardust pill fade the timer out — it stays mounted, so a running
- * session is untouched. The sky hands the pointer to the stars so they can be
- * hovered and focused; the stats are a scrollable panel over the dimmed sky.
- * The autostart toggle lives in the footer until a settings surface exists to
- * hold it.
+ * The main window: home and the timer page in front of your night sky
+ * (`home/HomeScreen.tsx`; the rules for which page shows are in
+ * `../navigation.ts`). The timer provider sits above both pages, so a session
+ * keeps running whichever is showing.
  */
 export const HomeRoute = () => {
   const { account } = useAccount();

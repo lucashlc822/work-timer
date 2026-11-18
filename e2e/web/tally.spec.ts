@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, signIn, skipMoment, stardustBalance } from '../support/app';
+import {
+  dismissResult,
+  goHome,
+  goToTimer,
+  signIn,
+  skipMoment,
+  stardustBalance,
+} from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { addCompletedSession } from '../support/friends';
 import { createUser, type TestUser } from '../support/users';
@@ -19,11 +26,12 @@ const signedIn = async (page: Page, user: TestUser) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
 };
 
 /** Runs a 25-minute session to its end and lets its moment settle. */
 const finishASession = async (page: Page) => {
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
   await page.clock.fastForward('25:01');
@@ -66,7 +74,8 @@ test('the session that reaches the daily goal shows the bonus, and fits the wind
   );
 
   // The tallest result there is still fits the desktop app's window.
-  const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox();
+  // The timer page has no footer: its main is the whole window when nothing scrolls.
+  const nav = await page.getByRole('main').boundingBox();
   const { scrollHeight, innerHeight } = await page.evaluate(() => ({
     scrollHeight: document.documentElement.scrollHeight,
     innerHeight: window.innerHeight,
@@ -80,12 +89,14 @@ test('the session that reaches the daily goal shows the bonus, and fits the wind
 
 test('the star that finishes a constellation shows its bonus (PR 2, case 5)', async ({ page }) => {
   await signedIn(page, await createUser('tally-kite'));
+  await goHome(page);
   await page.getByRole('button', { name: 'Choose a constellation' }).click();
   await page
     .getByRole('dialog')
     .getByRole('button', { name: /^The Kite/ })
     .click();
   for (let i = 0; i < 3; i++) {
+    await goToTimer(page);
     await page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(page.getByRole('timer')).toContainText('25:00');
     await page.clock.fastForward('25:01');

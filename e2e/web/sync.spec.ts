@@ -1,8 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  dismissResult,
   backToTimer,
+  dismissResult,
+  expectStardust,
+  goHome,
+  goToTimer,
   openView,
   sessionsOnDevice,
   stardustPill,
@@ -159,19 +162,20 @@ test('a session finished offline on each device: both are kept, 50 Stardust, no 
     await two.context.setOffline(true);
 
     for (const device of [one, two]) {
+      await goToTimer(device.page);
       await device.page.getByRole('button', { name: 'Start 25 min' }).click();
       await expect(device.page.getByRole('timer')).toBeVisible();
       await device.page.clock.fastForward('25:01');
       await expect(device.page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
       await dismissResult(device.page);
-      await expect(stardustPill(device.page)).toHaveText(/\b25 Stardust$/);
+      await expectStardust(device.page, /\b25 Stardust$/);
     }
 
     await one.context.setOffline(false);
     await two.context.setOffline(false);
 
-    await expect(stardustPill(one.page)).toHaveText(/\b50 Stardust$/, { timeout: 30_000 });
-    await expect(stardustPill(two.page)).toHaveText(/\b50 Stardust$/, { timeout: 30_000 });
+    await expectStardust(one.page, /\b50 Stardust$/, { timeout: 30_000 });
+    await expectStardust(two.page, /\b50 Stardust$/, { timeout: 30_000 });
 
     const sessions = await adminClient().from('sessions').select('id').eq('user_id', user.id);
     expect(sessions.data).toHaveLength(2);
@@ -195,8 +199,8 @@ test('a session finished offline on each device: both are kept, 50 Stardust, no 
       .eq('user_id', user.id);
     expect(ledger.data).toHaveLength(2);
     expect(ledger.data?.reduce((sum, row: { delta: number }) => sum + row.delta, 0)).toBe(50);
-    await expect(stardustPill(one.page)).toHaveText(/\b50 Stardust$/);
-    await expect(stardustPill(two.page)).toHaveText(/\b50 Stardust$/);
+    await expectStardust(one.page, /\b50 Stardust$/);
+    await expectStardust(two.page, /\b50 Stardust$/);
   } finally {
     await closeDevices(one, two);
   }
@@ -210,21 +214,22 @@ test('the same shop item bought on both offline devices is deducted once', async
   const one = await openDevice(browser, BASE_URL, user);
   const two = await openDevice(browser, BASE_URL, user);
   try {
-    await expect(stardustPill(one.page)).toHaveText(/\b1,000 Stardust$/, { timeout: 20_000 });
-    await expect(stardustPill(two.page)).toHaveText(/\b1,000 Stardust$/, { timeout: 20_000 });
+    await expectStardust(one.page, /\b1,000 Stardust$/, { timeout: 20_000 });
+    await expectStardust(two.page, /\b1,000 Stardust$/, { timeout: 20_000 });
 
     await one.context.setOffline(true);
     await two.context.setOffline(true);
 
     for (const device of [one, two]) {
+      await goHome(device.page);
       await stardustPill(device.page).click();
       const ember = device.page.getByRole('listitem').filter({ hasText: 'Ember' });
       await ember.getByRole('button', { name: /^Buy/ }).click();
       // Buy only asks; the second Buy, in the card, spends.
       await ember.getByRole('button', { name: 'Buy', exact: true }).click();
       await expect(ember.getByRole('button', { name: /Equip|Equipped/ })).toBeVisible();
-      await device.page.getByRole('button', { name: 'Back to timer' }).click();
-      await expect(stardustPill(device.page)).toHaveText(/\b700 Stardust$/);
+      await device.page.getByRole('button', { name: 'Back to home' }).click();
+      await expectStardust(device.page, /\b700 Stardust$/);
     }
 
     await one.context.setOffline(false);
@@ -244,8 +249,8 @@ test('the same shop item bought on both offline devices is deducted once', async
       )
       .toEqual([{ delta: -300 }]);
 
-    await expect(stardustPill(one.page)).toHaveText(/\b700 Stardust$/, { timeout: 30_000 });
-    await expect(stardustPill(two.page)).toHaveText(/\b700 Stardust$/, { timeout: 30_000 });
+    await expectStardust(one.page, /\b700 Stardust$/, { timeout: 30_000 });
+    await expectStardust(two.page, /\b700 Stardust$/, { timeout: 30_000 });
     const total = await adminClient().from('ledger').select('delta').eq('user_id', user.id);
     expect(total.data?.reduce((sum, row: { delta: number }) => sum + row.delta, 0)).toBe(700);
   } finally {
@@ -263,6 +268,7 @@ test('settings arriving through sync do not change a Pomodoro run already in pro
   const two = await openDevice(browser, BASE_URL, user);
   try {
     await chooseMode(one.page, 'Pomodoro');
+    await goToTimer(one.page);
     await one.page.getByRole('button', { name: 'Start Pomodoro' }).click();
     await expect(one.page.getByText('Block 1 · Pomodoro')).toBeVisible();
     await expect(one.page.getByText(/^25 minutes · ends at/)).toBeVisible();
@@ -279,7 +285,8 @@ test('settings arriving through sync do not change a Pomodoro run already in pro
     await openView(one.page, 'Account');
     await one.page.getByRole('button', { name: 'Sync now' }).click();
     await expect(syncLine(one.page)).toContainText('Backed up', { timeout: 20_000 });
-    await one.page.getByRole('button', { name: 'Back to timer' }).click();
+    await one.page.getByRole('button', { name: 'Back to home' }).click();
+    await goToTimer(one.page);
     await expect(one.page.getByText(/^25 minutes · ends at/)).toBeVisible();
     await expect(one.page.getByText('Block 1 · Pomodoro')).toBeVisible();
 
@@ -324,6 +331,7 @@ test('a session finished while a sync round is in flight still uploads without a
     await backToTimer(device.page);
 
     // A session finishes while that round is stuck, and its 2 s upload delay passes.
+    await goToTimer(device.page);
     await device.page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(device.page.getByRole('timer')).toBeVisible();
     await device.page.clock.fastForward('25:01');

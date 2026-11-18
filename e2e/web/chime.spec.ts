@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { backToTimer, expectSignedIn, openAccount, signIn, skipMoment } from '../support/app';
+import { backToTimer, goToTimer, openAccount, signIn, skipMoment } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -54,10 +54,11 @@ const signedInWithFakeAudio = async (page: Page, name: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
 };
 
 const runToTheEnd = async (page: Page) => {
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
   await page.clock.fastForward('25:01');
@@ -91,7 +92,7 @@ test('the switch turns it off, and stays off after a reload (PR 4, cases 2 and 5
   await backToTimer(page);
 
   await page.reload();
-  await expectSignedIn(page);
+  await goToTimer(page);
   await openAccount(page);
   await expect(page.getByRole('checkbox', { name: 'Completion sound' })).not.toBeChecked();
   await backToTimer(page);
@@ -108,6 +109,7 @@ test('a session that ended while the window was hidden plays its moment on retur
   page,
 }) => {
   await signedInWithFakeAudio(page, 'chime-hidden');
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
 

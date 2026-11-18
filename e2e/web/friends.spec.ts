@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { backToTimer, expectSignedIn, openFriends, sessionsOnDevice, signIn } from '../support/app';
+import { backToTimer, goToTimer, openFriends, sessionsOnDevice, signIn } from '../support/app';
 import { closeDevices, openDevice } from '../support/devices';
 import {
   addCompletedSession,
@@ -349,6 +349,7 @@ test('a friend sees you focusing, then on a break, within about 15 seconds', asy
     await expect(adaRow).toContainText('Online', { timeout: 20_000 });
 
     // 3.1: Ada starts; Bea's open panel shows it on its next check.
+    await goToTimer(a.page);
     await a.page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(a.page.getByRole('timer')).toBeVisible();
     await expect(adaRow).toContainText(/Focusing now · 2[45] min left/, { timeout: 20_000 });
@@ -375,10 +376,11 @@ test('a friend sees you focusing, then on a break, within about 15 seconds', asy
   await page.clock.install({ time: new Date() });
   await page.goto('/');
   await signIn(page, ada);
-  await expectSignedIn(page);
+  await goToTimer(page);
   const b2 = await openDevice(browser, BASE, bea);
   try {
     await page.getByRole('radio', { name: 'Pomodoro' }).click();
+    await goToTimer(page);
     await page.getByRole('button', { name: 'Start Pomodoro' }).click();
     await expect(page.getByText('Block 1 · Pomodoro')).toBeVisible();
     await page.clock.fastForward('25:01');

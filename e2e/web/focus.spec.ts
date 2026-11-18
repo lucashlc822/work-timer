@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { expectSignedIn, openTagPicker, signIn, stardustPill } from '../support/app';
+import { goHome, goToTimer, openTagPicker, signIn, stardustPill } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { befriend, setName } from '../support/friends';
 import { createUser } from '../support/users';
@@ -21,12 +21,12 @@ const signedIn = async (page: Page, label: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goHome(page);
 };
 
 test('closing a panel hands focus back to the button that opened it', async ({ page }) => {
   await signedIn(page, 'focus-panels');
-  const back = page.getByRole('button', { name: 'Back to timer' });
+  const back = page.getByRole('button', { name: 'Back to home' });
   // A panel opens on its title; the sky, which has no title, on its Back button.
   const openers: Array<[string, Locator, Locator]> = [
     ['View sky', page.getByRole('button', { name: 'View sky', exact: true }), back],
@@ -55,7 +55,7 @@ test('closing a panel hands focus back to the button that opened it', async ({ p
       await page.keyboard.press('Escape');
       await expect(opener).toBeFocused();
     });
-    await test.step(`${name}, closed with Back to timer`, async () => {
+    await test.step(`${name}, closed with Back to home`, async () => {
       await press(opener, 'Enter');
       await expect(landing).toBeFocused();
       await press(back, 'Enter');
@@ -75,7 +75,7 @@ test('a panel opened with the mouse also lands on its title', async ({ page }) =
   for (const [opener, title] of openers) {
     await opener.click();
     await expect(page.getByRole('heading', { name: title, level: 2 })).toBeFocused();
-    await page.getByRole('button', { name: 'Back to timer' }).click();
+    await page.getByRole('button', { name: 'Back to home' }).click();
   }
 });
 
@@ -88,7 +88,7 @@ test('with a friend: Focus together opens on its title, and leaving a friend’s
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, ada);
-  await expectSignedIn(page);
+  await goToTimer(page);
 
   // Focus together, by keyboard and by mouse; closing goes back to its opener.
   const together = page.getByRole('button', { name: 'Focus with friends' });
@@ -103,6 +103,7 @@ test('with a friend: Focus together opens on its title, and leaving a friend’s
 
   // A friend's sky: its Back is floating and focused; leaving it, by Back or
   // by Escape, opens Friends on its title, never the page.
+  await goHome(page);
   await page.getByRole('button', { name: /^Friends(,|$)/ }).click();
   const friendsTitle = page.getByRole('heading', { name: 'Friends', level: 2 });
   const beaRow = page
@@ -126,7 +127,7 @@ test('a panel opens on its title: Tab goes into the content, and Back is the las
   page,
 }) => {
   await signedIn(page, 'focus-title');
-  const back = page.getByRole('button', { name: 'Back to timer' });
+  const back = page.getByRole('button', { name: 'Back to home' });
   await press(page.getByRole('button', { name: 'Stats', exact: true }), 'Enter');
   const title = page.getByRole('heading', { name: 'Stats', level: 2 });
   await expect(title).toBeFocused();
@@ -151,6 +152,7 @@ test('a panel opens on its title: Tab goes into the content, and Back is the las
 
 test('"Done" on a finished session lands on Start', async ({ page }) => {
   await signedIn(page, 'focus-done');
+  await goToTimer(page);
   await press(page.getByRole('button', { name: 'Start 25 min' }), 'Enter');
   await expect(page.getByRole('timer')).toContainText('25:00');
 
@@ -164,6 +166,7 @@ test('"Done" on a finished session lands on Start', async ({ page }) => {
 
 test('picking a tag keeps focus on the tag button', async ({ page }) => {
   await signedIn(page, 'focus-tag');
+  await goToTimer(page);
   const pill = page.getByRole('button', { name: 'No tag', exact: true, expanded: false });
   await press(pill, 'Enter');
   const panel = await openTagPicker(page);
@@ -178,6 +181,7 @@ test('arrow keys move through the idle screen’s choices and nothing else moves
   page,
 }) => {
   await signedIn(page, 'focus-radios');
+  await goToTimer(page);
   const radio = (name: string) => page.getByRole('radio', { name, exact: true });
   const modeToggle = page.getByRole('radiogroup', { name: 'Session type' });
   const toggleTop = async () => (await modeToggle.boundingBox())?.y;
@@ -212,6 +216,7 @@ test('arrow keys move through the idle screen’s choices and nothing else moves
 
 test('a focus ring is lavender the moment a control gets focus', async ({ page }) => {
   await signedIn(page, 'focus-ring');
+  await goToTimer(page);
   // A keyboard move first, so the next focus counts as keyboard focus (:focus-visible).
   await page.getByRole('radio', { name: '25 min', exact: true }).focus();
   await page.keyboard.press('Tab');
