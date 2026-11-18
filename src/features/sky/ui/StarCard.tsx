@@ -42,7 +42,7 @@ export const StarCard = forwardRef<HTMLDivElement, StarCardProps>(
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
         style={style}
-        className="rounded-soft border-night-600 bg-night-800/95 absolute z-20 flex w-max max-w-72 items-center gap-3 border p-3 shadow-lg backdrop-blur"
+        className="rounded-soft border-night-600 bg-night-800/95 animate-card-in absolute z-20 flex w-max max-w-72 items-center gap-3 border p-3 shadow-lg backdrop-blur"
       >
         <svg
           width={PREVIEW}

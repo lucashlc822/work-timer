@@ -77,7 +77,7 @@ export const RunSummary = ({ summary, onDone, slots = {}, present = true }: Prop
         ref={doneRef}
         type="button"
         onClick={onDone}
-        className={`rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-8 py-2.5 text-sm transition-colors ${part('tally')}`}
+        className={`rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-8 py-2.5 text-sm ${part('tally')}`}
       >
         Done
       </button>

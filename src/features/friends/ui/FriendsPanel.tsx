@@ -20,7 +20,7 @@ const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-soft 
 const INPUT =
   'bg-night-900 border-night-600 text-ink-primary w-full rounded-soft border px-3 py-2 text-sm';
 const BUTTON =
-  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50';
+  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs pressable disabled:pointer-events-none disabled:opacity-50';
 const LINK = 'text-ink-muted hover:text-ink-primary text-xs transition-colors';
 
 const messageOf = (e: unknown): string =>

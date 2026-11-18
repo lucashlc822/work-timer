@@ -64,14 +64,14 @@ export const CancelDialog = ({
             ref={keepGoingRef}
             type="button"
             onClick={onKeepGoing}
-            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-5 py-2 text-sm transition-colors"
+            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-5 py-2 text-sm"
           >
             Keep going
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-pill text-ink-muted hover:text-faded px-5 py-2 text-sm transition-colors"
+            className="rounded-pill text-ink-muted hover:text-faded pressable px-5 py-2 text-sm"
           >
             End session
           </button>

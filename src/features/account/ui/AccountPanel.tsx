@@ -98,7 +98,7 @@ export const AccountPanel = ({
           type="button"
           disabled={busy || signingOut}
           onClick={() => void signOut()}
-          className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-5 py-2 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50"
+          className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable border px-5 py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
         >
           {signingOut ? 'Signing out…' : 'Sign out'}
         </button>
@@ -248,7 +248,7 @@ const DeleteAccount = ({
           type="button"
           disabled={!confirmed || blocked !== null || deleting}
           onClick={() => void remove()}
-          className="rounded-pill border-faded text-faded hover:bg-faded/10 border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-pill border-faded text-faded hover:bg-faded/10 pressable border px-4 py-1.5 text-xs disabled:pointer-events-none disabled:opacity-40"
         >
           {deleting ? 'Deleting…' : 'Delete my account'}
         </button>

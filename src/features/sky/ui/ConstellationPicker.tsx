@@ -165,14 +165,14 @@ export const ConstellationPicker = ({
               <button
                 type="button"
                 onClick={() => setPending(null)}
-                className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-5 py-2 text-sm transition-colors"
+                className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-5 py-2 text-sm"
               >
                 Keep building
               </button>
               <button
                 type="button"
                 onClick={() => void choose(pending)}
-                className="rounded-pill text-ink-muted hover:text-ink-primary px-5 py-2 text-sm transition-colors"
+                className="rounded-pill text-ink-muted hover:text-ink-primary pressable px-5 py-2 text-sm"
               >
                 Switch to {pending.name}
               </button>
@@ -231,7 +231,7 @@ export const ConstellationPicker = ({
               <button
                 type="button"
                 onClick={() => setReroll((n) => n + 1)}
-                className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+                className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable border px-4 py-1.5 text-xs"
               >
                 Shuffle wild constellations
               </button>

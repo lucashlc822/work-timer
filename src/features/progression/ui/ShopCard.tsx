@@ -12,7 +12,7 @@ import type { CatalogueItem } from '../domain/catalogue';
 import type { ShopState } from '../domain/shopState';
 import { count } from './format';
 
-const button = 'rounded-pill border px-4 py-1.5 text-xs whitespace-nowrap transition-colors';
+const button = 'rounded-pill border px-4 py-1.5 text-xs whitespace-nowrap pressable';
 const primary = `${button} border-lavender-400 bg-lavender-400/15 text-ink-primary hover:bg-lavender-400/25`;
 const quiet = `${button} border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary`;
 const status =

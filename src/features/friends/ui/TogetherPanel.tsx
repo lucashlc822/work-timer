@@ -10,7 +10,7 @@ import { StatusDot } from './StatusDot';
 
 const CARD = 'bg-night-800/70 border-night-600 flex flex-col gap-3 rounded-soft border p-4 text-sm';
 const PRIMARY =
-  'rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-5 py-2 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50';
+  'rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-5 py-2 text-sm pressable disabled:pointer-events-none disabled:opacity-50';
 
 /** The lengths on offer, in minutes: the same as the timer's presets. */
 const LENGTHS = [25, 50, 90] as const;

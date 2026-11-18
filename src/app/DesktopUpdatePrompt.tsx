@@ -102,7 +102,7 @@ export const DesktopUpdatePrompt = ({
         type="button"
         disabled={installing}
         onClick={() => setDismissed(true)}
-        className="rounded-pill text-ink-muted hover:text-ink-secondary px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+        className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm disabled:opacity-50"
       >
         Later
       </button>
@@ -110,7 +110,7 @@ export const DesktopUpdatePrompt = ({
         type="button"
         disabled={installing}
         onClick={() => void install()}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm disabled:opacity-50"
       >
         Restart to update
       </button>

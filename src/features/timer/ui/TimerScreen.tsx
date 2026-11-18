@@ -303,7 +303,7 @@ export const TimerScreen = ({
           type="button"
           disabled={starting}
           onClick={() => void begin()}
-          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 px-12 py-3.5 text-base font-medium shadow-lg transition disabled:opacity-60"
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 pressable px-12 py-3.5 text-base font-medium shadow-lg disabled:opacity-60"
         >
           {pomodoro ? 'Start Pomodoro' : `Start ${minutes} min`}
         </button>

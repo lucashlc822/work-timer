@@ -896,7 +896,10 @@ rejected). Don't pre-populate this with guesses.
   exits are shorter than entrances; the running countdown and focus rings never
   animate; while the window is hidden every animation finishes at once
   (`useInstantWhenHidden`; WebView2 delivers no frames there). `--ease-gentle` and
-  the long durations stay for the completion moments only.
+  the long durations stay for the completion moments only. **A pill button uses
+  `pressable`** (`index.css`: quick colour change, scale 0.97 while pressed) instead
+  of `transition-colors`; tab panels use `animate-fade-in` and hover cards
+  `animate-card-in`. Tailwind's default transition is 150 ms on `--ease-standard`.
 
 ## Plans include acceptance tests
 

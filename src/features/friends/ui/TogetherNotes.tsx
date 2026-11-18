@@ -54,7 +54,7 @@ export const InviteBanner = ({
           type="button"
           disabled={acting || busy}
           onClick={() => void answer(true)}
-          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50"
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-4 py-1.5 text-xs disabled:pointer-events-none disabled:opacity-50"
         >
           Join
         </button>
@@ -62,7 +62,7 @@ export const InviteBanner = ({
           type="button"
           disabled={acting}
           onClick={() => void answer(false)}
-          className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50"
+          className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable border px-4 py-1.5 text-xs disabled:pointer-events-none disabled:opacity-50"
         >
           No thanks
         </button>
@@ -144,7 +144,7 @@ export const StartAloneDialog = ({
             type="button"
             disabled={acting}
             onClick={() => onClose(false)}
-            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-5 py-2 text-sm transition-colors disabled:opacity-50"
+            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-5 py-2 text-sm disabled:opacity-50"
           >
             Not now
           </button>
@@ -152,7 +152,7 @@ export const StartAloneDialog = ({
             type="button"
             disabled={acting}
             onClick={() => void startAlone()}
-            className="rounded-pill text-ink-secondary hover:text-ink-primary px-5 py-2 text-sm transition-colors disabled:opacity-50"
+            className="rounded-pill text-ink-secondary hover:text-ink-primary pressable px-5 py-2 text-sm disabled:opacity-50"
           >
             {acting ? 'Starting…' : 'Start on my own'}
           </button>
@@ -213,7 +213,7 @@ export const LobbyEndedNote = ({
     <button
       type="button"
       onClick={onDismiss}
-      className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs transition-colors"
+      className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable shrink-0 border px-4 py-1.5 text-xs"
     >
       OK
     </button>
