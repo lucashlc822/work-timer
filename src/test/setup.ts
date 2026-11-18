@@ -2,6 +2,11 @@ import '@testing-library/jest-dom/vitest';
 // jsdom has no IndexedDB, so the real Dexie code paths are exercised against an
 // in-memory implementation rather than being mocked out.
 import 'fake-indexeddb/auto';
+import { MotionGlobalConfig } from 'motion/react';
+
+// Tests assert end states, not frames: finish every Motion animation at once so
+// no test waits on a transition (or on an exit that jsdom would never time).
+MotionGlobalConfig.skipAnimations = true;
 
 // jsdom does not implement matchMedia. `shared/lib/platform` already guards
 // against its absence, but tests that render components need a real object to

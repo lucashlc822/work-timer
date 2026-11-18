@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { readLastUserId } from '@/shared/backend';
 import { bindAccountDb } from '@/shared/db';
 import { isDesktop } from '@/shared/runtime';
+import { MotionRoot } from '@/shared/ui/motion';
 
 import { AuthGate } from './AuthGate';
 import { DesktopUpdatePrompt } from './DesktopUpdatePrompt';
@@ -44,9 +45,12 @@ export const App = () =>
     </ErrorBoundary>
   ) : (
     <ErrorBoundary>
-      <AuthGate>
-        <RouterProvider router={router} />
-      </AuthGate>
+      {/* Main window only: the mini window never animates, so it never loads Motion. */}
+      <MotionRoot>
+        <AuthGate>
+          <RouterProvider router={router} />
+        </AuthGate>
+      </MotionRoot>
       {/*
         Each host updates its own way. `UpdatePrompt` is what registers the
         browser build's service worker, and the desktop app must not have one:
