@@ -1,7 +1,7 @@
 /**
  * Public entrypoint of the sky feature — the only module `app/` may import.
  */
-export { SkyBackdrop, SkyView } from './ui/SkyBackdrop';
+export { SkyBackdrop, SkyView, type HeroSlot } from './ui/SkyBackdrop';
 export { completedConstellations, deriveOtherSky } from './domain/otherSky';
 export type { OtherSession } from './domain/otherSky';
 export { activeShared, deriveShared, sharedTitle } from './domain/shared';

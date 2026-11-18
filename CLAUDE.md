@@ -780,8 +780,10 @@ rejected). Don't pre-populate this with guesses.
   hero lights that star in its place (`sky-arrive`) and draws only the line that
   joins it (`sky-draw`); wandering stars light the same way. **A mote of the star's
   own light flies there first only when the target is clearly outside the result's
-  star** (`arrivalPath`, `FLIGHT_CLEARANCE` 16 px, `FLIGHT_MS` 700): the result sits
-  over the hero figure, so a target behind it simply lights in place. Skipped or
+  star** (`arrivalPath`, `FLIGHT_CLEARANCE` 16 px, `FLIGHT_MS` 700): the hero now
+  has its own slot above the result (premium-motion PR 4), so the mote usually
+  flies up into it; where a short window leaves no slot, the hero falls back
+  behind the result and a target behind the result's star lights in place. Skipped or
   reduced motion (`instant`): no flight, no ignite, the star is just there. **If that
   star finished its constellation, its moment plays behind the result**:
   `useCelebrations(…, { only: id })` decides, plays (after
@@ -904,6 +906,26 @@ rejected). Don't pre-populate this with guesses.
   their handlers can close them). Focus: home → timer lands on the `h2`, timer →
   home on the call to action, a launch focuses nothing. A short window
   (`max-height: 640px`) uses the timer's compact spacing so 380×560 fits.
+
+- **The hero constellation lives in a slot the page sets aside** (premium-motion
+  PR 4, 2026-11-17; the 0.10.0 "menu covers the constellation" fix). The timer page
+  renders an empty `data-hero-slot` above the card; the app measures it
+  (`useElementRect`) and passes it to `SkyBackdrop` as `heroSlot`, and the sky draws
+  the hero inside with `heroInSlot` (`sky/domain/layout.ts`: a centred square at 92%
+  of the shorter side, **not drawn under `HERO_MIN_SIZE` = 72 px**). The slot takes
+  two thirds of the room the card leaves, capped per state (`routes/home/heroSlot.ts`:
+  idle, running, break, result; `tall:` raises the caps from 860 px). **Its height is
+  frozen while the page shows the same thing** (`useFrozenSlotHeight`), so the
+  card, anchored at its top, never moves under the pointer; the idle slot also
+  leaves 72 px for the card to grow (Custom, Pomodoro). It is measured again on a
+  change of state, window or banner, and whenever the page would overflow (a
+  result's reward lines arrive late), which can only shrink it. So the idle hero
+  shows only in taller windows; running gets the most room. **A result with no room
+  keeps the hero where it sat before slots, behind the result** (`heroFallback`), so
+  a constellation finished there still has its moment seen. Home has no slot yet and
+  uses `heroPlacement`. A change of state glides the figure (`useFigureFlip`: one Web
+  Animation, page duration, enter easing; a fade when it appears or under reduced
+  motion; a resize just snaps). `data-hero-box` is the test hook.
 
 - **Motion (motion.dev) animates anything CSS can't, and the app's motion is
   "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;

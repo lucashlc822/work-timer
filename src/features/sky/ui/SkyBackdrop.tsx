@@ -42,6 +42,15 @@ import {
   type CardFacts,
 } from './describe';
 import { StarCard } from './StarCard';
+import { heroInSlot, heroPlacement } from '../domain/layout';
+
+/** A space on the page, in window pixels (what `getBoundingClientRect` gives). */
+export interface HeroSlot {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 /** How long a card stays after the pointer leaves its star, so it can be reached (WCAG 1.4.13). */
 export const CARD_GRACE_MS = 250;
@@ -90,6 +99,9 @@ export const SkyView = ({
   label,
   reserveTop,
   arriving = null,
+  heroSlot,
+  heroKey,
+  heroFallback = false,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -129,6 +141,19 @@ export const SkyView = ({
    * header. Stars and figures are laid out below it and cards keep clear of it.
    */
   reserveTop?: number;
+  /**
+   * Hero only: the space the page set aside for the constellation, in window
+   * pixels (premium motion PR 4); null while the page has no room for one.
+   * Unset, the hero sits where it always did.
+   */
+  heroSlot?: HeroSlot | null;
+  /** Hero only: what the page is showing; a change glides the figure to its new slot. */
+  heroKey?: string;
+  /**
+   * Hero only: when the slot is too small, draw the hero where it sat before
+   * slots (behind the page) instead of not at all.
+   */
+  heroFallback?: boolean;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -308,6 +333,13 @@ export const SkyView = ({
           {...(!full && arriving !== null && { arriving })}
           {...(label !== undefined && { label })}
           {...(reserveTop !== undefined && { reserveTop })}
+          {...(!full &&
+            heroSlot !== undefined && {
+              heroBox:
+                (heroSlot === null ? null : heroInSlot(heroSlot)) ??
+                (heroFallback ? heroPlacement(width, height) : null),
+            })}
+          {...(!full && heroKey !== undefined && { heroKey })}
         />
       )}
       {full && active !== null ? (
@@ -402,11 +434,20 @@ export const SkyBackdrop = ({
   shared,
   focusId,
   styleName,
+  heroSlot,
+  heroKey,
+  heroFallback,
 }: {
   mode: SkyMode;
   shared?: readonly SharedState[];
   focusId?: string | null;
   styleName?: (key: string | undefined) => string;
+  /** Hero only: the page's space for the constellation (see `SkyView`). */
+  heroSlot?: HeroSlot | null;
+  /** Hero only: what the page is showing; a change glides the figure. */
+  heroKey?: string;
+  /** Hero only: with no room in the slot, draw it where it sat before slots. */
+  heroFallback?: boolean;
 }) => {
   const full = mode === 'full';
   const sky = useSky();
@@ -448,6 +489,9 @@ export const SkyBackdrop = ({
       {...(focusId !== undefined && { focusId })}
       {...(details !== undefined && { details })}
       {...(styleName !== undefined && { styleName })}
+      {...(heroSlot !== undefined && { heroSlot })}
+      {...(heroKey !== undefined && { heroKey })}
+      {...(heroFallback !== undefined && { heroFallback })}
     />
   );
 };
