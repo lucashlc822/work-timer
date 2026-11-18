@@ -35,7 +35,7 @@ export const ConstellationStatus = ({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={prompt ? label : `Building ${label}. Change constellation`}
-        className={`rounded-pill border px-4 py-1.5 text-xs transition-colors ${
+        className={`rounded-pill pressable border px-4 py-1.5 text-xs ${
           prompt
             ? 'border-lavender-400 bg-lavender-400/15 text-ink-primary hover:bg-lavender-400/25'
             : 'border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary'

@@ -8,7 +8,7 @@ export const FriendsPill = ({ waiting, onOpen }: { waiting: number; onOpen: () =
         ? 'Friends'
         : `Friends, ${waiting} ${waiting === 1 ? 'request' : 'requests'} waiting`
     }
-    className="rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 px-3 py-1.5 text-xs transition-colors"
+    className="rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 pressable px-3 py-1.5 text-xs"
   >
     Friends
     {waiting > 0 && <span className="text-lavender-300"> · {waiting}</span>}

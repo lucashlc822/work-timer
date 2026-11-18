@@ -19,7 +19,7 @@ const EMPTY_TEXT: Record<PeriodKind, string> = {
 };
 
 const arrow =
-  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary h-8 w-8 border transition-colors disabled:pointer-events-none disabled:opacity-30';
+  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary h-8 w-8 border pressable disabled:pointer-events-none disabled:opacity-30';
 
 /**
  * Where focus time went: totals, a bar per day, a split by tag, and the
@@ -101,7 +101,9 @@ export const StatsView = () => {
         role="tabpanel"
         id={PERIOD_PANEL_ID}
         aria-labelledby={periodTabId(kind)}
-        className="flex flex-col gap-6"
+        // Keyed by period so a new period's content fades in (CSS replays on mount).
+        key={kind}
+        className="animate-fade-in flex flex-col gap-6"
       >
         {view === undefined ? (
           <p className="text-ink-muted text-center text-sm">Opening…</p>

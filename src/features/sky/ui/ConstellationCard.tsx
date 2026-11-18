@@ -26,7 +26,7 @@ export const ConstellationCard = forwardRef<HTMLDivElement, ConstellationCardPro
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       style={style}
-      className="rounded-soft border-night-600 bg-night-800/95 absolute z-20 flex w-max max-w-72 flex-col gap-0.5 border px-4 py-3 text-sm shadow-lg backdrop-blur"
+      className="rounded-soft border-night-600 bg-night-800/95 animate-card-in absolute z-20 flex w-max max-w-72 flex-col gap-0.5 border px-4 py-3 text-sm shadow-lg backdrop-blur"
     >
       <p className="font-atlas tracking-atlas text-lavender-200 text-base">{model.name}</p>
       <p className="text-ink-primary">{model.progress}</p>

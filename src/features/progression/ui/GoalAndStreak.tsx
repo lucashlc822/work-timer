@@ -4,7 +4,7 @@ import { updateDailyGoal, useProgress } from '../hooks/useStardust';
 const STEP_MIN = 5;
 
 const stepButton =
-  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-3 py-1 text-sm transition-colors disabled:opacity-40 disabled:hover:border-night-600';
+  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-3 py-1 text-sm pressable disabled:opacity-40 disabled:hover:border-night-600';
 
 /** Today's progress and the streak, with the daily goal setting. */
 export const GoalAndStreak = () => {

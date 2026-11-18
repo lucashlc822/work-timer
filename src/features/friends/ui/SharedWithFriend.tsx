@@ -6,7 +6,7 @@ import { openWith, type DescribeShared, type SharedDraft } from '../domain/share
 import type { Shared } from '../hooks/useShared';
 
 const BUTTON =
-  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs transition-colors disabled:pointer-events-none disabled:opacity-50';
+  'rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary shrink-0 border px-4 py-1.5 text-xs pressable disabled:pointer-events-none disabled:opacity-50';
 
 const messageOf = (e: unknown): string =>
   FRIENDS_MESSAGES[e instanceof FriendsFailure ? e.kind : 'unknown'];

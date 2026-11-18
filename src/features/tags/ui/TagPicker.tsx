@@ -74,7 +74,7 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((o) => !o)}
-        className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary flex items-center gap-2 border px-4 py-1.5 text-xs transition-colors disabled:opacity-60"
+        className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable flex items-center gap-2 border px-4 py-1.5 text-xs disabled:opacity-60"
       >
         {current !== null ? (
           <>
@@ -226,7 +226,7 @@ const NewTagForm = ({ taken, onCreated }: { taken: number; onCreated: (id: strin
         <button
           type="submit"
           disabled={busy || name.trim() === ''}
-          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-3 py-1 text-xs transition-colors disabled:opacity-50"
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1 text-xs disabled:opacity-50"
         >
           Add
         </button>

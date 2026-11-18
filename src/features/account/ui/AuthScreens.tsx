@@ -230,7 +230,7 @@ export const AuthScreens = ({ onSignedIn }: Props) => {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 mt-1 py-2.5 text-sm transition-colors disabled:opacity-50"
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable mt-1 py-2.5 text-sm disabled:opacity-50"
         >
           {busy ? 'One moment…' : submitLabel[step]}
         </button>

@@ -71,6 +71,26 @@
 }
 
 /*
+ * A button that gives under the finger: scales to 0.97 while pressed, over the
+ * press duration, and keeps the usual quick colour change. Replaces
+ * `transition-colors` on the control (both set `transition-property`).
+ * Hover never moves it; only the press does, so a still pointer sees no motion.
+ * Disabled controls don't press. Reduced motion zeroes the duration.
+ */
+@utility pressable {
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow,
+    transform;
+  transition-duration:
+    var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-quick),
+    var(--duration-quick), var(--duration-quick), var(--duration-quick), var(--duration-press);
+  transition-timing-function: var(--ease-standard);
+  &:active:not(:disabled, [aria-disabled='true']) {
+    transform: scale(0.97);
+  }
+}
+
+/*
  * Sky animations. The continuous ones (twinkle, shimmer) are used only in the
  * full-sky view, never behind a running timer, so an hours-long session does
  * not pay for a continuously repainting SVG layer. Behind the timer only

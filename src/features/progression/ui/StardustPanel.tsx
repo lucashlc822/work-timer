@@ -168,7 +168,7 @@ export const StardustPanel = (shop: ShopProps) => {
               tabIndex={selected ? 0 : -1}
               onClick={() => setTab(t.id)}
               onKeyDown={(e) => onKeyDown(e, i)}
-              className={`rounded-pill min-h-7 border px-4 py-1 text-xs whitespace-nowrap transition-colors ${
+              className={`rounded-pill pressable min-h-7 border px-4 py-1 text-xs whitespace-nowrap ${
                 selected
                   ? 'border-lavender-400 bg-lavender-400/15 text-ink-primary'
                   : 'text-ink-secondary hover:text-ink-primary border-transparent'
@@ -185,7 +185,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('shop')}
         aria-labelledby={tabId('shop')}
         hidden={tab !== 'shop'}
-        className="w-full max-w-xl"
+        className="animate-fade-in w-full max-w-xl"
       >
         <Shop {...shop} />
       </div>
@@ -194,7 +194,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('goal')}
         aria-labelledby={tabId('goal')}
         hidden={tab !== 'goal'}
-        className="w-full max-w-xl"
+        className="animate-fade-in w-full max-w-xl"
       >
         <GoalAndStreak />
       </div>
@@ -203,7 +203,7 @@ export const StardustPanel = (shop: ShopProps) => {
         id={panelId('history')}
         aria-labelledby={tabId('history')}
         hidden={tab !== 'history'}
-        className="w-full max-w-xl"
+        className="animate-fade-in w-full max-w-xl"
       >
         <History />
       </div>

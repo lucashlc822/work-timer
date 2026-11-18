@@ -104,6 +104,24 @@
   --duration-page-in: 450ms;
   --duration-page-out: 300ms;
   --duration-stagger: 30ms;
+  /* Tailwind's own `transition-*` utilities: the same quick, standard motion. */
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-standard);
+  /* A tab's content, and a hover card, arriving. Opacity and a small scale
+     only; reduced motion turns them into a near-instant fade. */
+  --animate-fade-in: fade-in var(--duration-enter) var(--ease-enter) both;
+  --animate-card-in: card-in var(--duration-enter) var(--ease-enter) both;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
 
   /* --- Atlas type: constellation captions in the sky --------------------- */
   /* A small-caps serif, like the lettering on an old star chart. Bundled, not

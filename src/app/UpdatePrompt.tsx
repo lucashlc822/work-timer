@@ -25,14 +25,14 @@ export const UpdatePrompt = () => {
       <button
         type="button"
         onClick={() => setNeedRefresh(false)}
-        className="rounded-pill text-ink-muted hover:text-ink-secondary px-3 py-1.5 text-sm transition-colors"
+        className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm"
       >
         Later
       </button>
       <button
         type="button"
         onClick={() => void updateServiceWorker(true)}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-3 py-1.5 text-sm transition-colors"
+        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm"
       >
         Update
       </button>

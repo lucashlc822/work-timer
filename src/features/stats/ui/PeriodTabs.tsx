@@ -62,7 +62,7 @@ export const PeriodTabs = ({
           tabIndex={k === kind ? 0 : -1}
           onClick={() => onChange(k)}
           onKeyDown={(e) => onKeyDown(e, index)}
-          className={`rounded-pill border px-4 py-1.5 text-xs transition-colors ${
+          className={`rounded-pill pressable border px-4 py-1.5 text-xs ${
             k === kind
               ? 'border-lavender-400 text-ink-primary'
               : 'border-night-600 text-ink-secondary hover:border-lavender-400'

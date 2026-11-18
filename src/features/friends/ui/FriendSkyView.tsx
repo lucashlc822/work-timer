@@ -96,7 +96,7 @@ export const FriendSkyView = ({
               <button
                 type="button"
                 onClick={retry}
-                className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+                className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable border px-4 py-1.5 text-xs"
               >
                 Try again
               </button>

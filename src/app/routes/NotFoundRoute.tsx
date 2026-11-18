@@ -6,7 +6,7 @@ export const NotFoundRoute = () => (
     <p className="text-ink-secondary max-w-xs text-sm">That page is not part of this sky.</p>
     <Link
       to="/"
-      className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-6 py-2.5 text-sm transition-colors"
+      className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-6 py-2.5 text-sm"
     >
       Back to the timer
     </Link>

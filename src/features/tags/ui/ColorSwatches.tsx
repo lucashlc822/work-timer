@@ -46,7 +46,7 @@ export const ColorSwatches = ({
           className="group grid size-6 place-items-center"
         >
           <span
-            className={`rounded-pill h-5 w-5 border-2 transition-colors ${
+            className={`rounded-pill pressable h-5 w-5 border-2 ${
               color === value
                 ? 'border-ink-primary'
                 : 'group-hover:border-ink-muted border-transparent'

@@ -158,7 +158,7 @@ export const BreakScreen = ({
             type="button"
             onClick={onStartNext}
             disabled={busy}
-            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 px-10 py-3 text-base transition-colors disabled:opacity-60"
+            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-10 py-3 text-base disabled:opacity-60"
           >
             Start block {nextBlock}
           </button>

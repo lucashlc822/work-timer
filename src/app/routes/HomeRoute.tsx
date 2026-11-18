@@ -184,7 +184,7 @@ const BackButton = ({
     // A floating Back is the only control over a sky; in a panel the title is focused instead.
     autoFocus={floating}
     onClick={onClick}
-    className={`rounded-pill border-night-600 text-ink-secondary hover:text-ink-primary border px-5 py-2 text-xs transition-colors ${
+    className={`rounded-pill border-night-600 text-ink-secondary hover:text-ink-primary pressable border px-5 py-2 text-xs ${
       floating
         ? 'bg-night-800/80 fixed bottom-6 left-1/2 z-20 -translate-x-1/2 backdrop-blur'
         : 'bg-night-800'
@@ -200,14 +200,14 @@ const SkyLink = ({ onOpen }: { onOpen: () => void }) => (
   <button
     type="button"
     onClick={onOpen}
-    className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary border px-4 py-1.5 text-xs transition-colors"
+    className="rounded-pill border-night-600 text-ink-secondary hover:border-lavender-400 hover:text-ink-primary pressable border px-4 py-1.5 text-xs"
   >
     See it in your sky
   </button>
 );
 
 const NAV_BUTTON =
-  'rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 px-3 py-1.5 text-xs transition-colors';
+  'rounded-pill text-ink-secondary hover:text-ink-primary hover:bg-night-800/60 px-3 py-1.5 text-xs pressable';
 
 const NO_TIERS: ReadonlySet<'medium' | 'hard'> = new Set();
 const NO_PACKS: ReadonlySet<string> = new Set();
