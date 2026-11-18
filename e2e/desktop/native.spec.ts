@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, openAccount, signIn, signOut } from '../support/app';
+import { dismissResult, goToTimer, openAccount, signIn, signOut } from '../support/app';
 import { settle } from '../support/devices';
 import { befriend, createRoom, setName } from '../support/friends';
 import { adminClient, createUser } from '../support/users';
@@ -45,12 +45,13 @@ test('a session keeps running hidden in the tray: tooltip counts down, the notic
   const page = desktop.page;
   const user = await createUser('desktop-native');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
 
   expect((await nativeLog(page)).notifications).toEqual([]);
 
   await page.getByRole('radio', { name: '1 min (dev)' }).click();
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 1 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
   await expect
@@ -97,7 +98,7 @@ test('a session ending with the window in front raises no Windows notice: the re
   const page = desktop.page;
   const user = await createUser('desktop-quiet');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
   const before = (await nativeLog(page)).notifications.length;
 
@@ -111,6 +112,7 @@ test('a session ending with the window in front raises no Windows notice: the re
   test.skip(!focused, 'Windows would not give the test window the foreground.');
 
   await page.getByRole('radio', { name: '1 min (dev)' }).click();
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 1 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible({
@@ -134,7 +136,7 @@ test('hidden in the tray reads as Away to friends, and Online again once back (M
   const page = desktop.page;
   const user = await createUser('desktop-presence');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
 
   const presence = async () =>
@@ -165,7 +167,7 @@ test('an invitation to focus together raises a Windows notification (M7)', async
   await setName(ada, 'Ada');
   await befriend(ada, bea);
   await signIn(page, bea);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await settle(page);
 
   // The notification plugin shows a notification by constructing
@@ -209,7 +211,7 @@ test('"Launch at startup" adds and removes the per-user startup entry', async ()
   const page = desktop.page;
   const user = await createUser('desktop-autostart');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
 
   // The switch lives in the Account panel, not on the timer screen.
   await expect(page.getByRole('checkbox', { name: 'Launch at startup' })).toHaveCount(0);
@@ -233,9 +235,9 @@ test('"Launch at startup" adds and removes the per-user startup entry', async ()
     for (const [name, command] of addedSince(before)) {
       if (DEV_EXE.test(command)) removeRunEntry(name);
     }
-    // The panel makes the timer screen inert; leave it before signing out.
+    // The panel makes the page behind inert; leave it before signing out.
     await page
-      .getByRole('button', { name: 'Back to timer' })
+      .getByRole('button', { name: 'Back to home' })
       .click({ timeout: 5_000 })
       .catch(() => undefined);
     await signOut(page).catch(() => undefined);

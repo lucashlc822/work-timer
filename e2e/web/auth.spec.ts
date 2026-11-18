@@ -4,12 +4,12 @@ import { AUTH_MESSAGES } from '../../src/features/account/domain/auth';
 import {
   expectSignedIn,
   expectSignInScreen,
+  expectStardust,
   openAccount,
   openTagPicker,
   passwordField,
   signIn,
   signOut,
-  stardustPill,
 } from '../support/app';
 import { waitForCode } from '../support/inbox';
 import {
@@ -141,7 +141,7 @@ test('after sign-out, the next account on the same browser sees none of the firs
   // A signs in and their data arrives through sync.
   await signIn(page, a);
   await expectSignedIn(page);
-  await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/, { timeout: 20_000 });
+  await expectStardust(page, /\b25 Stardust$/, { timeout: 20_000 });
   await expect((await openTagPicker(page)).getByText(tagName)).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press('Escape');
 
@@ -154,9 +154,9 @@ test('after sign-out, the next account on the same browser sees none of the firs
   await openAccount(page);
   await expect(page.getByText(b.email)).toBeVisible();
   await expect(page.getByText(a.email)).toHaveCount(0);
-  await page.getByRole('button', { name: 'Back to timer' }).click();
+  await page.getByRole('button', { name: 'Back to home' }).click();
 
-  await expect(stardustPill(page)).toHaveText(/\b0 Stardust$/);
+  await expectStardust(page, /\b0 Stardust$/);
   const panel = await openTagPicker(page);
   await expect(panel.getByText(tagName)).toHaveCount(0);
 });

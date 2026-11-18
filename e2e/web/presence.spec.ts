@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectSignedIn, openAccount, openFriends, signIn } from '../support/app';
+import { goToTimer, openAccount, openFriends, signIn } from '../support/app';
 import { closeDevices, openDevice } from '../support/devices';
 import { befriend, setName } from '../support/friends';
 import { adminClient, createUser, type TestUser } from '../support/users';
@@ -46,6 +46,7 @@ test('C1, C3, C4: a friend with the app open is Online, Focusing while in a sess
     await expect(row.locator('[data-status]')).toHaveAttribute('data-status', 'online');
 
     // C3: focusing wins over being online.
+    await goToTimer(a.page);
     await a.page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(a.page.getByRole('timer')).toBeVisible();
     await expect(row).toContainText(/Focusing now · 2[45] min left/, { timeout: 20_000 });
@@ -91,13 +92,14 @@ test('C5: "Show when I’m online" off: friends see Offline at once, and still s
 
     // Still off after a reload (it's the server's setting, not this page's).
     await a.page.reload();
-    await expectSignedIn(a.page);
+    await goToTimer(a.page);
     await openAccount(a.page);
     await expect(a.page.getByRole('checkbox', { name: 'Show when I’m online' })).not.toBeChecked();
     expect(await presenceRow(ada)).toEqual([]);
 
     // Focusing is shared regardless.
-    await a.page.getByRole('button', { name: 'Back to timer' }).click();
+    await a.page.getByRole('button', { name: 'Back to home' }).click();
+    await goToTimer(a.page);
     await a.page.getByRole('button', { name: 'Start 25 min' }).click();
     await expect(row).toContainText(/Focusing now/, { timeout: 20_000 });
   } finally {
@@ -113,7 +115,7 @@ test('C7: an idle open app sends about one presence a minute', async ({ browser 
   await page.clock.install({ time: new Date() });
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   try {
     await expect.poll(() => presenceRow(user), { timeout: 15_000 }).toEqual([{ state: 'online' }]);
     let sent = 0;

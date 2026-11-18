@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, signIn, skipMoment, stardustPill } from '../support/app';
+import { dismissResult, expectStardust, goToTimer, signIn, skipMoment } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -15,7 +15,8 @@ const finishASession = async (page: Page, name: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
   await page.clock.fastForward('25:01');
@@ -34,7 +35,7 @@ test('Start another begins the same length again, and it finishes as a second st
   await page.clock.fastForward('25:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
   await dismissResult(page);
-  await expect(stardustPill(page)).toHaveText(/\b50 Stardust$/);
+  await expectStardust(page, /\b50 Stardust$/);
 });
 
 test('Done stays the focused button, and Enter on it goes to idle, not another session (PR 3, case 2)', async ({
@@ -64,7 +65,8 @@ test('an early ending offers neither (PR 3, case 4 in spirit)', async ({ page })
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
   await page.clock.fastForward('10:00');

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { dismissResult, expectSignedIn, signIn, skipMoment, stardustBalance } from '../support/app';
+import { dismissResult, goToTimer, signIn, skipMoment, stardustBalance } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -16,8 +16,9 @@ const startRun = async (page: Page, name: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await page.getByRole('radio', { name: 'Pomodoro' }).click();
+  await goToTimer(page);
   await page.getByRole('button', { name: 'Start Pomodoro' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
 };
@@ -42,7 +43,8 @@ test('a finished block ignites, says what it earned, and fits the window (PR 6, 
   // The break is the screen's job: its countdown has the focus, and the whole
   // thing fits the desktop window with the tag picker showing.
   await expect(page.getByRole('timer')).toBeVisible();
-  const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox();
+  // The timer page has no footer: its main is the whole window when nothing scrolls.
+  const nav = await page.getByRole('main').boundingBox();
   const { scrollHeight, innerHeight } = await page.evaluate(() => ({
     scrollHeight: document.documentElement.scrollHeight,
     innerHeight: window.innerHeight,
@@ -97,7 +99,7 @@ test('a break reloaded mid-way has no moment and no error (PR 6, case 4)', async
   await skipMoment(page);
 
   await page.reload();
-  await expectSignedIn(page);
+  await goToTimer(page);
   await expect(page.getByRole('heading', { name: /break/i })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('Block 1 done')).toHaveCount(0);
   await expect(page.locator('[data-stage]')).toHaveCount(0);

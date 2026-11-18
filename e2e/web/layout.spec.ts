@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { expectSignedIn, openAccount, signIn } from '../support/app';
+import { expectSignedIn, goHome, goToTimer, openAccount, signIn } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { befriend, createRoom, rpc, setName } from '../support/friends';
 import { createUser } from '../support/users';
@@ -19,35 +19,47 @@ const signedIn = async (page: Page, label: string) => {
   await expectSignedIn(page);
 };
 
-test('the idle screen fits the desktop app’s default window without scrolling', async ({
-  page,
-}) => {
-  await signedIn(page, 'layout-fit');
-  // The hint, the goal line and the footer's constellation button arrive after the
-  // first paint; measure only once the page is as tall as it is going to be.
-  await expect(page.getByText(/^Today \d+ of \d+ min/)).toBeVisible();
-  await expect(page.getByText(/wandering star|Adds star|Won.t count/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /constellation/i })).toBeVisible();
-  const start = await page.getByRole('button', { name: 'Start 25 min' }).boundingBox();
-  const page_ = await page.evaluate(() => ({
-    scrollHeight: document.documentElement.scrollHeight,
-    clientHeight: document.documentElement.clientHeight,
-  }));
-
-  expect(page_.scrollHeight).toBeLessThanOrEqual(page_.clientHeight);
-  expect((start?.y ?? 0) + (start?.height ?? 0)).toBeLessThanOrEqual(720);
-});
-
-/** The page doesn't scroll and the footer's navigation is fully in the window. */
-const expectFitsWindow = async (page: Page) => {
-  const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox();
+/** Nothing scrolls, and `bottom` (the lowest thing that must show) is inside the window. */
+const expectNoScroll = async (page: Page, bottom: Locator) => {
+  const box = await bottom.boundingBox();
   const { scrollHeight, innerHeight } = await page.evaluate(() => ({
     scrollHeight: document.documentElement.scrollHeight,
     innerHeight: window.innerHeight,
   }));
   expect(scrollHeight, `page is ${scrollHeight}px tall`).toBeLessThanOrEqual(innerHeight);
-  expect((nav?.y ?? 0) + (nav?.height ?? 0)).toBeLessThanOrEqual(innerHeight);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(innerHeight);
 };
+
+/** The everyday progress line, wherever it is visible ("Today 0 of 60 min"). */
+const todayLine = (page: Page) => page.getByText(/^Today \d+ of \d+ min/).filter({ visible: true });
+
+for (const size of [
+  { width: 480, height: 720 },
+  { width: 380, height: 560 },
+]) {
+  test.describe(`at ${size.width}x${size.height}`, () => {
+    test.use({ viewport: size });
+
+    test('home fits without scrolling', async ({ page }) => {
+      await signedIn(page, 'layout-home');
+      await expect(todayLine(page)).toBeVisible();
+      await expect(page.getByRole('button', { name: /constellation/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Start focusing' })).toBeVisible();
+      await expectNoScroll(page, page.getByRole('navigation', { name: 'Main' }));
+    });
+
+    test('the idle timer page fits without scrolling', async ({ page }) => {
+      await signedIn(page, 'layout-timer');
+      await goToTimer(page);
+      // The hint and the goal line arrive after the first paint; measure once
+      // the page is as tall as it is going to be.
+      await expect(todayLine(page)).toBeVisible();
+      await expect(page.getByText(/wandering star|Adds star|Won.t count/)).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath('timer.png'), fullPage: true });
+      await expectNoScroll(page, page.getByRole('button', { name: 'Start 25 min' }));
+    });
+  });
+}
 
 test.describe('with something above the timer', () => {
   // Real clock, as in together.spec.ts: a room's times are the server's.
@@ -57,11 +69,10 @@ test.describe('with something above the timer', () => {
     await befriend(ada, bea);
     await page.goto('/');
     await signIn(page, bea);
-    await expectSignedIn(page);
+    await goToTimer(page);
     // "Focus with friends" makes this the tallest everyday idle screen.
     await expect(page.getByRole('button', { name: 'Focus with friends' })).toBeVisible();
-    await expect(page.getByText(/^Today \d+ of \d+ min/)).toBeVisible();
-    await expect(page.getByRole('button', { name: /constellation/i })).toBeVisible();
+    await expect(todayLine(page)).toBeVisible();
     return { ada, bea };
   };
 
@@ -72,7 +83,9 @@ test.describe('with something above the timer', () => {
     expect(box!.height).toBeGreaterThanOrEqual(24);
   });
 
-  test('an invitation still leaves the footer in the window', async ({ page }, testInfo) => {
+  test('an invitation still leaves Start, and home its navigation, in the window', async ({
+    page,
+  }, testInfo) => {
     const { ada, bea } = await withFriend(page);
     await createRoom(ada, [bea], 1500);
     await expect(page.getByRole('region', { name: 'Invitation' })).toBeVisible({
@@ -80,10 +93,13 @@ test.describe('with something above the timer', () => {
     });
 
     await page.screenshot({ path: testInfo.outputPath('invite-480x720.png') });
-    await expectFitsWindow(page);
+    await expectNoScroll(page, page.getByRole('button', { name: 'Start 25 min' }));
+    await goHome(page);
+    await expect(page.getByRole('region', { name: 'Invitation' })).toBeVisible();
+    await expectNoScroll(page, page.getByRole('navigation', { name: 'Main' }));
   });
 
-  test('a lobby that ended still leaves the footer in the window', async ({ page }, testInfo) => {
+  test('a lobby that ended still leaves Start in the window', async ({ page }, testInfo) => {
     const { ada, bea } = await withFriend(page);
     const room = await createRoom(ada, [bea], 1500);
     await rpc(bea, 'respond_room', { room, join_room: true });
@@ -94,7 +110,7 @@ test.describe('with something above the timer', () => {
     await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
 
     await page.screenshot({ path: testInfo.outputPath('lobby-ended-480x720.png') });
-    await expectFitsWindow(page);
+    await expectNoScroll(page, page.getByRole('button', { name: 'Start 25 min' }));
 
     // Once it's dismissed the screen is back to its everyday spacing.
     await note.getByRole('button', { name: 'OK' }).click();

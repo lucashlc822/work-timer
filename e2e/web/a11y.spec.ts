@@ -3,6 +3,8 @@ import { test } from '@playwright/test';
 import {
   backToTimer,
   expectSignedIn,
+  goHome,
+  goToTimer,
   openFriends,
   openTagPicker,
   openView,
@@ -56,27 +58,41 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await signIn(page, user);
   await expectSignedIn(page);
   await settleTransitions(page);
+  findings.push(...(await scan(page, 'home')));
 
+  await goToTimer(page);
+  await settleTransitions(page);
   findings.push(...(await scan(page, 'timer, idle')));
 
   await openTagPicker(page);
   findings.push(...(await scan(page, 'timer, tag picker open')));
   await page.keyboard.press('Escape');
 
+  await goHome(page);
+
   await page.getByRole('button', { name: 'Choose a constellation' }).click();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'constellation picker')));
   await page.keyboard.press('Escape');
 
+  await goToTimer(page);
   await page.getByRole('radio', { name: 'Pomodoro' }).click();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'timer, Pomodoro settings')));
   await page.getByRole('radio', { name: 'Countdown' }).click();
 
+  await goToTimer(page);
+
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await page.getByRole('timer').waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'timer, running')));
+
+  // Home mid-session: the call to action returns to the timer and says what it's doing.
+  await goHome(page);
+  await settleTransitions(page);
+  findings.push(...(await scan(page, 'home, mid-session')));
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'End early' }).click();
   await page.getByRole('alertdialog').waitFor();
@@ -109,6 +125,7 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   findings.push(...(await scan(page, 'stats')));
   await backToTimer(page);
 
+  await goHome(page);
   await page.getByRole('button', { name: /Stardust$/ }).click();
   await page.getByRole('tabpanel', { name: 'Shop' }).waitFor();
   await settleTransitions(page);
@@ -183,7 +200,8 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   await settleTransitions(page);
   findings.push(...(await scan(page, "a friend's sky, building together")));
   await page.keyboard.press('Escape'); // a friend's sky -> friends
-  await page.keyboard.press('Escape'); // friends -> timer
+  await page.keyboard.press('Escape'); // friends -> home
+  await goToTimer(page);
   await page.getByLabel('Working on').waitFor();
   await settleTransitions(page);
   findings.push(...(await scan(page, 'timer, working on')));

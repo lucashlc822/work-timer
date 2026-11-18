@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-import { expectSignedIn, openView, signIn, stardustPill } from '../support/app';
+import { goHome, goToTimer, openView, signIn, stardustPill } from '../support/app';
 import { startClockInThePast } from '../support/clock';
 import { createUser } from '../support/users';
 
@@ -16,7 +16,7 @@ const signedIn = async (page: Page, label: string) => {
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
 };
 
 const transformOf = (el: Locator) => el.evaluate((node) => getComputedStyle(node).transform);
@@ -51,6 +51,7 @@ test('T2: reduced motion removes the press movement’s duration', async ({ page
 
 test('T3: a Stardust tab’s content fades in when the tab opens', async ({ page }) => {
   await signedIn(page, 'calm-tabs');
+  await goHome(page);
   await stardustPill(page).click();
   const goal = page.getByRole('tab', { name: /goal/i });
   await goal.click();

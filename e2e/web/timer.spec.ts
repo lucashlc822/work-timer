@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 
 import {
   dismissResult,
-  expectSignedIn,
+  expectStardust,
+  goToTimer,
   openView,
   signIn,
-  stardustPill,
   syncLine,
 } from '../support/app';
 import { startClockInThePast } from '../support/clock';
@@ -42,8 +42,10 @@ test('a 25-minute session the clock carries to the end becomes a star and 25 Sta
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
-  await expect(stardustPill(page)).toHaveText(/\b0 Stardust$/);
+  await goToTimer(page);
+  await expectStardust(page, /\b0 Stardust$/);
+
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toContainText('25:00');
@@ -55,7 +57,7 @@ test('a 25-minute session the clock carries to the end becomes a star and 25 Sta
   await expect(page.getByText('+25 Stardust')).toBeVisible();
   await dismissResult(page);
 
-  await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
+  await expectStardust(page, /\b25 Stardust$/);
 
   // It reached the server: one completed 25-minute session, and the ledger.
   await expect
@@ -78,7 +80,9 @@ test('ending early keeps the focused time, earns nothing, and the dialog can be 
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
@@ -99,7 +103,7 @@ test('ending early keeps the focused time, earns nothing, and the dialog can be 
   await expect(page.getByText('10 minutes of focus')).toBeVisible();
   await expect(page.getByText(/\+\d+ Stardust/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(stardustPill(page)).toHaveText(/\b0 Stardust$/);
+  await expectStardust(page, /\b0 Stardust$/);
 
   await expect
     .poll(async () => await serverSessions(user.id), { timeout: 20_000 })
@@ -114,7 +118,9 @@ test('a running session survives a reload and still finishes on schedule', async
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
+
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
@@ -127,5 +133,5 @@ test('a running session survives a reload and still finishes on schedule', async
   await page.clock.fastForward('05:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
   await dismissResult(page);
-  await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
+  await expectStardust(page, /\b25 Stardust$/);
 });

@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  dismissResult,
   backToTimer,
-  expectSignedIn,
+  dismissResult,
+  expectStardust,
+  goToTimer,
   openView,
   signIn,
-  stardustPill,
   syncLine,
 } from '../support/app';
 import { startClockInThePast } from '../support/clock';
@@ -44,7 +44,7 @@ test('the app opens offline, a session finishes offline, and it all uploads when
   await startClockInThePast(page);
   await page.goto('/');
   await signIn(page, user);
-  await expectSignedIn(page);
+  await goToTimer(page);
   await waitForServiceWorkerControl(page);
   // Signed in and synced before the network goes.
   await openView(page, 'Account');
@@ -56,16 +56,18 @@ test('the app opens offline, a session finishes offline, and it all uploads when
 
   // The shell came from the worker (the page is controlled by it again after
   // the offline reload), and the account from the device.
-  await expectSignedIn(page);
+  await goToTimer(page);
   expect(await page.evaluate(() => navigator.serviceWorker.controller?.state)).toBe('activated');
   await expect(page.getByRole('button', { name: 'Start 25 min' })).toBeVisible();
+
+  await goToTimer(page);
 
   await page.getByRole('button', { name: 'Start 25 min' }).click();
   await expect(page.getByRole('timer')).toBeVisible();
   await page.clock.fastForward('25:01');
   await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
   await dismissResult(page);
-  await expect(stardustPill(page)).toHaveText(/\b25 Stardust$/);
+  await expectStardust(page, /\b25 Stardust$/);
 
   // The device says plainly that it is offline with changes waiting.
   await openView(page, 'Account');
@@ -103,7 +105,7 @@ test.describe('without a service worker', () => {
     const user = await createUser('offline-control');
     await page.goto('/');
     await signIn(page, user);
-    await expectSignedIn(page);
+    await goToTimer(page);
 
     await context.setOffline(true);
     await expect(page.reload()).rejects.toThrow(/ERR_INTERNET_DISCONNECTED/);
