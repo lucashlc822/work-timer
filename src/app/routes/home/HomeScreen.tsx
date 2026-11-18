@@ -54,7 +54,7 @@ import {
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TimerScreen, useTimer, type TimerSlots } from '@/features/timer';
 import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
-import { useFocusIfLost, useMediaQuery } from '@/shared/ui';
+import { useElementRect, useFocusIfLost, useMediaQuery } from '@/shared/ui';
 
 import { useAccount } from '../../accountContext';
 import {
@@ -80,6 +80,7 @@ import {
   SkyLink,
 } from './panels';
 import { Brand, HomePage, TimerTopBar } from './pages';
+import { HERO_SLOT_CAP, heroKindOf, useFrozenSlotHeight } from './heroSlot';
 import { timerSlots } from './timerSlots';
 
 /** The same star in each style, so the shop shows only what the style changes. */
@@ -203,6 +204,10 @@ export const HomeScreen = ({ together }: { together: Together }) => {
   // Focus on a page change: the timer page's title, or home's call to action.
   // Not on launch (nothing was focused), and not when a page change finds focus
   // already inside the new page.
+  // The hero constellation's slot on the timer page, and what the page is showing.
+  const heroSlotRef = useRef<HTMLDivElement>(null);
+  const heroSlot = useElementRect(heroSlotRef);
+  const heroKind = heroKindOf(timer.status);
   const timerHeading = useRef<HTMLHeadingElement>(null);
   const cta = useRef<HTMLButtonElement>(null);
   const shownPage = useRef<Page | null>(null);
@@ -240,6 +245,11 @@ export const HomeScreen = ({ together }: { together: Together }) => {
   // A short window (the desktop app's 560 px minimum) tightens the same way.
   const shortWindow = useMediaQuery('(max-height: 640px)');
   const aboveTimer = together.invite !== null || showEnding || shortWindow;
+  const heroSlotHeight = useFrozenSlotHeight(
+    heroSlotRef,
+    heroKind,
+    `${together.invite?.id ?? ''}|${showEnding}|${page}`,
+  );
   const [refocusStart, setRefocusStart] = useState(0);
   const slots = useMemo<TimerSlots>(() => {
     const roomOf = (id: string | null) =>
@@ -389,6 +399,12 @@ export const HomeScreen = ({ together }: { together: Together }) => {
         shared={sharedStates}
         focusId={focusId}
         styleName={styleName}
+        // On home (until it has its own slot) the hero sits where it always did.
+        {...(page === 'timer' && { heroSlot })}
+        // A result with no room above it keeps the constellation behind it, as
+        // before, so a constellation finished there still has its moment seen.
+        heroFallback={page === 'timer' && heroKind === 'result'}
+        heroKey={page === 'timer' ? heroKind : (page ?? 'loading')}
       />
 
       {page !== null && (
@@ -423,10 +439,27 @@ export const HomeScreen = ({ together }: { together: Together }) => {
             />
           )}
 
+          {/* The constellation's own space, above the card and never under it: the
+              sky measures this and draws the hero inside (premium motion PR 4). It
+              takes two thirds of the room the card leaves, up to a cap per state. */}
+          {page === 'timer' && (
+            <div
+              ref={heroSlotRef}
+              aria-hidden
+              data-hero-slot={heroKind}
+              style={heroSlotHeight === null ? undefined : { height: heroSlotHeight }}
+              className={`min-h-0 w-full ${HERO_SLOT_CAP[heroKind]} ${
+                heroSlotHeight === null ? 'flex-2' : 'shrink-0'
+              }`}
+            />
+          )}
+
           {/* Kept mounted on home (hidden): the timer's own state and moments wait there. */}
           <section
             hidden={page !== 'timer'}
-            className="flex w-full flex-1 flex-col items-center justify-center"
+            className={`flex w-full flex-col items-center ${
+              page === 'timer' ? 'flex-auto justify-start' : 'flex-1 justify-center'
+            }`}
           >
             <TimerScreen
               slots={slots}

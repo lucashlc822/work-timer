@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 @import './tokens.css';
+
+/* A tall window (a maximised desktop app): the hero constellation gets more room. */
+@custom-variant tall (@media (min-height: 860px));
 /* Atlas captions in the sky (--font-atlas). Latin subset, one weight: self-hosted
    so the desktop app and the offline web build need no network for type. */
 @import '@fontsource/alegreya-sc/latin-500.css';

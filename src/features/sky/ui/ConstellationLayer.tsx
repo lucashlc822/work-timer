@@ -40,6 +40,7 @@ import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
 import { starForm, type TierStyle } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
+import { useFigureFlip } from './useFigureFlip';
 import type { CompletedSession, ConstellationState, SkyState } from '../domain/types';
 import { AstroStar } from './AstroStar';
 import { AtlasFigure } from './AtlasFigure';
@@ -94,6 +95,17 @@ interface Props {
    * the result's star is clear of it, light flies there from the result first.
    */
   arriving?: Arrival;
+  /**
+   * Hero only: the box the page set aside for the constellation (premium motion
+   * PR 4); null when the page's slot is too small, so none is drawn. Unset, the
+   * hero sits where `heroPlacement` puts it.
+   */
+  heroBox?: Placement | null;
+  /**
+   * Hero only: what the page behind is showing ('idle', 'running', ...). When it
+   * changes, the figure glides from its old box to its new one.
+   */
+  heroKey?: string;
 }
 
 /** Air left between a header over the sky and the first figure. */
@@ -179,6 +191,8 @@ export const ConstellationLayer = ({
   reserveTop,
   label = 'Your sky',
   arriving,
+  heroBox,
+  heroKey,
 }: Props) => {
   // Arrival is behind the timer only.
   const arrive = mode === 'full' ? undefined : arriving;
@@ -207,9 +221,13 @@ export const ConstellationLayer = ({
           ? undefined
           : { top: Math.max(height * 0.1, clear), bottom: height * 0.14 },
       ).map((box, i) => ({ state: visible[i]!, box }))
-    : focused !== undefined
-      ? [{ state: focused, box: heroPlacement(width, height) }]
-      : heroShown(sky, width, height);
+    : heroFigures(
+        focused ?? heroState(sky),
+        heroBox === undefined ? heroPlacement(width, height) : heroBox,
+      );
+  const heroRef = useRef<SVGGElement>(null);
+  const heroAt = full ? null : (shown[0]?.box ?? null);
+  useFigureFlip(heroRef, heroAt, full ? undefined : heroKey);
 
   // In the full sky a wandering star keeps clear of every figure's box and caption,
   // where a hit area or a caption would otherwise sit over it.
@@ -278,30 +296,41 @@ export const ConstellationLayer = ({
         );
       })}
 
-      {shown.map(({ state, box }) => (
-        <Figure
-          key={state.choice.id}
-          state={state}
-          box={box}
-          full={full}
-          glowId={glowId}
-          viewWidth={width}
-          onStar={onStar}
-          describeStar={describeStar}
-          onFigure={full ? onFigure : undefined}
-          describeFigure={describeFigure}
-          // With one constellation there is nothing to set it apart from.
-          dimmed={
-            full &&
-            shown.length > 1 &&
-            activeFigureId !== null &&
-            state.choice.id !== activeFigureId
-          }
-          active={full && state.choice.id === activeFigureId}
-          celebrate={celebrating?.get(state.choice.id)}
-          arrive={arrive}
-        />
-      ))}
+      <g
+        ref={full ? undefined : heroRef}
+        // The glide moves the group in the svg's own coordinates.
+        style={full ? undefined : { transformBox: 'view-box', transformOrigin: '0 0' }}
+        data-hero-box={
+          heroAt === null
+            ? undefined
+            : `${Math.round(heroAt.x)},${Math.round(heroAt.y)},${Math.round(heroAt.size)}`
+        }
+      >
+        {shown.map(({ state, box }) => (
+          <Figure
+            key={state.choice.id}
+            state={state}
+            box={box}
+            full={full}
+            glowId={glowId}
+            viewWidth={width}
+            onStar={onStar}
+            describeStar={describeStar}
+            onFigure={full ? onFigure : undefined}
+            describeFigure={describeFigure}
+            // With one constellation there is nothing to set it apart from.
+            dimmed={
+              full &&
+              shown.length > 1 &&
+              activeFigureId !== null &&
+              state.choice.id !== activeFigureId
+            }
+            active={full && state.choice.id === activeFigureId}
+            celebrate={celebrating?.get(state.choice.id)}
+            arrive={arrive}
+          />
+        ))}
+      </g>
     </svg>
   );
 };
@@ -382,10 +411,11 @@ const FocusRing = ({ x, y, r }: { x: number; y: number; r: number }) => (
 );
 
 /** Behind the timer: the constellation in progress, else the most recent one. */
-const heroShown = (sky: SkyState, width: number, height: number) => {
-  const state = sky.current ?? sky.constellations.filter((c) => c.stars.length > 0).at(-1);
-  return state === undefined ? [] : [{ state, box: heroPlacement(width, height) }];
-};
+const heroState = (sky: SkyState): ConstellationState | undefined =>
+  sky.current ?? sky.constellations.filter((c) => c.stars.length > 0).at(-1);
+
+const heroFigures = (state: ConstellationState | undefined, box: Placement | null) =>
+  state === undefined || box === null ? [] : [{ state, box }];
 
 /** Keep a caption this far from the window's left and right edges. */
 const CAPTION_EDGE = 8;

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { figureFootprint, gridPlacements, wanderingPosition, type Rect } from './layout';
+import {
+  figureFootprint,
+  gridPlacements,
+  HERO_MIN_SIZE,
+  heroInSlot,
+  wanderingPosition,
+  type Rect,
+} from './layout';
 
 describe('wanderingPosition', () => {
   const seeds = Array.from({ length: 200 }, (_, i) => `seed-${i}`);
@@ -121,5 +128,35 @@ describe('gridPlacements', () => {
         expect(box.y + box.size).toBeLessThanOrEqual(800 - 112);
       }
     }
+  });
+});
+
+describe('heroInSlot', () => {
+  it('is a centred square at the fill of the shorter side', () => {
+    const box = heroInSlot({ x: 40, y: 60, w: 400, h: 200 });
+    expect(box).not.toBeNull();
+    expect(box!.size).toBeCloseTo(184);
+    expect(box!.x + box!.size / 2).toBeCloseTo(240);
+    expect(box!.y + box!.size / 2).toBeCloseTo(160);
+  });
+
+  it('stays inside the slot', () => {
+    for (const slot of [
+      { x: 0, y: 0, w: 480, h: 112 },
+      { x: 12, y: 80, w: 200, h: 900 },
+      { x: 5, y: 5, w: 100, h: 100 },
+    ]) {
+      const box = heroInSlot(slot)!;
+      expect(box.x).toBeGreaterThanOrEqual(slot.x);
+      expect(box.y).toBeGreaterThanOrEqual(slot.y);
+      expect(box.x + box.size).toBeLessThanOrEqual(slot.x + slot.w);
+      expect(box.y + box.size).toBeLessThanOrEqual(slot.y + slot.h);
+    }
+  });
+
+  it('is null below the minimum, and for an empty slot', () => {
+    expect(heroInSlot({ x: 0, y: 0, w: 480, h: HERO_MIN_SIZE / 0.92 - 1 })).toBeNull();
+    expect(heroInSlot({ x: 0, y: 0, w: 480, h: HERO_MIN_SIZE / 0.92 + 1 })).not.toBeNull();
+    expect(heroInSlot({ x: 0, y: 0, w: 0, h: 0 })).toBeNull();
   });
 });

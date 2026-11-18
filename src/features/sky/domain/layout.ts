@@ -36,6 +36,25 @@ export const heroPlacement = (width: number, height: number): Placement => {
   return { x: (width - size) / 2, y: height * 0.1, size };
 };
 
+/** Below this the hero constellation is too small to read, so it isn't drawn. */
+export const HERO_MIN_SIZE = 72;
+
+/**
+ * The hero constellation inside a space the page set aside for it (premium
+ * motion PR 4): the largest square that fits, at `fill` of the shorter side,
+ * centred. Null when that square would be under `HERO_MIN_SIZE`, so a short
+ * window shows no hero rather than a speck. The page decides where the slot is,
+ * so the figure can never sit under the timer card.
+ */
+export const heroInSlot = (
+  slot: { x: number; y: number; w: number; h: number },
+  fill = 0.92,
+): Placement | null => {
+  const size = Math.min(slot.w, slot.h) * fill;
+  if (!(size >= HERO_MIN_SIZE)) return null;
+  return { x: slot.x + (slot.w - size) / 2, y: slot.y + (slot.h - size) / 2, size };
+};
+
 /**
  * The full sky: every constellation in a grid, sized as large as fits.
  *
