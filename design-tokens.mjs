@@ -36,3 +36,31 @@ export const STAR_WHITE = '#ffffff';
 export const LAVENDER_400 = '#ab93e6';
 export const ROSE_300 = '#f3b8d4';
 export const MINT_300 = '#a8e6d0';
+
+/*
+ * Motion. The CSS custom properties in tokens.css are the source; Motion
+ * (the JS animation library) can't read them, so the same numbers live here.
+ * tokens.test.ts fails if the two drift. Durations are milliseconds, easings
+ * are cubic-bezier control points.
+ */
+export const MOTION = {
+  duration: {
+    press: 100,
+    quick: 150,
+    enter: 240,
+    exit: 160,
+    panelIn: 300,
+    panelOut: 200,
+    pageIn: 450,
+    pageOut: 300,
+    stagger: 30,
+  },
+  ease: {
+    standard: [0.2, 0, 0, 1],
+    enter: [0.05, 0.7, 0.1, 1],
+    exit: [0.3, 0, 0.8, 0.15],
+  },
+};
+
+/** Longest total a staggered group may take, however many items it has. */
+export const STAGGER_CAP_MS = 240;

@@ -68,6 +68,18 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: 'framer-motion',
+              message: 'Use motion/react (the `m` component), not framer-motion.',
+            },
+            {
+              name: 'motion/react',
+              importNames: ['motion'],
+              message:
+                'Use the `m` component, not `motion`: `motion` pulls the whole library into the main bundle (MotionRoot loads features on demand).',
+            },
+          ],
           patterns: [
             {
               group: ['@/features/*/*'],
@@ -85,6 +97,18 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: 'framer-motion',
+              message: 'Use motion/react (the `m` component), not framer-motion.',
+            },
+            {
+              name: 'motion/react',
+              importNames: ['motion'],
+              message:
+                'Use the `m` component, not `motion`: `motion` pulls the whole library into the main bundle (MotionRoot loads features on demand).',
+            },
+          ],
           patterns: [
             {
               group: ['@/features/*', '@/features/*/*', '@/app/*'],

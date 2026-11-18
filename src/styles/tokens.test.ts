@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  MOTION,
   LAVENDER_300,
   LAVENDER_400,
   MINT_300,
@@ -42,5 +43,33 @@ describe('design token mirror', () => {
     ['--color-mint-300', MINT_300],
   ])('%s matches the value exported from design-tokens.mjs', (property, mirrored) => {
     expect(cssValueOf(property)).toBe(mirrored);
+  });
+});
+
+describe('motion token mirror', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+  const cssValueOf = (customProperty: string): string | undefined =>
+    new RegExp(`${customProperty}:\\s*([^;]+);`).exec(css)?.[1]?.trim();
+
+  it.each([
+    ['--duration-press', MOTION.duration.press],
+    ['--duration-quick', MOTION.duration.quick],
+    ['--duration-enter', MOTION.duration.enter],
+    ['--duration-exit', MOTION.duration.exit],
+    ['--duration-panel-in', MOTION.duration.panelIn],
+    ['--duration-panel-out', MOTION.duration.panelOut],
+    ['--duration-page-in', MOTION.duration.pageIn],
+    ['--duration-page-out', MOTION.duration.pageOut],
+    ['--duration-stagger', MOTION.duration.stagger],
+  ])('%s is %i ms in both places', (property, ms) => {
+    expect(cssValueOf(property)).toBe(`${ms}ms`);
+  });
+
+  it.each([
+    ['--ease-standard', MOTION.ease.standard],
+    ['--ease-enter', MOTION.ease.enter],
+    ['--ease-exit', MOTION.ease.exit],
+  ])('%s matches its control points', (property, points) => {
+    expect(cssValueOf(property)).toBe(`cubic-bezier(${points.join(', ')})`);
   });
 });

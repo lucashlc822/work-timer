@@ -84,9 +84,26 @@
   --radius-pill: 999px;
 
   /* --- Motion ----------------------------------------------------------- */
-  /* Slow, gentle easing throughout. Nothing in a focus app should feel snappy
-     or urgent. All of these are neutralised under prefers-reduced-motion. */
+  /* Quick, calm chrome; expressive moments. Everyday UI (a press, a panel, a
+     popover) moves briefly and settles without a bounce, while the long
+     eases below are kept for the completion moments, where slowness is the
+     point. Only transform and opacity animate. Exits are shorter than
+     entrances. All of it is neutralised under prefers-reduced-motion (movement
+     becomes a short cross-fade). The numbers are mirrored as MOTION in
+     design-tokens.mjs for Motion, and tokens.test.ts keeps the two in step. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* Slow and soft: completion moments only, never everyday chrome. */
   --ease-gentle: cubic-bezier(0.33, 0.9, 0.35, 1);
+  --duration-press: 100ms;
+  --duration-enter: 240ms;
+  --duration-exit: 160ms;
+  --duration-panel-in: 300ms;
+  --duration-panel-out: 200ms;
+  --duration-page-in: 450ms;
+  --duration-page-out: 300ms;
+  --duration-stagger: 30ms;
 
   /* --- Atlas type: constellation captions in the sky --------------------- */
   /* A small-caps serif, like the lettering on an old star chart. Bundled, not

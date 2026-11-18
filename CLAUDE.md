@@ -881,6 +881,23 @@ rejected). Don't pre-populate this with guesses.
   title and nothing else; closing still hands focus back to the opener
   (`useFocusIfLost`).
 
+- **Motion (motion.dev) animates anything CSS can't, and the app's motion is
+  "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;
+  supersedes the tokens comment "nothing should feel snappy"). `MotionRoot`
+  (`shared/ui/motion`, main window only; the mini window never loads it) wraps the
+  app in `LazyMotion strict` with the animation features fetched after first paint
+  and `MotionConfig reducedMotion="user"`. Use the `m` component, never `motion`
+  or `framer-motion` (ESLint refuses both; they'd pull the library into the main
+  bundle). The features are `domAnimation`; **`domMax` (layout animation, ~16 kB
+  gzipped more) is switched on only by the change that needs `layoutId`.** Numbers
+  come from the motion tokens in `tokens.css`, mirrored as `MOTION` in
+  `design-tokens.mjs` and `TRANSITIONS` in `shared/ui/motion` (a test keeps them in
+  step). Rules: only transform and opacity animate; opacity is never sprung;
+  exits are shorter than entrances; the running countdown and focus rings never
+  animate; while the window is hidden every animation finishes at once
+  (`useInstantWhenHidden`; WebView2 delivers no frames there). `--ease-gentle` and
+  the long durations stay for the completion moments only.
+
 ## Plans include acceptance tests
 
 Every implementation plan states the outcomes the change must deliver, then
