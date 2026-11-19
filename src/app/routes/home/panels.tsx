@@ -1,8 +1,10 @@
+import { m, useIsPresent } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { CompletionSoundSwitch } from '@/features/timer';
 import { getRuntime, type AutostartPort } from '@/shared/runtime';
 import { Switch, useFocusHeading } from '@/shared/ui';
+import { TRANSITIONS } from '@/shared/ui/motion';
 
 /** The views that scroll over the timer; each gets a footer for its Back button. */
 export const PANEL_VIEWS: ReadonlySet<string> = new Set([
@@ -30,15 +32,59 @@ export const PanelLayer = ({
 }) => {
   const content = useRef<HTMLDivElement>(null);
   useFocusHeading(content, backRef);
+  // Leaving (premium motion PR 6): still on screen for its exit, but nothing in
+  // it can be reached, read or pressed, and focus has already gone to the page.
+  const present = useIsPresent();
+  // Reopened while still leaving, the same panel comes back rather than a new
+  // one mounting, so its title is focused again here (useFocusHeading ran once).
+  const wasPresent = useRef(present);
+  useEffect(() => {
+    if (present && !wasPresent.current) {
+      (content.current?.querySelector<HTMLElement>('h2') ?? backRef.current)?.focus();
+    }
+    wasPresent.current = present;
+  }, [present, backRef]);
   return (
-    <div className="bg-night-900/85 fixed inset-0 z-10 flex flex-col backdrop-blur-sm">
+    <m.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, transition: TRANSITIONS.panelIn }}
+      exit={{ opacity: 0, y: 8, transition: TRANSITIONS.panelOut }}
+      inert={!present}
+      aria-hidden={present ? undefined : true}
+      data-overlay
+      // Opaque enough to read over the sky without a blur: a backdrop blur over
+      // the animating sky recomposited every frame, and fading one is slow.
+      className="bg-night-900/92 fixed inset-0 z-10 flex flex-col"
+    >
       {/* The gutter is always reserved: with classic scrollbars (Windows) a tab
           that scrolls would otherwise be 15 px narrower than one that fits. */}
       <div ref={content} className="min-h-0 flex-1 scrollbar-gutter-stable overflow-y-auto">
         {children}
       </div>
       <footer className="border-night-700 flex justify-center border-t py-3">{back}</footer>
-    </div>
+    </m.div>
+  );
+};
+
+/**
+ * A layer over the whole window that fades in and out (a friend's sky). Like a
+ * panel, it is out of reach while it leaves.
+ */
+export const FadeLayer = ({ children, testId }: { children: ReactNode; testId?: string }) => {
+  const present = useIsPresent();
+  return (
+    <m.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, transition: TRANSITIONS.enter }}
+      exit={{ opacity: 0, transition: TRANSITIONS.exit }}
+      inert={!present}
+      aria-hidden={present ? undefined : true}
+      data-testid={testId}
+      data-overlay
+      className="bg-night-900 fixed inset-0 z-10"
+    >
+      {children}
+    </m.div>
   );
 };
 
@@ -57,12 +103,15 @@ export const BackButton = ({
   <button
     ref={buttonRef}
     type="button"
+    data-overlay={floating ? true : undefined}
     // A floating Back is the only control over a sky; in a panel the title is focused instead.
     autoFocus={floating}
     onClick={onClick}
+    // Arrives just after the sky starts to open, so it doesn't lead the eye.
+    style={floating ? { animationDelay: 'var(--duration-quick)' } : undefined}
     className={`rounded-pill border-night-600 text-ink-secondary hover:text-ink-primary pressable border px-5 py-2 text-xs ${
       floating
-        ? 'bg-night-800/80 fixed bottom-6 left-1/2 z-20 -translate-x-1/2 backdrop-blur'
+        ? 'bg-night-800/80 animate-fade-in fixed bottom-6 left-1/2 z-20 -translate-x-1/2 backdrop-blur'
         : 'bg-night-800'
     }`}
   >

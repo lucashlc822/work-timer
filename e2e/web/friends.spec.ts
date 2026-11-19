@@ -356,7 +356,10 @@ test('a friend sees you focusing, then on a break, within about 15 seconds', asy
 
     // 3.4: the same line on her sky.
     await adaRow.click();
-    await expect(b.page.getByText(/Focusing now · 2[45] min left/)).toBeVisible();
+    // On her sky (the Friends panel may still be fading out behind it).
+    await expect(
+      b.page.getByTestId('friend-sky-layer').getByText(/Focusing now · 2[45] min left/),
+    ).toBeVisible();
     await b.page.getByRole('button', { name: 'Back to friends' }).click();
 
     // 3.2: Ada ends early; Bea's row goes back to how it was.

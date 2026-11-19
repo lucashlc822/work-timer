@@ -120,6 +120,23 @@ export const openView = async (page: Page, name: 'View sky' | 'Stats' | 'Account
   await goHome(page);
   await page.getByRole('button', { name, exact: true }).click();
   await expect(page.getByRole('button', { name: 'Back to home' })).toBeVisible();
+  if (name === 'View sky') await skyHasSettled(page);
+};
+
+/**
+ * Waits until the sky's opening has played: the figures glide and fade in
+ * (premium motion PR 6), so anything measured before then is mid-move.
+ */
+export const skyHasSettled = async (page: Page): Promise<void> => {
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll('g[data-figure]')).some(
+          (g) => g.getAnimations().length > 0,
+        ),
+      ),
+    )
+    .toBe(false);
 };
 
 /** Opens the Friends panel. The pill's name carries the waiting-request count, if any. */

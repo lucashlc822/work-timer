@@ -40,7 +40,7 @@ import { isShared, type SharedState } from '../domain/shared';
 import { starAppearance } from '../domain/starAppearance';
 import { starForm, type TierStyle } from '../domain/starForm';
 import { TIERS } from '../domain/tiers';
-import { useFigureFlip } from './useFigureFlip';
+import { useFigureFlip, useSkyEntrance } from './useFigureFlip';
 import type { CompletedSession, ConstellationState, SkyState } from '../domain/types';
 import { AstroStar } from './AstroStar';
 import { AtlasFigure } from './AtlasFigure';
@@ -228,6 +228,13 @@ export const ConstellationLayer = ({
   const heroRef = useRef<SVGGElement>(null);
   const heroAt = full ? null : (shown[0]?.box ?? null);
   useFigureFlip(heroRef, heroAt, full ? undefined : heroKey);
+  const svgRef = useRef<SVGSVGElement>(null);
+  useSkyEntrance(
+    svgRef,
+    heroRef,
+    full,
+    shown.map(({ state, box }) => ({ id: state.choice.id, box })),
+  );
 
   // In the full sky a wandering star keeps clear of every figure's box and caption,
   // where a hit area or a caption would otherwise sit over it.
@@ -235,6 +242,7 @@ export const ConstellationLayer = ({
 
   return (
     <svg
+      ref={svgRef}
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
