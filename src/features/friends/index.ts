@@ -5,6 +5,7 @@
  */
 export { FriendsPanel } from './ui/FriendsPanel';
 export { FriendsPill } from './ui/FriendsPill';
+export { FriendsGlance } from './ui/FriendsGlance';
 export { FriendSkyView } from './ui/FriendSkyView';
 export type { FriendSummary, SkyLayout } from './ui/FriendSkyView';
 export { FOCUS_POLL_MS, useFriends } from './hooks/useFriends';

@@ -20,6 +20,7 @@ import { AccountPanel } from '@/features/account';
 import {
   FOCUS_POLL_MS,
   FriendSkyView,
+  FriendsGlance,
   FriendsPanel,
   FriendsPill,
   incomingProposals,
@@ -46,8 +47,9 @@ import {
 } from '@/features/friends';
 import {
   StardustPanel,
-  StardustPill,
+  StardustTile,
   styleName,
+  TodayGlance,
   useBoughtTiers,
   useOwnedPacks,
 } from '@/features/progression';
@@ -79,6 +81,7 @@ import {
   PanelLayer,
   SkyLink,
 } from './panels';
+import { greeting } from '../../greeting';
 import { Brand, HomePage, TimerTopBar } from './pages';
 import { HERO_SLOT_CAP, heroKindOf, useFrozenSlotHeight } from './heroSlot';
 import { timerSlots } from './timerSlots';
@@ -126,9 +129,17 @@ export const HomeScreen = ({ together }: { together: Together }) => {
   const [friend, setFriend] = useState<FriendRow | null>(null);
   // Watched while a Friends screen, the Focus together setup, or a lobby is
   // open: that is where statuses show.
+  // Home or the timer page (navigation.ts has the rules). Null until the timer
+  // has read the store, so a launch mid-session never shows home first.
+  const [page, setPage] = useState<Page | null>(null);
+  // Also read while home is showing, for its "who is around" line (every 15 s).
   const friends = useFriends({
     watching:
-      view === 'friends' || view === 'friend' || view === 'together' || isLobby(together.room),
+      view === 'friends' ||
+      view === 'friend' ||
+      view === 'together' ||
+      isLobby(together.room) ||
+      (page === 'home' && view === 'none'),
   });
   useShareFocusStatus();
   useSharePresence({ share: friends.profile?.shareOnline !== false });
@@ -185,9 +196,6 @@ export const HomeScreen = ({ together }: { together: Together }) => {
     if (view === 'together' && inRoom) setView('none');
   }, [view, inRoom]);
 
-  // Home or the timer page (navigation.ts has the rules). Null until the timer
-  // has read the store, so a launch mid-session never shows home first.
-  const [page, setPage] = useState<Page | null>(null);
   const lastStatus = useRef(timer.status);
   useEffect(() => {
     const prev = lastStatus.current;
@@ -249,6 +257,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
     heroSlotRef,
     heroKind,
     `${together.invite?.id ?? ''}|${showEnding}|${page}`,
+    page === 'timer',
   );
   const [refocusStart, setRefocusStart] = useState(0);
   const slots = useMemo<TimerSlots>(() => {
@@ -400,7 +409,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
         focusId={focusId}
         styleName={styleName}
         // On home (until it has its own slot) the hero sits where it always did.
-        {...(page === 'timer' && { heroSlot })}
+        {...(page !== null && { heroSlot })}
         // A result with no room above it keeps the constellation behind it, as
         // before, so a constellation finished there still has its moment seen.
         heroFallback={page === 'timer' && heroKind === 'result'}
@@ -474,6 +483,31 @@ export const HomeScreen = ({ together }: { together: Together }) => {
             <HomePage
               busy={inProgress(timer.status) || inRoom}
               ctaRef={cta}
+              heroSlotRef={heroSlotRef}
+              greetingText={greeting(new Date().getHours(), friends.profile?.displayName)}
+              constellation={
+                <ConstellationStatus
+                  boughtTiers={boughtTiers}
+                  ownedPacks={ownedPacks}
+                  variant="glance"
+                />
+              }
+              tiles={
+                <>
+                  <TodayGlance />
+                  <StardustTile onOpen={() => openView('stardust')} />
+                </>
+              }
+              friends={
+                <FriendsGlance
+                  load={friends.load}
+                  friends={friends.friends}
+                  focus={friends.focus}
+                  presence={friends.presence}
+                  now={Date.now()}
+                  onOpen={() => openView('friends')}
+                />
+              }
               onFocus={() => setPage('timer')}
               footer={
                 <footer
@@ -481,12 +515,6 @@ export const HomeScreen = ({ together }: { together: Together }) => {
                     aboveTimer ? 'gap-2' : 'gap-3'
                   }`}
                 >
-                  {/* Your progress: what you are building and what you have earned. */}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <ConstellationStatus boughtTiers={boughtTiers} ownedPacks={ownedPacks} />
-                    <StardustPill onOpen={() => openView('stardust')} />
-                  </div>
-                  <span aria-hidden className="bg-night-600 hidden h-4 w-px sm:block" />
                   {/* Navigation: quieter, no outline. */}
                   <nav
                     aria-label="Main"

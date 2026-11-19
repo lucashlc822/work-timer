@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  dismissResult,
   expectSignedIn,
   focusButton,
   goHome,
@@ -11,7 +12,7 @@ import {
   skipMoment,
 } from '../support/app';
 import { startClockInThePast } from '../support/clock';
-import { befriend, createRoom, setName } from '../support/friends';
+import { befriend, createRoom, setName, shareFocus } from '../support/friends';
 import { createUser } from '../support/users';
 
 /**
@@ -167,5 +168,74 @@ test.describe('with a friend', () => {
     await expect(page.getByText('Waiting for Ada to start.')).toBeVisible({ timeout: 15_000 });
     await expect(homeButton(page)).toBeVisible();
     await expect(mainNav(page)).toBeHidden();
+  });
+});
+
+test.describe('the dashboard (PR 5)', () => {
+  test('P1: a first look shows the greeting, a ring at 0, no streak, and Add a friend', async ({
+    page,
+  }) => {
+    await signedIn(page, 'home-p1');
+    await expect(
+      page.getByRole('heading', { level: 2, name: /^Good (morning|afternoon|evening)/ }),
+    ).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Today 0 of 60 min' })).toBeVisible();
+    await expect(page.getByRole('group', { name: '0-day streak' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add a friend' })).toBeVisible();
+  });
+
+  test('P2: a finished session fills the ring and starts the streak, and Kite 1 of 4 says 3 to go', async ({
+    page,
+  }) => {
+    await signedIn(page, 'home-p2');
+    await page.getByRole('button', { name: 'Choose a constellation' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^The Kite/ })
+      .click();
+    await goToTimer(page);
+    await page.getByRole('button', { name: 'Start 25 min' }).click();
+    await expect(page.getByRole('timer')).toContainText('25:00');
+    await page.clock.fastForward('25:01');
+    await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
+    await dismissResult(page);
+    await goHome(page);
+
+    await expect(page.getByRole('group', { name: 'Today 25 of 60 min' })).toBeVisible();
+    await expect(page.getByRole('group', { name: '1-day streak' })).toBeVisible();
+    await expect(page.getByText(/1 of 4 stars · 3 to go/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Building The Kite · 1 of 4/ })).toBeVisible();
+    // The constellation is drawn in its own space, clear of everything on home.
+    const hero = await page.locator('[data-hero-box]').first().getAttribute('data-hero-box');
+    expect(hero).not.toBeNull();
+  });
+
+  test('P3: a friend who starts focusing shows on home within about 15 seconds', async ({
+    page,
+  }) => {
+    const [ada, bea] = await Promise.all([createUser('home-p3a'), createUser('home-p3b')]);
+    await Promise.all([setName(ada, 'Ada'), setName(bea, 'Bea')]);
+    await befriend(ada, bea);
+    await page.goto('/');
+    await signIn(page, bea);
+    await expect(mainNav(page)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('No one is around right now')).toBeVisible({ timeout: 20_000 });
+
+    await shareFocus(ada, 25);
+    await expect(page.getByText('Ada is focusing')).toBeVisible({ timeout: 25_000 });
+  });
+
+  test('P4: offline, home still opens with a plain greeting and no error', async ({
+    page,
+    context,
+  }) => {
+    await signedIn(page, 'home-p4');
+    await context.setOffline(true);
+    await page.reload();
+    await expect(mainNav(page)).toBeVisible({ timeout: 20_000 });
+    await expect(
+      page.getByRole('heading', { level: 2, name: /^Good (morning|afternoon|evening)$/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/error|failed|couldn.t/i)).toHaveCount(0);
   });
 });

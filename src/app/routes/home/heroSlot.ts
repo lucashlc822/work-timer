@@ -55,6 +55,8 @@ export const useFrozenSlotHeight = (
   ref: RefObject<HTMLElement | null>,
   kind: HeroKind,
   aboveKey: string,
+  /** Off (home): the slot just flexes; nothing is measured or held. */
+  enabled = true,
 ): number | null => {
   const [windowKey, setWindowKey] = useState(() =>
     typeof window === 'undefined' ? '' : `${window.innerWidth}x${window.innerHeight}`,
@@ -88,11 +90,11 @@ export const useFrozenSlotHeight = (
   const frozen = measured?.trigger === trigger ? measured.height : null;
 
   useLayoutEffect(() => {
-    if (frozen !== null || ref.current === null) return;
+    if (!enabled || frozen !== null || ref.current === null) return;
     const flexHeight = ref.current.getBoundingClientRect().height;
     setMeasured({ trigger, height: Math.max(0, Math.floor(flexHeight - GROWTH_RESERVE[kind])) });
     // `trigger` covers the slot appearing too: `aboveKey` carries the page.
-  }, [frozen, ref, trigger, kind]);
+  }, [enabled, frozen, ref, trigger, kind]);
 
   return frozen;
 };

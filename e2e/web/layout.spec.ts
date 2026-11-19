@@ -42,7 +42,7 @@ for (const size of [
 
     test('home fits without scrolling', async ({ page }) => {
       await signedIn(page, 'layout-home');
-      await expect(todayLine(page)).toBeVisible();
+      await expect(page.getByText('Minutes today')).toBeVisible();
       await expect(page.getByRole('button', { name: /constellation/i })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Start focusing' })).toBeVisible();
       await expectNoScroll(page, page.getByRole('navigation', { name: 'Main' }));
