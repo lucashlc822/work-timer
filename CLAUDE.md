@@ -922,10 +922,31 @@ rejected). Don't pre-populate this with guesses.
   result's reward lines arrive late), which can only shrink it. So the idle hero
   shows only in taller windows; running gets the most room. **A result with no room
   keeps the hero where it sat before slots, behind the result** (`heroFallback`), so
-  a constellation finished there still has its moment seen. Home has no slot yet and
-  uses `heroPlacement`. A change of state glides the figure (`useFigureFlip`: one Web
+  a constellation finished there still has its moment seen. Home has a slot too (PR 5),
+  unfrozen. A change of state glides the figure (`useFigureFlip`: one Web
   Animation, page duration, enter easing; a fade when it appears or under reduced
   motion; a resize just snaps). `data-hero-box` is the test hook.
+
+- **Home is a dashboard** (premium-motion PR 5, 2026-11-18; fills the page PR 3
+  made). Top to bottom: `greeting` (by the hour; the name comes from your profile,
+  so offline or with none it is just "Good evening"; "Good evening" runs through
+  the small hours on purpose, never "Good night"), the hero constellation drawn
+  into a slot the page measures (as on the timer page, but not frozen: nothing on
+  home changes height on its own), `ConstellationStatus variant="glance"` ("The
+  Kite · 2 of 4 stars · 2 to go" with Change, keeping the pill's accessible name
+  "Building … Change constellation"), three tiles (`TodayGlance`: goal ring and
+  streak; `StardustTile`, which opens the panel and reads "N Stardust"), who is
+  around (`FriendsGlance`), then the call to action. The ring and tiles are static:
+  nothing animates when a number changes, so home never moves. **The progress
+  line is gone from home** (the timer page keeps it); the constellation pill and
+  Stardust pill left the footer, which is now just the navigation. `FriendsGlance`
+  names at most three friends who are around (focusing, then on a break, online,
+  away; offline are never named), says "No one is around right now" when there
+  are none and "Add a friend" with no friends, and renders nothing while friends
+  load or offline. **Friends are read every 15 s only while home is showing with
+  no overlay open** (`useFriends({ watching })`). From `lg` the page is two columns,
+  the constellation left and everything else right; the source order is the
+  reading order.
 
 - **Motion (motion.dev) animates anything CSS can't, and the app's motion is
   "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;

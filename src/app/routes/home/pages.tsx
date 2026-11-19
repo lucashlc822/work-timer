@@ -1,6 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
 
-import { ProgressLine } from '@/features/progression';
 import { TimerGlance } from '@/features/timer';
 import { APP_NAME } from '@/shared/config';
 import { StarMark } from '@/shared/ui';
@@ -16,41 +15,64 @@ export const Brand = () => (
 );
 
 /**
- * Home: the one big thing to do, and the ways to everything else.
+ * Home: where you are, and the one big thing to do (premium motion PR 5).
  *
- * The call to action starts focusing; while a session, a break or a lobby is in
- * progress it returns to it instead, and says what the timer is doing
+ * Top to bottom: a greeting, the constellation you are building (drawn by the
+ * sky into the slot below the greeting, which this page measures), how it is
+ * going, today's goal, streak and Stardust, who is around, and the call to
+ * action. The call to action starts focusing; while a session, a break or a lobby
+ * is in progress it returns to it instead, and says what the timer is doing
  * ("Focusing · 18 min left") at minute resolution, so home never repaints every
  * second.
+ *
+ * One column; from `lg` (a wide window) two, the constellation on the left and
+ * everything else on the right. Source order stays the reading order.
  */
 export const HomePage = ({
   busy,
   ctaRef,
+  heroSlotRef,
+  greetingText,
+  constellation,
+  tiles,
+  friends,
   onFocus,
   footer,
 }: {
   /** A session, a break, a result or a lobby is in progress on the timer page. */
   busy: boolean;
   ctaRef: RefObject<HTMLButtonElement | null>;
+  /** The space the sky draws the constellation in; measured by the app. */
+  heroSlotRef: RefObject<HTMLDivElement | null>;
+  greetingText: string;
+  constellation: ReactNode;
+  tiles: ReactNode;
+  friends: ReactNode;
   onFocus: () => void;
   footer: ReactNode;
 }) => (
   <>
-    <section className="flex w-full flex-1 flex-col items-center justify-center gap-3">
+    <section className="flex min-h-0 w-full max-w-md flex-1 flex-col items-center gap-3 lg:grid lg:max-w-4xl lg:flex-none lg:grid-cols-2 lg:content-center lg:justify-items-center lg:gap-x-16 lg:gap-y-4">
+      <h2 className="text-ink-primary text-lg lg:col-start-2">{greetingText}</h2>
+      <div
+        ref={heroSlotRef}
+        aria-hidden
+        data-hero-slot="home"
+        className="min-h-0 w-full flex-1 lg:col-start-1 lg:row-span-6 lg:row-start-1 lg:h-96 lg:flex-none lg:self-stretch"
+      />
+      <div className="lg:col-start-2">{constellation}</div>
+      <div className="flex w-full max-w-md gap-2 lg:col-start-2">{tiles}</div>
+      <div className="flex min-h-6 items-center justify-center lg:col-start-2">{friends}</div>
       <button
         ref={ctaRef}
         type="button"
         onClick={onFocus}
         aria-describedby={busy ? GLANCE_ID : undefined}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 pressable px-12 py-3.5 text-base font-medium shadow-lg"
+        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 pressable px-12 py-3.5 text-base font-medium shadow-lg lg:col-start-2"
       >
         {busy ? 'Return to focus' : 'Start focusing'}
       </button>
-      {busy ? (
-        <TimerGlance id={GLANCE_ID} className="text-ink-secondary text-sm" />
-      ) : (
-        <ProgressLine />
-      )}
+      {busy && <TimerGlance id={GLANCE_ID} className="text-ink-secondary text-sm lg:col-start-2" />}
     </section>
     {footer}
   </>

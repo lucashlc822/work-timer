@@ -10,5 +10,6 @@ export { RewardSummary, RewardTally } from './ui/RewardTally';
 export type { FinishedConstellation } from './domain/rewards';
 export { StardustPanel } from './ui/StardustPanel';
 export { StardustPill } from './ui/StardustPill';
+export { StardustTile, TodayGlance } from './ui/TodayGlance';
 export { streakAt } from './domain/streak';
 export type { SharedCompletion, TogetherWin } from './domain/reconcile';
