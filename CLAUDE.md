@@ -150,6 +150,9 @@ in `NOTES.md`.
   minimised, and no `visibilitychange` fires. `src-tauri/src/lib.rs` fixes this
   by calling the webview's own `hide()`/`show()` (WebView2's `SetIsVisible`)
   alongside the window's. Any new window that needs visibility must do the same.
+- **Motion and Web Animations stall in a hidden browser pane too**, so an exit
+  never finishes and the leaving panel stays in the DOM until a screenshot renders
+  frames. Screenshot before believing an overlay "didn't close".
 - **CSS transitions stall in Claude's browser pane while it is hidden.** The
   pane renders no frames when it is not on screen, so a fade can sit at 0.89
   opacity indefinitely; taking a screenshot renders frames and it completes.
@@ -947,6 +950,26 @@ rejected). Don't pre-populate this with guesses.
   no overlay open** (`useFriends({ watching })`). From `lg` the page is two columns,
   the constellation left and everything else right; the source order is the
   reading order.
+
+- **Overlays come and go, and the one leaving is out of reach** (premium-motion
+  PR 6, 2026-11-18). Panels, a friend's sky and the floating Back sit in one
+  `AnimatePresence initial={false}` in `HomeScreen`: a panel (`PanelLayer`, an
+  `m.div`) rises 8 px and fades in over `panelIn` and leaves over `panelOut`; a
+  friend's sky (`FadeLayer`) fades; the floating Back fades in a beat late. **The
+  panel has no backdrop blur** (`bg-night-900/92`): a blur over the animating sky
+  recomposited every frame, and fading one is slow. A leaving layer is `inert` and
+  `aria-hidden` (`useIsPresent`), and is marked `data-overlay`: when the view
+  closes, focus goes back to the opener at once if it was in a `data-overlay` (or
+  lost), never when the exit ends. **A panel reopened while still leaving comes
+  back as the same panel**, so it focuses its title again itself; `useFocusHeading`
+  only runs on mount. The page behind fades on the default quick transition.
+  **Opening the sky glides the hero constellation from where it was into its grid
+  cell, and the others fade in 30 ms apart (capped); closing glides it back**
+  (`useSkyEntrance`, `sky/ui/useFigureFlip.ts`, one-shot Web Animations; reduced
+  motion fades instead). e2e that measure the full sky wait for it to settle
+  (`skyHasSettled`, called by `openView('View sky')`); a test reading text in an
+  overlay should scope to it, because the one leaving is still in the DOM for
+  ~200 ms.
 
 - **Motion (motion.dev) animates anything CSS can't, and the app's motion is
   "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;

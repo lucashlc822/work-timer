@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { AnimatePresence } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -56,7 +57,7 @@ import {
 import { StatsView, installStatsDevTools } from '@/features/stats';
 import { TimerScreen, useTimer, type TimerSlots } from '@/features/timer';
 import { clearMeta, db, META_KEYS, readMeta, writeMeta } from '@/shared/db';
-import { useElementRect, useFocusIfLost, useMediaQuery } from '@/shared/ui';
+import { useElementRect, useMediaQuery } from '@/shared/ui';
 
 import { useAccount } from '../../accountContext';
 import {
@@ -73,6 +74,7 @@ import { useTogetherTimer } from '../../useTogetherTimer';
 
 import {
   BackButton,
+  FadeLayer,
   DeviceSettings,
   NAV_BUTTON,
   NO_PACKS,
@@ -124,7 +126,15 @@ export const HomeScreen = ({ together }: { together: Together }) => {
     if (document.activeElement instanceof HTMLElement) opener.current = document.activeElement;
     setView(next);
   }, []);
-  useFocusIfLost(opener, view === 'none');
+  // Closing hands focus back to the opener at once, not when the exit ends: the
+  // leaving layer (`data-overlay`) is about to be inert, so focus in it is lost.
+  useEffect(() => {
+    if (view !== 'none') return;
+    const active = document.activeElement;
+    if (active === null || active === document.body || active.closest('[data-overlay]') !== null) {
+      opener.current?.focus();
+    }
+  }, [view]);
   // The friend whose sky is open; kept after closing so "Back to friends" has somewhere to go.
   const [friend, setFriend] = useState<FriendRow | null>(null);
   // Watched while a Friends screen, the Focus together setup, or a lobby is
@@ -419,7 +429,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
       {page !== null && (
         <main
           inert={away}
-          className={`relative z-10 flex min-h-dvh flex-col items-center px-6 transition-opacity duration-500 sm:gap-8 sm:pt-10 sm:pb-6 ${
+          className={`relative z-10 flex min-h-dvh flex-col items-center px-6 transition-opacity sm:gap-8 sm:pt-10 sm:pb-6 ${
             aboveTimer ? 'gap-4 pt-6 pb-4' : 'gap-6 pt-8 pb-6'
           } ${away ? 'pointer-events-none opacity-0' : ''}`}
         >
@@ -545,100 +555,106 @@ export const HomeScreen = ({ together }: { together: Together }) => {
         </main>
       )}
 
-      {view === 'stats' && (
-        <PanelLayer back={back} backRef={backRef}>
-          <StatsView />
-        </PanelLayer>
-      )}
+      {/* Overlays come and go (premium motion PR 6); the one leaving is inert. */}
+      <AnimatePresence initial={false}>
+        {view === 'stats' && (
+          <PanelLayer key="stats" back={back} backRef={backRef}>
+            <StatsView />
+          </PanelLayer>
+        )}
 
-      {view === 'stardust' && (
-        <PanelLayer back={back} backRef={backRef}>
-          <StardustPanel
-            userId={account.userId}
-            earnedTiers={{ medium: earnedTiers?.medium ?? false, hard: earnedTiers?.hard ?? false }}
-            renderStylePreview={renderStylePreview}
-            renderThemePreview={renderThemePreview}
-            renderPackPreview={renderPackPreview}
-          />
-        </PanelLayer>
-      )}
+        {view === 'stardust' && (
+          <PanelLayer key="stardust" back={back} backRef={backRef}>
+            <StardustPanel
+              userId={account.userId}
+              earnedTiers={{
+                medium: earnedTiers?.medium ?? false,
+                hard: earnedTiers?.hard ?? false,
+              }}
+              renderStylePreview={renderStylePreview}
+              renderThemePreview={renderThemePreview}
+              renderPackPreview={renderPackPreview}
+            />
+          </PanelLayer>
+        )}
 
-      {view === 'account' && (
-        <PanelLayer back={back} backRef={backRef}>
-          <AccountPanel
-            email={account.email}
-            sync={sync}
-            onSyncNow={syncNow}
-            onSignOut={signOut}
-            onDeleteAccount={deleteAccount}
-            privacySettings={<OnlineToggle friends={friends} />}
-            deviceSettings={<DeviceSettings />}
-          />
-        </PanelLayer>
-      )}
+        {view === 'account' && (
+          <PanelLayer key="account" back={back} backRef={backRef}>
+            <AccountPanel
+              email={account.email}
+              sync={sync}
+              onSyncNow={syncNow}
+              onSignOut={signOut}
+              onDeleteAccount={deleteAccount}
+              privacySettings={<OnlineToggle friends={friends} />}
+              deviceSettings={<DeviceSettings />}
+            />
+          </PanelLayer>
+        )}
 
-      {view === 'friends' && (
-        <PanelLayer back={back} backRef={backRef}>
-          <FriendsPanel
-            friends={friends}
-            now={Date.now()}
-            shared={{ shared, me, describe: describeShared }}
-            onOpenFriend={(f) => {
-              setFriend(f);
-              setView('friend');
-            }}
-          />
-        </PanelLayer>
-      )}
+        {view === 'friends' && (
+          <PanelLayer key="friends" back={back} backRef={backRef}>
+            <FriendsPanel
+              friends={friends}
+              now={Date.now()}
+              shared={{ shared, me, describe: describeShared }}
+              onOpenFriend={(f) => {
+                setFriend(f);
+                setView('friend');
+              }}
+            />
+          </PanelLayer>
+        )}
 
-      {view === 'together' && (
-        <PanelLayer back={back} backRef={backRef}>
-          <TogetherPanel
-            together={together}
-            friends={friends.friends}
-            busy={timer.status !== 'idle'}
-            focus={friends.focus}
-            presence={friends.presence}
-          />
-        </PanelLayer>
-      )}
+        {view === 'together' && (
+          <PanelLayer key="together" back={back} backRef={backRef}>
+            <TogetherPanel
+              together={together}
+              friends={friends.friends}
+              busy={timer.status !== 'idle'}
+              focus={friends.focus}
+              presence={friends.presence}
+            />
+          </PanelLayer>
+        )}
 
-      {view === 'friend' && friend !== null && (
-        // Opaque: a Night-theme sky paints no ground of its own, so without this your
-        // own timer backdrop (stars and its constellation) shows through a friend's.
-        <div className="bg-night-900 fixed inset-0 z-10" data-testid="friend-sky-layer">
-          <FriendSkyView
-            key={friend.friendId}
-            friendId={friend.friendId}
-            name={friend.displayName}
-            renderSky={renderFriendSky}
-            summarize={(sky) => summarizeFriend(sky, Date.now())}
-            status={friends.focus.get(friend.friendId) ?? null}
-            now={Date.now()}
-            shared={
-              <SharedWithFriend
-                friendId={friend.friendId}
-                friendName={friend.displayName ?? 'your friend'}
-                shared={shared}
-                me={me}
-                describe={describeShared}
-                // Portalled: the header's backdrop blur would trap a fixed dialog inside it.
-                renderPicker={({ onPick, onClose }) =>
-                  createPortal(
-                    <SharedPicker
-                      boughtTiers={boughtTiers}
-                      ownedPacks={ownedPacks}
-                      onPick={onPick}
-                      onClose={onClose}
-                    />,
-                    document.body,
-                  )
-                }
-              />
-            }
-          />
-        </div>
-      )}
+        {view === 'friend' && friend !== null && (
+          // Opaque: a Night-theme sky paints no ground of its own, so without this your
+          // own timer backdrop (stars and its constellation) shows through a friend's.
+          <FadeLayer key="friend" testId="friend-sky-layer">
+            <FriendSkyView
+              key={friend.friendId}
+              friendId={friend.friendId}
+              name={friend.displayName}
+              renderSky={renderFriendSky}
+              summarize={(sky) => summarizeFriend(sky, Date.now())}
+              status={friends.focus.get(friend.friendId) ?? null}
+              now={Date.now()}
+              shared={
+                <SharedWithFriend
+                  friendId={friend.friendId}
+                  friendName={friend.displayName ?? 'your friend'}
+                  shared={shared}
+                  me={me}
+                  describe={describeShared}
+                  // Portalled: the header's backdrop blur would trap a fixed dialog inside it.
+                  renderPicker={({ onPick, onClose }) =>
+                    createPortal(
+                      <SharedPicker
+                        boughtTiers={boughtTiers}
+                        ownedPacks={ownedPacks}
+                        onPick={onPick}
+                        onClose={onClose}
+                      />,
+                      document.body,
+                    )
+                  }
+                />
+              }
+            />
+          </FadeLayer>
+        )}
+      </AnimatePresence>
 
       {startAlone !== null && (
         <StartAloneDialog
