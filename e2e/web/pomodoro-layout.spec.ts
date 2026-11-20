@@ -66,15 +66,20 @@ test('A2: at 480x720 Custom, Pomodoro and Countdown all fit without scrolling', 
   }
 });
 
-test('A3: at 380x560 Pomodoro scrolls far less than before the grid (694 px), within 7 px of Custom', async ({
+test('A3: at 380x560 Pomodoro scrolls far less than it did, and no more than a line past Custom', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 380, height: 560 });
   await signedIn(page, 'pl-a3');
+  await radio(page, 'Custom').click();
+  await settle(page);
+  const custom = await scrollHeight(page);
   await radio(page, 'Pomodoro').click();
   await settle(page);
-  // Measured 600 px; 593 for Custom. Before the grid it was 694.
-  expect(await scrollHeight(page)).toBeLessThanOrEqual(600);
+  // Before the grid Pomodoro scrolled to 694 here, 101 px past Custom. Now it is
+  // 7 px past it on Windows (600 v 593); a line of slack for another platform's
+  // text, which wraps the summary line differently (CI: 615).
+  expect(await scrollHeight(page)).toBeLessThanOrEqual(custom + 24);
 });
 
 // 365 is the 380 px desktop minimum less a 15 px classic scrollbar (headless hides it).
@@ -94,6 +99,13 @@ for (const width of [365, 380, 480]) {
       }),
     );
     expect(rows).toEqual([1, 1, 1, 1]);
+    // A narrow settings area uses the smaller size (a container query), so a
+    // platform whose text is wider (CI's Linux) still fits a label and its value.
+    const size = await panel
+      .locator('label > span:first-child')
+      .first()
+      .evaluate((el) => getComputedStyle(el).fontSize);
+    expect(size).toBe(width <= 380 ? '12px' : '14px');
     const summary = await panel.locator('p').evaluate((el) => {
       const r = el.getBoundingClientRect();
       const p = el.parentElement!.getBoundingClientRect();

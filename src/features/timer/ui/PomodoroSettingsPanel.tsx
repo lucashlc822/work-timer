@@ -41,7 +41,7 @@ export const PomodoroSettingsPanel = ({ settings, limits, onChange, disabled = f
     const devOnly = settings[key] < prod.min || (settings[key] - prod.min) % prod.step !== 0;
     return (
       <label key={key} className="flex min-w-0 flex-col gap-1">
-        <span className="text-ink-secondary flex justify-between gap-1 text-sm">
+        <span className="text-ink-secondary flex justify-between gap-1 text-sm @max-xs:text-xs">
           <span>{shown}</span>
           <span className="whitespace-nowrap">
             <span className="text-ink-primary font-mono">{value}</span>
@@ -65,14 +65,19 @@ export const PomodoroSettingsPanel = ({ settings, limits, onChange, disabled = f
   };
 
   return (
-    <div className="grid w-full max-w-sm grid-cols-2 gap-x-3 gap-y-3">
-      {field('focusS', 'Focus', 'min')}
-      {field('shortBreakS', 'Short break', 'min')}
-      {field('longBreakS', 'Long break', 'min')}
-      {field('blocksPerLongBreak', 'Long break every', 'blocks', 'Every')}
-      <p className="text-ink-secondary col-span-2 text-center text-xs">
-        {describeSettings(settings)}
-      </p>
+    // A container, so the rows below ask how much room *they* have (a narrow window, or a
+    // card with something above it), not what the window is: they drop to a smaller size
+    // when half a row would be too tight for a label and its value on one line.
+    <div className="@container w-full max-w-sm">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+        {field('focusS', 'Focus', 'min')}
+        {field('shortBreakS', 'Short break', 'min')}
+        {field('longBreakS', 'Long break', 'min')}
+        {field('blocksPerLongBreak', 'Long break every', 'blocks', 'Every')}
+        <p className="text-ink-secondary col-span-2 text-center text-xs">
+          {describeSettings(settings)}
+        </p>
+      </div>
     </div>
   );
 };
