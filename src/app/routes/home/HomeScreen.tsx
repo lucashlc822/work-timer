@@ -86,6 +86,7 @@ import {
 import { greeting } from '../../greeting';
 import { Brand, HomePage, TimerTopBar } from './pages';
 import { HERO_SLOT_CAP, heroKindOf, useFrozenSlotHeight } from './heroSlot';
+import { useFocusMorph } from './morph';
 import { timerSlots } from './timerSlots';
 
 /** The same star in each style, so the shop shows only what the style changes. */
@@ -228,6 +229,16 @@ export const HomeScreen = ({ together }: { together: Together }) => {
   const heroKind = heroKindOf(timer.status);
   const timerHeading = useRef<HTMLHeadingElement>(null);
   const cta = useRef<HTMLButtonElement>(null);
+  const morphSurface = useRef<HTMLDivElement>(null);
+  const morph = useFocusMorph(page, cta, morphSurface);
+  const goToTimerPage = useCallback(() => {
+    morph.toTimer();
+    setPage('timer');
+  }, [morph]);
+  const goHomePage = useCallback(() => {
+    morph.toHome();
+    setPage('home');
+  }, [morph]);
   const shownPage = useRef<Page | null>(null);
   useEffect(() => {
     const was = shownPage.current;
@@ -384,7 +395,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
       // An open dialog or popover closes itself on this same press; a text field
       // keeps its Escape. Only a press with nothing else to do goes home.
       if (elsewhere) return;
-      if (page !== null && escapeGoesHome(page, status, inRoom)) setPage('home');
+      if (page !== null && escapeGoesHome(page, status, inRoom)) goHomePage();
     };
     window.addEventListener('keydown', snapshot, true);
     document.addEventListener('keydown', onKey);
@@ -392,7 +403,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
       window.removeEventListener('keydown', snapshot, true);
       document.removeEventListener('keydown', onKey);
     };
-  }, [view, page, status, inRoom]);
+  }, [view, page, status, inRoom, goHomePage]);
 
   const backRef = useRef<HTMLButtonElement>(null);
   const back = (
@@ -436,7 +447,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
           {page === 'home' ? (
             <Brand />
           ) : (
-            <TimerTopBar onHome={() => setPage('home')} headingRef={timerHeading} />
+            <TimerTopBar onHome={goHomePage} headingRef={timerHeading} />
           )}
 
           {together.invite !== null && (
@@ -518,7 +529,7 @@ export const HomeScreen = ({ together }: { together: Together }) => {
                   onOpen={() => openView('friends')}
                 />
               }
-              onFocus={() => setPage('timer')}
+              onFocus={goToTimerPage}
               footer={
                 <footer
                   className={`flex flex-col items-center justify-center sm:flex-row sm:gap-4 ${
@@ -554,6 +565,16 @@ export const HomeScreen = ({ together }: { together: Together }) => {
           )}
         </main>
       )}
+
+      {/* The surface home's call to action grows into the timer card on (PR 7). */}
+      <div
+        ref={morphSurface}
+        aria-hidden
+        data-morph-surface
+        className="rounded-soft border-night-600 bg-night-800 pointer-events-none fixed z-20 hidden overflow-hidden border"
+      >
+        <div className="bg-lavender-400 absolute inset-0" />
+      </div>
 
       {/* Overlays come and go (premium motion PR 6); the one leaving is inert. */}
       <AnimatePresence initial={false}>

@@ -971,6 +971,25 @@ rejected). Don't pre-populate this with guesses.
   overlay should scope to it, because the one leaving is still in the DOM for
   ~200 ms.
 
+- **Home's call to action grows into the timer card, and back** (premium-motion
+  PR 7, 2026-11-19; M3's container transform). **Done with a clipped surface, not
+  Motion's `layoutId`**: the card lives inside the timer slice, which stays
+  Motion-free, and `layoutId` needed `domMax` (+16 kB) plus layout reads the timer
+  page must never do while a session ticks. `useFocusMorph`
+  (`routes/home/morph.ts`): the navigation records where it starts (the button,
+  or the card, `[data-timer-card]`), the arriving element is hidden before paint,
+  and **a frame later**, once the page has finished laying out (the hero slot's
+  second pass moves the card), a fixed `data-morph-surface` over the union of the
+  two shapes is clipped from one to the other (`clip-path: inset(… round r)`, so the
+  pill stays round instead of a scale stretching it). Its lavender face gives way
+  to the card's colour by 40 %, the card's own contents fade in from 40 % while the
+  surface fades out under them (450 ms, enter easing); going home it shrinks over
+  300 ms and the button reappears as it lands. Measured once per navigation;
+  nothing runs during a session. No morph under reduced motion, or when there is no
+  card or button to meet (mid-session, a lobby): the arriving element just fades in.
+  The animation frame is deliberately not cancelled by a re-render, or the arrival
+  would stay hidden.
+
 - **Motion (motion.dev) animates anything CSS can't, and the app's motion is
   "quick, calm chrome; expressive moments"** (premium-motion PR 1, 2026-11-17;
   supersedes the tokens comment "nothing should feel snappy"). `MotionRoot`

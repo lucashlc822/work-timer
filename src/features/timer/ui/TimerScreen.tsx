@@ -278,6 +278,8 @@ export const TimerScreen = ({
       }`}
     >
       <div
+        // The app grows home's call to action into this card (premium motion PR 7).
+        data-timer-card
         className={`rounded-soft border-night-600/60 bg-night-800/50 flex w-full max-w-md flex-col items-center border px-8 backdrop-blur-md sm:gap-6 sm:py-8 ${
           compact ? 'gap-4 py-4' : 'gap-6 py-6'
         }`}
