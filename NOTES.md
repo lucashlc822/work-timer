@@ -12,6 +12,48 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-20 — Premium motion, a dashboard home, and the UI-review fixes: merged, not released
+
+**Status: merged, not released.** #204–#220 are on `master` (37 commits past `v0.10.0`); `package.json` is still 0.10.0 and nothing here has reached anyone but Lucas. Whether and when to release is his call (`RELEASING.md`). Open work: nothing in flight. The plan file is `~/.claude/plans/it-s-time-to-work-wild-key.md`.
+
+### What changed, and the choices behind it
+
+Lucas found the transitions and animations lacklustre and disliked the timer card covering the constellation (the red box in his 0.10.0 screenshot). He chose three things: a **separate dashboard home**, the **Motion library**, and a **clickable prototype first** (an Artifact, throwaway; he approved it after one change, the update notice centred at the bottom). Nine PRs followed, each merged on his word, with the design recorded as a CLAUDE.md "Decisions already made" bullet in the PR that made it:
+
+- **#204** Motion foundation (`LazyMotion strict` + `domAnimation`, tokens, ESLint bans on `motion`/`framer-motion`). **#205** calm chrome (press state, fades). **#206** home page and timer page (`app/navigation.ts`). **#207** hero constellation in its own slot (the red-box fix). **#208** dashboard content. **#209** overlay motion. **#210** focus morph. **#212** dialog/popover/toast motion. **#213** sliding highlight, digit roll, Stardust count-up.
+- **#211** was a separate fix: the tally e2e specs failed near midnight (see "learned").
+- A `ui-ux-reviewer` pass then found no blockers, one High and five Mediums, and each became its own PR: **#214** friends line contrast and tile labels (H1, L1), **#215** wide-window home centred (M1), **#216** larger idle constellation in tall windows (M2), **#217** tag popover flips and caps its height (M3), **#218** a finishing session takes focus from the page title (M4, `data-focus-yields`), **#219** "Still trying to reach the server…" after 8 s of one sync round (M5). **#220** fixed P2's midnight failure the same way as #211.
+- The plan chose `domAnimation`, not `domMax`: `domMax` measured about +48 kB, and no feature needed `layoutId`. The morph and the sliding highlight are a clip-path surface and one FLIP Web Animation instead.
+
+### Checked, with what was seen
+
+- Every PR: lint, `tsc -b`, `npm test` and `npm run e2e:web` (now 153) passed locally, and all five CI jobs were green before each merge. Each PR body has its own acceptance table.
+- The review ran at 380, 480, 768, 1280 and 1920 widths, through every timer state plus offline and error; axe reported 0 violations across about 35 runs.
+- #215 and #216 were measured with screenshots and live slot measurements, and #217's popover was looked at in a 1280×800 window with Custom open.
+
+### Not verified
+
+- **The desktop app.** The local `npm run e2e:desktop` suite and a manual look at the packaged window were not run for #214–#220 (CI's `desktop` job passed). The layouts below `lg` are unchanged by M1/M2, so the 480×720 window should look as before, but that is reasoned, not seen.
+- **CPU cost.** The plan's before/after Task Manager check of the timer card's backdrop blur and of the motion work was not recorded.
+- **A real screen reader** on the focus changes (M4) and the new overlays.
+- **Anything with real friends or the hosted server**, including a 0.10.0 → next-version update.
+
+### Things learned that aren't in the code
+
+- **Day-based e2e specs fail near midnight.** Tally (#211) and home P2 (#220) both read "Today N of 60" with a clock started two hours back, so a run between local midnight and about 02:00 splits the session across two days. Fix: start the page's clock at yesterday's noon (`startClockAtYesterdayNoon`). P2 was reproduced on demand by starting its clock at 23:48 yesterday.
+- **`sky.spec.ts:284` (reduced-motion celebration) is a low-rate flake**: it failed once on #218's CI and once in six local runs on that branch, then passed 20/20 on the branch and on master and on a CI re-run. Not understood; look at it if it recurs.
+- **Pomodoro makes the idle timer card about 200 px taller**, far more than the 72 px growth reserve (whose comment says ~68). In tall windows the card jumps when you switch (on master too), and at 480×720 and below the page scrolls. Left alone on purpose: the fix is a design choice (a smaller idle figure, or a more compact Pomodoro panel).
+- **Docker Desktop stops overnight.** The e2e run reports "The local Supabase stack isn't running"; start Docker Desktop, then `npx supabase start`.
+- **A Python/`sed` edit through Git Bash can leave CRLF line endings** in a file the repo keeps as LF; `git diff --stat` shows the whole file changed. Strip with `sed -i 's/\r$//'`.
+
+### Next
+
+- Decide on a **release** (everything above is unreleased: the new home page, the motion work and the fixes).
+- Plan the **Pomodoro card growth** and triage the review's remaining **Lows (L2–L6)** (L3: raw durations and the Goal & streak width transition) in one plan.
+- `.claude/agent-memory/ui-ux-reviewer/MEMORY.md` has an uncommitted change that is the reviewer's own memory, not part of any of these PRs.
+
+---
+
 ## 2026-11-16 — Released 0.10.0 (the session-complete redesign)
 
 **Status: published.** v0.10.0 is the Latest release (tag `v0.10.0`, commit `4e75761`, version bump #202). It went out at 03:48 UTC on 2026-11-17 (22:48 local on the 16th), on Lucas's "publish the release". The desktop update and the web version both came from it. Nothing in flight except the docs PR that adds this entry.
