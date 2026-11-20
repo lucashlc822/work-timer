@@ -71,11 +71,17 @@ export const PopoverPanel = ({
   className,
   id,
   label,
+  origin = 'top center',
+  maxHeight,
 }: {
   children: ReactNode;
   className: string;
   id: string;
   label: string;
+  /** Where it grows from: the edge that touches its trigger. */
+  origin?: 'top center' | 'bottom center';
+  /** Tallest it may be, in px; it scrolls inside beyond that. */
+  maxHeight?: number;
 }) => {
   const present = useIsPresent();
   const reduced = useReducedMotion() === true;
@@ -89,7 +95,11 @@ export const PopoverPanel = ({
       initial={{ opacity: 0, ...(!reduced && { scale: 0.95 }) }}
       animate={{ opacity: 1, ...(!reduced && { scale: 1 }), transition: TRANSITIONS.enter }}
       exit={{ opacity: 0, ...(!reduced && { scale: 0.95 }), transition: TRANSITIONS.exit }}
-      style={{ transformOrigin: 'top center' }}
+      style={
+        maxHeight === undefined
+          ? { transformOrigin: origin }
+          : { transformOrigin: origin, maxHeight }
+      }
       className={className}
     >
       {children}

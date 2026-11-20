@@ -115,3 +115,73 @@ test('T3: an invitation banner fades in on home, and the lobby it opens is in or
   await expect(banner).toBeVisible({ timeout: 15_000 });
   expect(await banner.evaluate((el) => getComputedStyle(el).animationName)).toBe('fade-in');
 });
+
+test.describe('the tag popover stays inside the window (UI review M3)', () => {
+  const rect = (page: Page) =>
+    page.getByRole('dialog', { name: 'Choose a tag' }).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, height: r.height };
+    });
+
+  test('G1: with room below it opens below the pill', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1080 });
+    await signedIn(page, 'tag-g1');
+    await openTagPicker(page);
+    await page.waitForTimeout(400);
+    const pill = (await page.locator('button[aria-expanded][aria-controls]').boundingBox())!;
+    const r = await rect(page);
+    expect(r.top).toBeGreaterThan(pill.y + pill.height);
+    expect(r.bottom).toBeLessThanOrEqual(1080);
+  });
+
+  for (const height of [800, 640]) {
+    test(`G2: at 1280x${height} with Custom open it flips above the pill and stays in the window`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height });
+      await signedIn(page, `tag-g2-${height}`);
+      await page.getByRole('radio', { name: 'Custom' }).click();
+      await openTagPicker(page);
+      await page.waitForTimeout(400);
+      const pill = (await page.locator('button[aria-expanded][aria-controls]').boundingBox())!;
+      const r = await rect(page);
+      expect(r.top).toBeGreaterThanOrEqual(0);
+      expect(r.bottom).toBeLessThanOrEqual(height);
+      if (r.bottom > pill.y) {
+        // It sits below the pill only if all of it fits there.
+        expect(r.top).toBeGreaterThan(pill.y + pill.height);
+      } else {
+        expect(r.bottom).toBeLessThanOrEqual(pill.y);
+      }
+    });
+  }
+
+  test('G3: in a very short window the panel scrolls inside instead of leaving the window', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 480, height: 400 });
+    await signedIn(page, 'tag-g3');
+    await openTagPicker(page);
+    await page.waitForTimeout(400);
+    const r = await rect(page);
+    expect(r.top).toBeGreaterThanOrEqual(0);
+    expect(r.bottom).toBeLessThanOrEqual(400);
+    // Everything in it is still reachable: the "New tag" field takes focus.
+    await page.getByRole('dialog', { name: 'Choose a tag' }).getByRole('textbox').focus();
+    await expect(
+      page.getByRole('dialog', { name: 'Choose a tag' }).getByRole('textbox'),
+    ).toBeFocused();
+  });
+
+  test('G4: Escape still closes only the popover, and focus returns to the pill', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 640 });
+    await signedIn(page, 'tag-g4');
+    const pill = page.getByRole('button', { name: 'No tag', exact: true });
+    await openTagPicker(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Choose a tag' })).toBeHidden();
+    await expect(pill).toBeFocused();
+  });
+});
