@@ -39,6 +39,9 @@ export const heroPlacement = (width: number, height: number): Placement => {
 /** Below this the hero constellation is too small to read, so it isn't drawn. */
 export const HERO_MIN_SIZE = 72;
 
+/** How much of its slot's shorter side the hero square fills. */
+export const HERO_FILL = 0.92;
+
 /**
  * The hero constellation inside a space the page set aside for it (premium
  * motion PR 4): the largest square that fits, at `fill` of the shorter side,
@@ -48,7 +51,7 @@ export const HERO_MIN_SIZE = 72;
  */
 export const heroInSlot = (
   slot: { x: number; y: number; w: number; h: number },
-  fill = 0.92,
+  fill = HERO_FILL,
 ): Placement | null => {
   const size = Math.min(slot.w, slot.h) * fill;
   if (!(size >= HERO_MIN_SIZE)) return null;

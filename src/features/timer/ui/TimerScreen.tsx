@@ -273,10 +273,11 @@ export const TimerScreen = ({
   return (
     // Fills the section and anchors the card to its top, not its middle: the
     // card changes height with the mode and the Custom slider, and a centred
-    // one would move the controls out from under the pointer. The extra top
-    // padding from 2xl up stops it sitting top-heavy on tall, wide windows.
+    // one would move the controls out from under the pointer. In a tall window
+    // the constellation's slot above takes the room (UI review M2), so there is
+    // no extra top padding from 2xl up any more.
     <div
-      className={`flex w-full flex-1 flex-col items-center justify-start sm:pt-12 2xl:pt-32 ${
+      className={`flex w-full flex-1 flex-col items-center justify-start sm:pt-12 ${
         compact ? 'pt-0' : 'pt-4'
       }`}
     >

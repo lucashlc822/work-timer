@@ -29,3 +29,4 @@ export type { ConstellationCompletion } from './hooks/useSky';
 export const installDevTools = (): void => {
   if (import.meta.env.DEV) void import('./dev/devTools').then((m) => m.install());
 };
+export { HERO_MIN_SIZE, HERO_FILL } from './domain/layout';
