@@ -12,9 +12,52 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
-## 2026-11-20 — Pomodoro grid, token durations, hero behind panels, picker polish: merged, not released
+## 2026-11-20 — Released 0.11.0 (the dashboard home and premium motion)
 
-**Status: merged, not released.** #222–#226 are on `master` (50 commits past `v0.10.0`, together with #204–#221 from the entry below); `package.json` is still 0.10.0 and only Lucas has seen any of it. Nothing in flight. This is the plan Lucas approved after the UI-review fixes: Pomodoro card growth plus the review's Lows (plan file `~/.claude/plans/it-s-time-to-work-wild-key.md`, rewritten for this). He picked a 2×2 slider grid for Pomodoro and L3, L4, L5 and a verify-only L6; **L2 ("← Home" at the card's left edge) was dropped on purpose** (the documented design). L1 had shipped in #214.
+**Status: published.** v0.11.0 is the Latest release (tag `v0.11.0`, commit `cdc9302`, version bump #228). It was published at 22:00:49 UTC on 2026-11-20 (17:00 local), on Lucas's "Publish now". The desktop update and the web version both came from it. Nothing in flight except the docs PR that adds this entry.
+
+### What shipped
+
+The 50 commits past `v0.10.0` (#204–#227): the dashboard home page and the separate timer page, the Motion library and motion throughout, the hero constellation in its own slot, the UI-review fixes, the Pomodoro 2×2 settings, token durations, the hero fading behind panels and the picker polish. The decisions are in CLAUDE.md. **Server side: nothing.** `supabase/` is unchanged since v0.10.0 (no migration, `min_client_version` stays empty), there is no Dexie schema change, and `src-tauri` has no changes (the exe differs only in the frontend it bundles). The one new dependency is `motion` 14.14.0. Lucas picked 0.11.0 (a minor bump) and the live update test (below).
+
+### Checked, with what was seen
+
+- **Pre-flight on master `e1663f0`:** a `qa-lead` pass found **no Critical and no Should-fix**: lint, format, types, `npm test` (1143), build, cargo fmt and clippy, pgTAP (312), web e2e with axe (176), Lighthouse (sign-in 100, home 100), `npm audit --omit=dev` (0), `cargo audit`. `npm run e2e:desktop`: 7 passed (installed app closed). `perf:size` with the production env: JS **329.8 kB** gzipped against the repo's 317.2 kB baseline (+4.0%, limit 10%), CSS 9.1 kB.
+- **Hosted database (read-only):** `migration list --remote` and `db push --remote --dry-run` both printed `Target: project starkeep (…) · production`; "Remote database is up to date".
+- **Bump PR #228:** exactly the five version files, 6 lines, all five CI jobs green.
+- **Draft (before anyone could see it):** the `version` and `desktop` jobs green; four files; `tag_name` `v0.11.0` (re-read after the description PATCH, which named the tag); `latest.json` says 0.11.0 under `/download/v0.11.0/`; both platform entries carry key id `8E3AF18012526DA8`, which matches the public key in `tauri.conf.json`. Installer 2,485,405 bytes, starts `MZ`, SHA-256 `95ad8a06…623a` matched GitHub's digest (and `Starkeep-setup.exe` is the same file). Lucas approved the "What's new" wording first.
+- **After publishing:** release list shows v0.11.0 Latest with tag `v0.11.0`, and no `untagged-…` tag; `Deploy web` succeeded on the tagged commit `cdc9302`; https://starkeep.vercel.app returns 200 and its bundle contains `0.11.0` and "Start focusing"; `Starkeep-setup.exe` answers 200; `latest.json` at `/releases/latest/download/` says 0.11.0.
+- **The live update (the first ever seen on a real install):** Lucas's installed 0.10.0 app (`%LOCALAPPDATA%\Starkeep\starkeep.exe`, closed beforehand) was launched with a localhost DevTools port, and read through a throwaway script that printed only the notice and yes/no flags. It showed **"Starkeep 0.11.0 is ready"** with a "Restart to update" button; pressing it brought the app back signed in (no sign-in screen), on the new home page (main navigation, greeting, "Start focusing"), with **no service worker**, and the installed exe reports 0.11.0. No session was started on the real account.
+
+### Not verified
+
+- **SmartScreen on the update.** The installer ran silently from the app, so a "Windows protected your PC" prompt would not have been visible to the script; Lucas did not watch the screen. Updates are documented not to warn, but this was not seen.
+- **A friend's machine, and macOS** (there is no Mac app; Mac users use the web version).
+- **Signing in on the live site** beyond the page loading, and a completed session on the updated app (permanent on the real account, so not run).
+- **The by-ear checks** in `docs/qa-desktop-checklist.md`, a real screen reader, and a visual or keyboard pass of the new pages beyond the automated suites.
+- **A formal `security-review` of the 0.11.0 changes.** `qa-lead` could not run it (the skill diffs against `master`, which was the current branch); a grep of the v0.10.0..HEAD diff for `innerHTML`, `eval`, `fetch(`, `postMessage`, `localStorage` and secrets found only a test file's `innerHTML`, which is not a review.
+- **One unit test failed once** in a full local `npm test` during #226 (1 failed, 1142 passed), unreproduced in nine later runs; `qa-lead` and CI were clean.
+
+### Things learned that aren't in the code
+
+- **The self-update works from a published release**, including the zip-less updater (#185): the first live check of both. The notice appeared within the app's first 10 s checks, "Restart to update" relaunched it, and it kept its sign-in and data.
+- **A relaunched app inherits `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`** from the process that started it (the updater chain), so the DevTools port stayed open after the restart. Stop that process when finished, or the port stays open on the real account (it was stopped here).
+- **CLAUDE.md's size line is stale**: "re-set at 0.9.0 = 281 kB" is wrong, since `e2e/perf-baseline.json` now says 317.2 kB. Fix it in a small PR of its own.
+- **`cargo audit` has a new "unmaintained" warning for `chrono`** (RUSTSEC-2026-0543; the advisory entry changed, not our code). Informational; keep an eye on it.
+- **Git Bash and Python disagree about `/tmp`**: a file written to `/tmp` from Bash is not where a Windows Python looks. Use the session's scratch folder, or `cygpath -w`.
+
+### Next
+
+- Tell friends 0.11.0 is out (apps update themselves; the web version is already live).
+- The reviewer's and `qa-lead`'s agent-memory files have uncommitted changes (`.claude/agent-memory/…`) that are their own notes, not part of any PR.
+- Fix CLAUDE.md's stale size-baseline sentence, in its own PR.
+- Optional: listen to the chime on real speakers, and watch one update on a friend's machine for the SmartScreen question.
+
+---
+
+## 2026-11-20 — Pomodoro grid, token durations, hero behind panels, picker polish: merged (released as 0.11.0)
+
+**Status: merged, not released.** **(Superseded 2026-11-20 — released as 0.11.0, see above.)** #222–#226 are on `master` (50 commits past `v0.10.0`, together with #204–#221 from the entry below); `package.json` is still 0.10.0 and only Lucas has seen any of it. Nothing in flight. This is the plan Lucas approved after the UI-review fixes: Pomodoro card growth plus the review's Lows (plan file `~/.claude/plans/it-s-time-to-work-wild-key.md`, rewritten for this). He picked a 2×2 slider grid for Pomodoro and L3, L4, L5 and a verify-only L6; **L2 ("← Home" at the card's left edge) was dropped on purpose** (the documented design). L1 had shipped in #214.
 
 ### What changed, and the choices behind it
 
@@ -58,9 +101,9 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
-## 2026-11-20 — Premium motion, a dashboard home, and the UI-review fixes: merged, not released
+## 2026-11-20 — Premium motion, a dashboard home, and the UI-review fixes: merged (released as 0.11.0)
 
-**Status: merged, not released.** (Carried on by the entry above, #222–#226.) #204–#220 are on `master` (37 commits past `v0.10.0`); `package.json` is still 0.10.0 and nothing here has reached anyone but Lucas. Whether and when to release is his call (`RELEASING.md`). Open work: nothing in flight. The plan file is `~/.claude/plans/it-s-time-to-work-wild-key.md`.
+**Status: merged, not released.** **(Superseded 2026-11-20 — released as 0.11.0, see above.)** (Carried on by the entry above, #222–#226.) #204–#220 are on `master` (37 commits past `v0.10.0`); `package.json` is still 0.10.0 and nothing here has reached anyone but Lucas. Whether and when to release is his call (`RELEASING.md`). Open work: nothing in flight. The plan file is `~/.claude/plans/it-s-time-to-work-wild-key.md`.
 
 ### What changed, and the choices behind it
 
