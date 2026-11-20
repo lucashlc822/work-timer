@@ -11,7 +11,7 @@ import {
   signIn,
   skipMoment,
 } from '../support/app';
-import { startClockInThePast } from '../support/clock';
+import { startClockAtYesterdayNoon, startClockInThePast } from '../support/clock';
 import { befriend, createRoom, setName, shareFocus } from '../support/friends';
 import { createUser } from '../support/users';
 
@@ -25,9 +25,13 @@ test.use({ viewport: { width: 480, height: 720 } });
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 const timerTitle = (page: Page) => page.getByRole('heading', { name: 'Focus', level: 2 });
 
-const signedIn = async (page: Page, label: string) => {
+const signedIn = async (
+  page: Page,
+  label: string,
+  startClock: (page: Page) => Promise<void> = startClockInThePast,
+) => {
   const user = await createUser(label);
-  await startClockInThePast(page);
+  await startClock(page);
   await page.goto('/');
   await signIn(page, user);
   await expectSignedIn(page);
@@ -267,7 +271,9 @@ test.describe('the dashboard (PR 5)', () => {
   test('P2: a finished session fills the ring and starts the streak, and Kite 1 of 4 says 3 to go', async ({
     page,
   }) => {
-    await signedIn(page, 'home-p2');
+    // It reads a day ("Today 25 of 60"): start at yesterday's noon, not two hours ago,
+    // so a run shortly after midnight can't split the session across two days.
+    await signedIn(page, 'home-p2', startClockAtYesterdayNoon);
     await page.getByRole('button', { name: 'Choose a constellation' }).click();
     await page
       .getByRole('dialog')
