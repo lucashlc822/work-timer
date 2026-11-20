@@ -171,6 +171,59 @@ test.describe('with a friend', () => {
   });
 });
 
+test.describe('a wide window (UI review M1)', () => {
+  const box = (page: Page, selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 };
+      });
+
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    test(`W1–W3 at ${viewport.width}×${viewport.height}: the pair is centred, the column on the figure, the nav at the bottom`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await signedIn(page, `home-w${viewport.width}`);
+      await expect(focusButton(page)).toBeVisible();
+      const brand = await box(page, 'header');
+      const nav = await box(page, 'nav[aria-label="Main"]');
+      const hero = await box(page, '[data-hero-slot="home"]');
+      const column = await box(page, '[data-home-column]');
+      // W1: as much room above the pair as below it, between the name and the nav.
+      const pairTop = Math.min(hero.top, column.top);
+      const pairBottom = Math.max(hero.bottom, column.bottom);
+      expect(Math.abs(pairTop - brand.bottom - (nav.top - pairBottom))).toBeLessThan(48);
+      // W2: the right-hand column is centred on the figure beside it.
+      expect(Math.abs(column.mid - hero.mid)).toBeLessThan(4);
+      // W3: the navigation sits at the bottom of the window, as in a narrow one.
+      expect(viewport.height - nav.bottom).toBeLessThan(64);
+    });
+  }
+
+  test('W4: a narrow window keeps the greeting above the figure, and reads greeting first', async ({
+    page,
+  }) => {
+    await signedIn(page, 'home-w4');
+    await expect(focusButton(page)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Choose a constellation' })).toBeVisible();
+    // Polled: the tiles and friends line arrive a moment after the page.
+    await expect
+      .poll(async () => {
+        const greeting = await box(page, 'h2');
+        const hero = await box(page, '[data-hero-slot="home"]');
+        const status = await box(page, '[data-home-column] > div');
+        return greeting.bottom <= hero.top + 1 && hero.bottom <= status.top + 1;
+      })
+      .toBe(true);
+  });
+});
+
 test.describe('the dashboard (PR 5)', () => {
   test('P1: a first look shows the greeting, a ring at 0, no streak, and Add a friend', async ({
     page,

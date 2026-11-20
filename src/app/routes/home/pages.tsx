@@ -26,7 +26,9 @@ export const Brand = () => (
  * second.
  *
  * One column; from `lg` (a wide window) two, the constellation on the left and
- * everything else on the right. Source order stays the reading order.
+ * everything else in one column on the right, centred on it, with the pair
+ * centred in the page and the navigation at the bottom. The greeting is still
+ * read first: the slot before it is decorative.
  */
 export const HomePage = ({
   busy,
@@ -52,27 +54,42 @@ export const HomePage = ({
   footer: ReactNode;
 }) => (
   <>
-    <section className="flex min-h-0 w-full max-w-md flex-1 flex-col items-center gap-3 lg:grid lg:max-w-4xl lg:flex-none lg:grid-cols-2 lg:content-center lg:justify-items-center lg:gap-x-16 lg:gap-y-4">
-      <h2 className="text-ink-primary text-lg lg:col-start-2">{greetingText}</h2>
+    {/* `lg:flex-1` + `content-center`: in a wide window the pair sits in the
+        middle of the room between the name and the navigation, which stays at
+        the bottom as it does in a narrow one (UI review M1). */}
+    <section
+      data-home-layout
+      className="flex min-h-0 w-full max-w-md flex-1 flex-col items-center gap-3 lg:grid lg:max-w-4xl lg:grid-cols-2 lg:content-center lg:items-center lg:gap-x-16"
+    >
+      {/* Decorative, so its place in the source doesn't change the reading
+          order; it comes first so that from `lg` it can be the left column. */}
       <div
         ref={heroSlotRef}
         aria-hidden
         data-hero-slot="home"
-        className="min-h-0 w-full flex-1 lg:col-start-1 lg:row-span-6 lg:row-start-1 lg:h-96 lg:flex-none lg:self-stretch"
+        className="lg:tall:h-120 min-h-0 w-full flex-1 lg:h-96 lg:flex-none"
       />
-      <div className="lg:col-start-2">{constellation}</div>
-      <div className="flex w-full max-w-md gap-2 lg:col-start-2">{tiles}</div>
-      <div className="flex min-h-6 items-center justify-center lg:col-start-2">{friends}</div>
-      <button
-        ref={ctaRef}
-        type="button"
-        onClick={onFocus}
-        aria-describedby={busy ? GLANCE_ID : undefined}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 pressable px-12 py-3.5 text-base font-medium shadow-lg lg:col-start-2"
+      {/* One column, centred on the figure from `lg`. Narrower, `contents`
+          leaves its children in the page's own column, the greeting first. */}
+      <div
+        data-home-column
+        className="contents lg:flex lg:w-full lg:flex-col lg:items-center lg:gap-4"
       >
-        {busy ? 'Return to focus' : 'Start focusing'}
-      </button>
-      {busy && <TimerGlance id={GLANCE_ID} className="text-ink-secondary text-sm lg:col-start-2" />}
+        <h2 className="text-ink-primary order-first text-lg lg:order-none">{greetingText}</h2>
+        <div>{constellation}</div>
+        <div className="flex w-full max-w-md gap-2">{tiles}</div>
+        <div className="flex min-h-6 items-center justify-center">{friends}</div>
+        <button
+          ref={ctaRef}
+          type="button"
+          onClick={onFocus}
+          aria-describedby={busy ? GLANCE_ID : undefined}
+          className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 shadow-lavender-400/25 hover:shadow-lavender-400/40 pressable px-12 py-3.5 text-base font-medium shadow-lg"
+        >
+          {busy ? 'Return to focus' : 'Start focusing'}
+        </button>
+        {busy && <TimerGlance id={GLANCE_ID} className="text-ink-secondary text-sm" />}
+      </div>
     </section>
     {footer}
   </>
