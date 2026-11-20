@@ -920,7 +920,7 @@ rejected). Don't pre-populate this with guesses.
   idle, running, break, result; `tall:` raises the caps from 860 px). **Its height is
   frozen while the page shows the same thing** (`useFrozenSlotHeight`), so the
   card, anchored at its top, never moves under the pointer; the idle slot also
-  leaves 72 px for the card to grow (Custom, Pomodoro). It is measured again on a
+  leaves 132 px for the card to grow (Custom +65; Pomodoro up to +88, since its four sliders sit in a 2x2 grid: in one column it was +202 and the card jumped; plus 36 px for the card's own progress and hint lines, which arrive from the local database after the slot is frozen, and 8 px). It is measured again on a
   change of state, window or banner, and whenever the page would overflow (a
   result's reward lines arrive late), which can only shrink it. So the idle hero
   shows only in taller windows; running gets the most room. **A result with no room
