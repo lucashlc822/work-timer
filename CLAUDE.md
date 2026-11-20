@@ -359,6 +359,10 @@ in `NOTES.md`.
   its own. If a spacing need keeps recurring, add a token there rather than a
   one-off value.
 - **Text colours:** `--color-ink-muted` only on night-900/800, never night-700.
+- **Scrollbars take `--color-night-600` on a transparent track, and are thin,
+  everywhere** (`index.css`: the colour on `html` inherits; the width is set on
+  `*`, since it does not). A text button that closes something is a pill
+  (`rounded-pill pressable`) so the global focus ring follows its shape.
 - **Accessibility target is WCAG 2.2 AA**; the axe scan in
   `e2e/web/a11y.spec.ts` must stay enforcing.
 - **Tone is gentle**: nothing urgent-looking, and an early ending is a soft

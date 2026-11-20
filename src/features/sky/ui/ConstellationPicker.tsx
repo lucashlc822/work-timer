@@ -150,7 +150,7 @@ export const ConstellationPicker = ({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="text-ink-muted hover:text-ink-secondary -mx-2 -my-1 px-2 py-1 text-sm transition-colors"
+            className="rounded-pill text-ink-muted hover:text-ink-secondary hover:bg-night-700/60 pressable -my-1.5 -mr-3 px-3 py-1.5 text-sm"
           >
             Close
           </button>
