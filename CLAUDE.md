@@ -1053,7 +1053,11 @@ rejected). Don't pre-populate this with guesses.
   the long durations stay for the completion moments only. **A pill button uses
   `pressable`** (`index.css`: quick colour change, scale 0.97 while pressed) instead
   of `transition-colors`; tab panels use `animate-fade-in` and hover cards
-  `animate-card-in`. Tailwind's default transition is 150 ms on `--ease-standard`.
+  `animate-card-in`. Tailwind's default transition is 150 ms on `--ease-standard`. **A duration in a component is a token utility**
+  (`duration-enter`, `duration-page-in`, … in `index.css`), never a number, and
+  nothing animates `width` (`transition-[…]`): `styles/noRawMotion.test.ts` fails
+  on `duration-300` or `transition-[width]`. The daily-goal bar slides a full-width
+  fill with `translateX` inside its clipping track.
 
 ## Plans include acceptance tests
 

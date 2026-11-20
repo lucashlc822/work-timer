@@ -79,7 +79,7 @@ const Member = ({
 }) => (
   <li className="flex w-16 flex-col items-center gap-1 text-center">
     {/* The twinkle animates opacity, so it sits inside the dimming, not on it. */}
-    <span className={`ease-gentle transition duration-500 ${STAR_LOOK[member.state]}`}>
+    <span className={`ease-gentle duration-page-in transition ${STAR_LOOK[member.state]}`}>
       <span
         data-testid="member-star"
         className="block"

@@ -377,4 +377,32 @@
 .moment-part:has(:focus-visible) {
   opacity: 1;
   transform: none;
+} /*
+ * The motion duration tokens as utilities, so a component names a token and
+ * never a number (`duration-enter`, not `duration-300`; a test keeps raw ones
+ * out). Pair with `transition-*` and an `ease-*` utility.
+ */
+@utility duration-press {
+  transition-duration: var(--duration-press);
+}
+@utility duration-quick {
+  transition-duration: var(--duration-quick);
+}
+@utility duration-enter {
+  transition-duration: var(--duration-enter);
+}
+@utility duration-exit {
+  transition-duration: var(--duration-exit);
+}
+@utility duration-panel-in {
+  transition-duration: var(--duration-panel-in);
+}
+@utility duration-panel-out {
+  transition-duration: var(--duration-panel-out);
+}
+@utility duration-page-in {
+  transition-duration: var(--duration-page-in);
+}
+@utility duration-page-out {
+  transition-duration: var(--duration-page-out);
 }

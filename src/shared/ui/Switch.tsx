@@ -27,7 +27,7 @@ export const Switch = ({
       />
       <span
         aria-hidden
-        className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary after:rounded-pill pointer-events-none absolute inset-0 transition-colors duration-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:transition-transform after:duration-300 peer-checked:after:translate-x-4"
+        className="bg-night-600 peer-checked:bg-lavender-400 peer-focus-visible:outline-lavender-300 ease-gentle rounded-pill after:bg-ink-primary after:rounded-pill duration-enter after:duration-enter pointer-events-none absolute inset-0 transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"
       />
     </span>
   </label>
