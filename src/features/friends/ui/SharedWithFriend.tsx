@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'motion/react';
 import { useState, type ReactNode } from 'react';
 
 import { FriendsFailure } from '../data/friendsRepository';
@@ -147,11 +148,13 @@ export const SharedWithFriend = ({
           {error}
         </p>
       )}
-      {picking &&
-        renderPicker({
-          onPick: (draft) => void run(() => shared.propose(friendId, draft)),
-          onClose: () => setPicking(false),
-        })}
+      <AnimatePresence>
+        {picking &&
+          renderPicker({
+            onPick: (draft) => void run(() => shared.propose(friendId, draft)),
+            onClose: () => setPicking(false),
+          })}
+      </AnimatePresence>
     </div>
   );
 };

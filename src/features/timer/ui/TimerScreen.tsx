@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { systemClock } from '@/shared/lib';
@@ -229,18 +230,20 @@ export const TimerScreen = ({
           </SecondaryButton>
         </div>
 
-        {confirming && timer.status === 'running' && (
-          <CancelDialog
-            focusedSoFar={formatDuration(cancelledEnding(session, now).actualFocusS)}
-            runStarsKept={block !== null ? (timer.run?.blocksDone ?? 0) : null}
-            note={slots.cancelNote?.(running)}
-            onKeepGoing={keepGoing}
-            onConfirm={() => {
-              setConfirming(false);
-              timer.confirmCancel();
-            }}
-          />
-        )}
+        <AnimatePresence>
+          {confirming && timer.status === 'running' && (
+            <CancelDialog
+              focusedSoFar={formatDuration(cancelledEnding(session, now).actualFocusS)}
+              runStarsKept={block !== null ? (timer.run?.blocksDone ?? 0) : null}
+              note={slots.cancelNote?.(running)}
+              onKeepGoing={keepGoing}
+              onConfirm={() => {
+                setConfirming(false);
+                timer.confirmCancel();
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }

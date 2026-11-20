@@ -65,6 +65,7 @@ test('the signed-in screens', async ({ page }, testInfo) => {
   findings.push(...(await scan(page, 'timer, idle')));
 
   await openTagPicker(page);
+  await settleTransitions(page);
   findings.push(...(await scan(page, 'timer, tag picker open')));
   await page.keyboard.press('Escape');
 
@@ -96,6 +97,8 @@ test('the signed-in screens', async ({ page }, testInfo) => {
 
   await page.getByRole('button', { name: 'End early' }).click();
   await page.getByRole('alertdialog').waitFor();
+  // Dialogs fade in (premium motion PR 8); scan the settled one, not a half-faded one.
+  await settleTransitions(page);
   findings.push(...(await scan(page, 'end-early dialog')));
   await page.getByRole('button', { name: 'Keep going' }).click();
 

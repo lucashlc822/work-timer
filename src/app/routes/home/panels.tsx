@@ -1,4 +1,4 @@
-import { m, useIsPresent } from 'motion/react';
+import { m, useIsPresent, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { CompletionSoundSwitch } from '@/features/timer';
@@ -35,6 +35,7 @@ export const PanelLayer = ({
   // Leaving (premium motion PR 6): still on screen for its exit, but nothing in
   // it can be reached, read or pressed, and focus has already gone to the page.
   const present = useIsPresent();
+  const reduced = useReducedMotion() === true;
   // Reopened while still leaving, the same panel comes back rather than a new
   // one mounting, so its title is focused again here (useFocusHeading ran once).
   const wasPresent = useRef(present);
@@ -46,9 +47,9 @@ export const PanelLayer = ({
   }, [present, backRef]);
   return (
     <m.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, transition: TRANSITIONS.panelIn }}
-      exit={{ opacity: 0, y: 8, transition: TRANSITIONS.panelOut }}
+      initial={{ opacity: 0, ...(!reduced && { y: 8 }) }}
+      animate={{ opacity: 1, ...(!reduced && { y: 0 }), transition: TRANSITIONS.panelIn }}
+      exit={{ opacity: 0, ...(!reduced && { y: 8 }), transition: TRANSITIONS.panelOut }}
       inert={!present}
       aria-hidden={present ? undefined : true}
       data-overlay

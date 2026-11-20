@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 import { useDialogFocus } from '@/shared/ui';
+import { ModalBackdrop, ModalPanel, useOverlayPresent } from '@/shared/ui/motion';
 
 interface Props {
   /** e.g. "12 minutes" — what will be credited if the user confirms. */
@@ -29,24 +30,24 @@ export const CancelDialog = ({
 }: Props) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const keepGoingRef = useRef<HTMLButtonElement>(null);
-  useDialogFocus(dialogRef, keepGoingRef);
+  const present = useOverlayPresent();
+  useDialogFocus(dialogRef, keepGoingRef, present);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onKeepGoing();
+      if (e.key === 'Escape' && present) onKeepGoing();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onKeepGoing]);
+  }, [onKeepGoing, present]);
 
   return (
-    <div className="bg-night-950/70 fixed inset-0 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div
+    <ModalBackdrop className="bg-night-950/80 fixed inset-0 z-40 flex items-center justify-center p-4">
+      <ModalPanel
         ref={dialogRef}
         role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="cancel-title"
-        aria-describedby="cancel-body"
+        labelledBy="cancel-title"
+        describedBy="cancel-body"
         className="rounded-soft border-night-600 bg-night-800 w-full max-w-xs space-y-4 border p-5 text-center"
       >
         <h2 id="cancel-title" className="text-ink-primary text-lg">
@@ -76,7 +77,7 @@ export const CancelDialog = ({
             End session
           </button>
         </div>
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 };

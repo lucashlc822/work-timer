@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { StarMark, useDialogFocus } from '@/shared/ui';
+import { ModalBackdrop, ModalPanel, useOverlayPresent } from '@/shared/ui/motion';
 
 import { FriendsFailure } from '../data/friendsRepository';
 import { FRIENDS_MESSAGES } from '../domain/errors';
@@ -42,7 +43,7 @@ export const InviteBanner = ({
   return (
     <section
       aria-label="Invitation"
-      className="bg-night-800/80 border-lavender-400/60 rounded-soft flex w-full max-w-md flex-col items-center gap-1.5 border px-4 py-2 text-center text-sm"
+      className="animate-fade-in bg-night-800/80 border-lavender-400/60 rounded-soft flex w-full max-w-md flex-col items-center gap-1.5 border px-4 py-2 text-center text-sm"
     >
       <p className="text-ink-primary">
         {nameOf(invite, invite.host)} invites you to focus{' '}
@@ -99,15 +100,16 @@ export const StartAloneDialog = ({
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const notNowRef = useRef<HTMLButtonElement>(null);
-  useDialogFocus(dialogRef, notNowRef);
+  const present = useOverlayPresent();
+  useDialogFocus(dialogRef, notNowRef, present);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose(false);
+      if (e.key === 'Escape' && present) onClose(false);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, present]);
 
   const startAlone = async () => {
     setActing(true);
@@ -123,13 +125,12 @@ export const StartAloneDialog = ({
 
   const host = nameOf(invite, invite.host);
   return (
-    <div className="bg-night-950/70 fixed inset-0 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div
+    <ModalBackdrop className="bg-night-950/80 fixed inset-0 z-40 flex items-center justify-center p-4">
+      <ModalPanel
         ref={dialogRef}
         role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="start-alone-title"
-        aria-describedby="start-alone-body"
+        labelledBy="start-alone-title"
+        describedBy="start-alone-body"
         className="rounded-soft border-night-600 bg-night-800 w-full max-w-xs space-y-4 border p-5 text-center"
       >
         <h2 id="start-alone-title" className="text-ink-primary text-lg">
@@ -162,8 +163,8 @@ export const StartAloneDialog = ({
             {error}
           </p>
         )}
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 };
 
@@ -203,7 +204,7 @@ export const LobbyEndedNote = ({
 }) => (
   <section
     aria-label="Friends session"
-    className="bg-night-800/80 border-night-600 rounded-soft flex w-full max-w-md items-center justify-between gap-3 border px-4 py-3 text-sm"
+    className="animate-fade-in bg-night-800/80 border-night-600 rounded-soft flex w-full max-w-md items-center justify-between gap-3 border px-4 py-3 text-sm"
   >
     <p className="text-ink-secondary" role="status">
       {ending.why === 'closed'

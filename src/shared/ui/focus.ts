@@ -19,10 +19,15 @@ const focusIsLost = () =>
  *
  * The opener is captured during the first render, before any effect moves
  * focus, so StrictMode's double effect run can't mistake `initial` for it.
+ *
+ * A dialog that animates out (premium motion PR 8) stays mounted while it
+ * leaves; pass `present` (false once it is leaving) and focus goes back when it
+ * starts to leave, not when it is finally unmounted.
  */
 export const useDialogFocus = (
   container: RefObject<HTMLElement | null>,
   initial: RefObject<HTMLElement | null>,
+  present = true,
 ) => {
   const [opener] = useState(() =>
     typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
@@ -30,7 +35,16 @@ export const useDialogFocus = (
       : null,
   );
 
+  // Leaving: hand focus back now. The dialog is inert while it goes, so focus
+  // inside it is as good as lost.
   useEffect(() => {
+    if (present) return;
+    const inside = container.current?.contains(document.activeElement) === true;
+    if (opener?.isConnected === true && (inside || focusIsLost())) opener.focus();
+  }, [present, container, opener]);
+
+  useEffect(() => {
+    if (!present) return;
     initial.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       const root = container.current;
@@ -57,7 +71,7 @@ export const useDialogFocus = (
       document.removeEventListener('keydown', onKey);
       if (opener?.isConnected === true && focusIsLost()) opener.focus();
     };
-  }, [container, initial, opener]);
+  }, [container, initial, opener, present]);
 };
 
 /**

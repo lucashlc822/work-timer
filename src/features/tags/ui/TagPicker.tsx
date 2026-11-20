@@ -1,7 +1,9 @@
+import { AnimatePresence } from 'motion/react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { db, type TagColor } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
+import { PopoverPanel } from '@/shared/ui/motion';
 
 import { createTag, TagLimitError, TagNameInvalidError } from '../data/tagRepository';
 import { MAX_ACTIVE_TAGS, MAX_TAG_NAME_LENGTH, TAG_NAME_MESSAGES } from '../domain/tags';
@@ -86,50 +88,56 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
         )}
       </button>
 
-      {open && (
-        <div
-          id={panelId}
-          role="dialog"
-          aria-label="Choose a tag"
-          className="bg-night-800 border-night-600 rounded-soft absolute top-full left-1/2 z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-3 border p-3 text-left shadow-lg"
-        >
-          {managing ? (
-            <>
-              <TagManager tags={all} selectedId={value} onArchivedSelected={() => onChange(null)} />
-              <PanelLink onClick={() => setManaging(false)}>Done</PanelLink>
-            </>
-          ) : (
-            <>
-              <ul className="flex max-h-48 flex-col overflow-y-auto">
-                <Option selected={current === null} onClick={() => choose(null)}>
-                  No tag
-                </Option>
-                {active.map((tag) => (
-                  <Option
-                    key={tag.id}
-                    selected={tag.id === current?.id}
-                    onClick={() => choose(tag.id)}
-                  >
-                    <TagDot color={tag.color} />
-                    {tag.name}
-                  </Option>
-                ))}
-              </ul>
-              {active.length < MAX_ACTIVE_TAGS && (
-                <NewTagForm
-                  taken={active.length}
-                  onCreated={(id) => {
-                    choose(id);
-                  }}
+      <AnimatePresence>
+        {open && (
+          <PopoverPanel
+            key="tag-popover"
+            id={panelId}
+            label="Choose a tag"
+            className="bg-night-800 border-night-600 rounded-soft absolute top-full left-1/2 z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-3 border p-3 text-left shadow-lg"
+          >
+            {managing ? (
+              <>
+                <TagManager
+                  tags={all}
+                  selectedId={value}
+                  onArchivedSelected={() => onChange(null)}
                 />
-              )}
-              {all.length > 0 && (
-                <PanelLink onClick={() => setManaging(true)}>Manage tags</PanelLink>
-              )}
-            </>
-          )}
-        </div>
-      )}
+                <PanelLink onClick={() => setManaging(false)}>Done</PanelLink>
+              </>
+            ) : (
+              <>
+                <ul className="flex max-h-48 flex-col overflow-y-auto">
+                  <Option selected={current === null} onClick={() => choose(null)}>
+                    No tag
+                  </Option>
+                  {active.map((tag) => (
+                    <Option
+                      key={tag.id}
+                      selected={tag.id === current?.id}
+                      onClick={() => choose(tag.id)}
+                    >
+                      <TagDot color={tag.color} />
+                      {tag.name}
+                    </Option>
+                  ))}
+                </ul>
+                {active.length < MAX_ACTIVE_TAGS && (
+                  <NewTagForm
+                    taken={active.length}
+                    onCreated={(id) => {
+                      choose(id);
+                    }}
+                  />
+                )}
+                {all.length > 0 && (
+                  <PanelLink onClick={() => setManaging(true)}>Manage tags</PanelLink>
+                )}
+              </>
+            )}
+          </PopoverPanel>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
