@@ -22,6 +22,13 @@ const ago = (then: number, now: number): string => {
   return new Date(then).toLocaleDateString();
 };
 
+/**
+ * A round that has gone on this long says so (UI review M5). A server that
+ * doesn't answer can hold a request for far longer than a person will wait
+ * with only "Syncing…" in front of them.
+ */
+export const SLOW_SYNC_MS = 8_000;
+
 const waiting = (n: number): string =>
   n === 0 ? '' : ` · ${n} ${n === 1 ? 'change' : 'changes'} waiting`;
 
@@ -40,9 +47,20 @@ export const SyncStatus = ({
     return () => clearInterval(timer);
   }, []);
 
+  // How long this round has been running: reset whenever the phase changes.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (status.phase !== 'syncing') return;
+    const timer = setTimeout(() => setSlow(true), SLOW_SYNC_MS);
+    return () => clearTimeout(timer);
+  }, [status.phase]);
+
   const line =
     status.phase === 'syncing'
-      ? 'Syncing…'
+      ? slow
+        ? `Still trying to reach the server…${waiting(status.pending)}`
+        : 'Syncing…'
       : status.phase === 'offline'
         ? `Offline${waiting(status.pending)}`
         : status.phase === 'unreachable'
