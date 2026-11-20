@@ -1,5 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 
+import { useSlidingIndicator } from '@/shared/ui';
+
 import type { PeriodKind } from '../domain/period';
 import { PERIOD_PANEL_ID, periodTabId } from './periodTabIds';
 
@@ -22,6 +24,9 @@ export const PeriodTabs = ({
   onChange: (next: PeriodKind) => void;
 }) => {
   const tabs = useRef<Partial<Record<PeriodKind, HTMLButtonElement | null>>>({});
+  const track = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  useSlidingIndicator(track, indicator, kind);
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const last = KINDS.length - 1;
@@ -47,7 +52,12 @@ export const PeriodTabs = ({
   };
 
   return (
-    <div role="tablist" aria-label="Period" className="flex gap-2">
+    <div ref={track} role="tablist" aria-label="Period" className="relative flex gap-2">
+      <span
+        ref={indicator}
+        aria-hidden
+        className="border-lavender-400 rounded-pill pointer-events-none absolute border opacity-0"
+      />
       {KINDS.map(({ kind: k, label }, index) => (
         <button
           key={k}
@@ -62,9 +72,9 @@ export const PeriodTabs = ({
           tabIndex={k === kind ? 0 : -1}
           onClick={() => onChange(k)}
           onKeyDown={(e) => onKeyDown(e, index)}
-          className={`rounded-pill pressable border px-4 py-1.5 text-xs ${
+          className={`rounded-pill pressable relative z-10 border px-4 py-1.5 text-xs ${
             k === kind
-              ? 'border-lavender-400 text-ink-primary'
+              ? 'text-ink-primary border-transparent'
               : 'border-night-600 text-ink-secondary hover:border-lavender-400'
           }`}
         >

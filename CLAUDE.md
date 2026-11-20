@@ -971,6 +971,28 @@ rejected). Don't pre-populate this with guesses.
   overlay should scope to it, because the one leaving is still in the DOM for
   ~200 ms.
 
+- **A highlight slides to the selected option, changed digits roll, and the
+  Stardust balance counts** (premium-motion PR 9, 2026-11-19; the last of the
+  premium-motion plan). `useSlidingIndicator` (`shared/ui`): one absolutely
+  positioned element behind the options of a segmented control, the period tabs
+  and the Stardust tabs, moved to the option marked `aria-checked`/`aria-selected`
+  by **one FLIP Web Animation** (transform only, `enter` duration and easing) from
+  where the highlight visibly is, so a second choice mid-glide carries on from
+  there. The options keep the text; the indicator holds the fill or outline, so a
+  selected option's own background or border is transparent. A resize re-places it
+  without a glide; reduced motion and the first placement don't move it. **Not
+  `layoutId`** (like PR 7): no `domMax`, nothing tracked per render. `RollingText`
+  (the idle `PlannedTime`): only the characters that changed rise 0.25 em as they
+  fade in; **changes under 150 ms apart (a held arrow on the Custom slider) show at
+  once**, so at most the first of a burst rolls. **The running countdown never
+  animates** (a test samples it for animations over four seconds). `useTweenedNumber`
+  counts the Stardust tile's and panel's balance to a new value over 450 ms: the
+  first value is shown at once (a page opening never counts from zero), reduced
+  motion and a hidden window show every value at once, and the tile's accessible
+  name is always the real balance. A test that counts animations under reduced
+  motion must ignore `CSSTransition`: the global reduced-motion rule makes every
+  style change a 0.01 ms transition.
+
 - **Dialogs, the tag popover and the update notice animate in and out; the one
   leaving is out of reach** (premium-motion PR 8, 2026-11-19). The shared pieces
   are in `shared/ui/motion/overlays.tsx`: `ModalBackdrop` (fade, **no backdrop
@@ -1020,7 +1042,8 @@ rejected). Don't pre-populate this with guesses.
   and `MotionConfig reducedMotion="user"`. Use the `m` component, never `motion`
   or `framer-motion` (ESLint refuses both; they'd pull the library into the main
   bundle). The features are `domAnimation`; **`domMax` (layout animation, ~16 kB
-  gzipped more) is switched on only by the change that needs `layoutId`.** Numbers
+  gzipped more) is for a change that genuinely needs `layoutId`; none has (PR 7
+  and 9 use clipped and FLIP surfaces instead).** Numbers
   come from the motion tokens in `tokens.css`, mirrored as `MOTION` in
   `design-tokens.mjs` and `TRANSITIONS` in `shared/ui/motion` (a test keeps them in
   step). Rules: only transform and opacity animate; opacity is never sprung;

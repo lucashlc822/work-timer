@@ -5,3 +5,6 @@ export { useDialogFocus, useFocusHeading, useFocusIfLost } from './focus';
 export { radioKeyTarget } from './radioKeys';
 export { useMediaQuery } from './useMediaQuery';
 export { useElementRect, type ElementRect } from './useElementRect';
+export { useSlidingIndicator } from './useSlidingIndicator';
+export { useTweenedNumber } from './useTweenedNumber';
+export { RollingText } from './RollingText';

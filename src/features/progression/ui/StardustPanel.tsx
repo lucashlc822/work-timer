@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
 
 import { addDays, dayKey, dayStart } from '@/shared/lib';
-import { radioKeyTarget } from '@/shared/ui';
+import { radioKeyTarget, useSlidingIndicator, useTweenedNumber } from '@/shared/ui';
 
 import { STARDUST_PER_MINUTE } from '../domain/economy';
 import { groupByDay } from '../domain/ledgerDays';
@@ -91,8 +91,12 @@ const History = () => {
  */
 export const StardustPanel = (shop: ShopProps) => {
   const balance = useBalance();
+  const shownBalance = useTweenedNumber(balance ?? 0);
   const [tab, setTab] = useState<TabId>('shop');
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabTrack = useRef<HTMLDivElement>(null);
+  const tabIndicator = useRef<HTMLSpanElement>(null);
+  useSlidingIndicator(tabTrack, tabIndicator, tab);
   const base = useId();
   const tabId = (id: TabId) => `${base}-tab-${id}`;
   const panelId = (id: TabId) => `${base}-panel-${id}`;
@@ -132,7 +136,7 @@ export const StardustPanel = (shop: ShopProps) => {
           <span aria-hidden className="text-star-warm mr-2">
             ✦
           </span>
-          {count(balance ?? 0)}
+          {count(shownBalance)}
           <span className="sr-only"> Stardust</span>
         </p>
         <details className="text-ink-secondary max-w-sm text-center text-sm">
@@ -149,9 +153,15 @@ export const StardustPanel = (shop: ShopProps) => {
 
       <div
         role="tablist"
+        ref={tabTrack}
         aria-label="Stardust"
-        className="rounded-pill border-night-600 bg-night-800/70 flex gap-1 border p-1"
+        className="rounded-pill border-night-600 bg-night-800/70 relative flex gap-1 border p-1"
       >
+        <span
+          ref={tabIndicator}
+          aria-hidden
+          className="border-lavender-400 bg-lavender-400/15 rounded-pill pointer-events-none absolute border opacity-0"
+        />
         {TABS.map((t, i) => {
           const selected = t.id === tab;
           return (
@@ -168,10 +178,8 @@ export const StardustPanel = (shop: ShopProps) => {
               tabIndex={selected ? 0 : -1}
               onClick={() => setTab(t.id)}
               onKeyDown={(e) => onKeyDown(e, i)}
-              className={`rounded-pill pressable min-h-7 border px-4 py-1 text-xs whitespace-nowrap ${
-                selected
-                  ? 'border-lavender-400 bg-lavender-400/15 text-ink-primary'
-                  : 'text-ink-secondary hover:text-ink-primary border-transparent'
+              className={`rounded-pill pressable relative z-10 min-h-7 border border-transparent px-4 py-1 text-xs whitespace-nowrap ${
+                selected ? 'text-ink-primary' : 'text-ink-secondary hover:text-ink-primary'
               }`}
             >
               {t.label}
