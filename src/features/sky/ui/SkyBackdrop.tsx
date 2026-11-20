@@ -102,6 +102,7 @@ export const SkyView = ({
   heroSlot,
   heroKey,
   heroFallback = false,
+  heroHidden = false,
 }: {
   sky: SkyState | undefined;
   themeKey: string | undefined;
@@ -154,6 +155,8 @@ export const SkyView = ({
    * slots (behind the page) instead of not at all.
    */
   heroFallback?: boolean;
+  /** Hero only: a panel is open over the sky, so the figure fades out. */
+  heroHidden?: boolean;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { width, height } = useElementSize(ref);
@@ -340,6 +343,7 @@ export const SkyView = ({
                 (heroFallback ? heroPlacement(width, height) : null),
             })}
           {...(!full && heroKey !== undefined && { heroKey })}
+          {...(!full && heroHidden && { heroHidden })}
         />
       )}
       {full && active !== null ? (
@@ -437,6 +441,7 @@ export const SkyBackdrop = ({
   heroSlot,
   heroKey,
   heroFallback,
+  heroHidden,
 }: {
   mode: SkyMode;
   shared?: readonly SharedState[];
@@ -448,6 +453,8 @@ export const SkyBackdrop = ({
   heroKey?: string;
   /** Hero only: with no room in the slot, draw it where it sat before slots. */
   heroFallback?: boolean;
+  /** Hero only: a panel is open over the sky; the figure fades out, the starfield stays. */
+  heroHidden?: boolean;
 }) => {
   const full = mode === 'full';
   const sky = useSky();
@@ -492,6 +499,7 @@ export const SkyBackdrop = ({
       {...(heroSlot !== undefined && { heroSlot })}
       {...(heroKey !== undefined && { heroKey })}
       {...(heroFallback !== undefined && { heroFallback })}
+      {...(heroHidden !== undefined && { heroHidden })}
     />
   );
 };

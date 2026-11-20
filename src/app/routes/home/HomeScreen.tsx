@@ -447,6 +447,9 @@ export const HomeScreen = ({ together }: { together: Together }) => {
         // before, so a constellation finished there still has its moment seen.
         heroFallback={page === 'timer' && heroKind === 'result'}
         heroKey={page === 'timer' ? heroKind : (page ?? 'loading')}
+        // Behind a panel or a friend's sky the figure shows faintly through it (UI review
+        // L4): fade it out. The full sky (View sky) is the figure's own stage, so it stays.
+        heroHidden={view !== 'none' && view !== 'sky'}
       />
 
       {page !== null && (
