@@ -12,9 +12,55 @@ Once this file passes ~1,000 lines, archive older entries to
 
 ---
 
+## 2026-11-20 — Pomodoro grid, token durations, hero behind panels, picker polish: merged, not released
+
+**Status: merged, not released.** #222–#226 are on `master` (50 commits past `v0.10.0`, together with #204–#221 from the entry below); `package.json` is still 0.10.0 and only Lucas has seen any of it. Nothing in flight. This is the plan Lucas approved after the UI-review fixes: Pomodoro card growth plus the review's Lows (plan file `~/.claude/plans/it-s-time-to-work-wild-key.md`, rewritten for this). He picked a 2×2 slider grid for Pomodoro and L3, L4, L5 and a verify-only L6; **L2 ("← Home" at the card's left edge) was dropped on purpose** (the documented design). L1 had shipped in #214.
+
+### What changed, and the choices behind it
+
+- **#222 Pomodoro settings in a 2×2 grid.** Switching Countdown → Pomodoro grew the idle card **202 px** against 72 px reserved, so the card jumped in tall windows and the page scrolled at 480×720 and 380×560. Now it grows 52–88 px. `GROWTH_RESERVE.idle` is **132 = 88 (the larger growth) + 36 (the card's own progress and hint lines, which arrive from the local database ~100 ms after the page opens, after the slot is frozen) + 8**. "Long break every" is *shown* as "Every" (accessible name unchanged). CI showed that Linux's text is wider than Windows': two rows wrapped at 365 and 380 px, so the rows use a container query (`@container` / `@max-xs`) to drop to 12 px when narrow.
+- **#223 Durations are tokens.** `duration-press/quick/enter/exit/panel-in/panel-out/page-in/page-out` utilities in `index.css`; the Switch (300 → 240 ms), the lobby and the sky fade (500 → 450 ms) use them; the goal bar slides a full-width fill with `translateX` instead of animating `width`. `styles/noRawMotion.test.ts` fails on any `duration-<number>` or `transition-[…]` in `src`.
+- **#224 The hero slot no longer freezes around "Opening…".** While the timer reads its store it renders only that placeholder; the slot measured then, saw an empty section (528 px of "spare"), took its cap and left the card nothing, and choosing Custom later made the page overflow and the slot give 145 px back. The placeholder now carries `data-timer-loading` and `hasContent` (unit-tested) gates the measurement. This was the cause of #222's CI flake and of the load-time "drawn, then collapses" jump I had recorded as unfixed in #222; I did not re-measure that jump separately afterwards.
+- **#225 The home constellation fades out behind open panels** (`heroHidden`: opacity on the figure's own `svg`, `panelIn` in and `panelOut` back; the starfield stays; View sky keeps it).
+- **#226 Picker polish and L6.** The picker's Close is a pill (its focus ring was square); scrollbars use `--color-night-600` (`scrollbar-color` on `html` inherits; `scrollbar-width: thin` is on `*`, because it does not inherit). **L6 needed no change**: the dialog's mid-fade frame is an ordinary cross-fade, and the morph's `clip-path`, recorded every frame, runs from the home button's shape to within 0.3 px of the card.
+
+### Checked, with what was seen
+
+- Every PR: lint, `tsc -b`, `npm test` and `npm run e2e:web` (176 by the last) passed locally, and CI's five jobs were green before each merge (#223 and #222 each needed a re-run or fix first; see below). Each PR body has its acceptance table. New specs: `pomodoro-layout`, `motion-tokens`, `hero-hidden`, `picker-polish`.
+- Tests written first failed on the old code: `noRawMotion` (named exactly the four files), A8 in `pomodoro-layout` (6 of 8), the goal bar's `width` transition and the Switch's 0.3 s, `hero-hidden` C1/C1b/C4, and `picker-polish` D1/D2.
+- The slot race (#224): `pomodoro-layout` A1 at 768×1024 failed 3 of 24 runs on 8 workers before, 24 of 24 passed after; the layout and hero specs passed 152 of 152 at 8 repeats.
+- The desktop suite ran once, for #222: 7 passed.
+
+### Not verified
+
+- **Pomodoro at 380×560 still scrolls 7 px more than Custom** (600 v 593 on Windows, 615 on CI; 694 before). The plan said "no more than Custom"; closing it would crowd the 24 px sliders. A3 checks "no more than a line past Custom", measured in the same environment.
+- **The desktop app** for #223–#226 (no desktop-specific code, but not run); a real window with Windows' classic scrollbar (simulated with a 365 px case); the scrollbar look by eye (headless Chromium hides it, so only the CSS values are asserted).
+- The `friend` and `together` views for #225 (same expression, not driven in the e2e); the slot's content gate on the running, break and result kinds (same code path, not stressed).
+- **One unit test failed once** in a full local `npm test` (1 failed, 1142 passed) while preparing #226, and I lost which. Nine later runs passed. If it recurs, capture the output.
+- A real screen reader, and anything against the hosted server.
+
+### Things learned that aren't in the code
+
+- **CI's Linux text is wider than Windows'.** A layout that fits locally can wrap on CI. Test narrow layouts with a margin (a probe with 10% wider letter-spacing is cheap) and assert relative to a baseline in the same environment, not a fixed pixel count.
+- **Headless Chromium hides scrollbars**, so a 380 px window there has 15 px more room than a real one. Use 365 to mimic a classic scrollbar.
+- **A script's `focus()` shows no focus ring after a mouse click**; reach the control by keyboard (Tab, Shift+Tab) when testing rings.
+- **Measure before the content exists and you freeze around nothing.** Anything that sizes itself from its neighbours' layout needs a "ready" signal. A time window ("measure again for 600 ms") failed on a loaded machine; a state gate did not.
+- **Stress tests find what single runs hide.** `--repeat-each=24 --workers=8` reproduced a flake in seconds, and 88 repeats confirmed a fix. A temporary `console.log` printed from the page (`page.on('console')`) found the cause quickly.
+- **`scrollbar-color` inherits; `scrollbar-width` does not.**
+- **`gh pr checks --watch` can outlast the 10-minute tool limit** and moves to the background; it reports when done.
+- **A script that rewrites a file can leave CRLF line endings**; `git diff --stat` then shows the whole file changed. Strip them with `sed -i 's/\r$//'`.
+
+### Next
+
+- Decide on a **release**: the new home page, the motion work, the review fixes and everything above are unreleased.
+- `.claude/agent-memory/ui-ux-reviewer/MEMORY.md` still has an uncommitted change that is the reviewer's own memory, not part of any PR.
+- Optional: a second `ui-ux-reviewer` pass over the home and timer flow, since all of the first pass's fixes are now merged.
+
+---
+
 ## 2026-11-20 — Premium motion, a dashboard home, and the UI-review fixes: merged, not released
 
-**Status: merged, not released.** #204–#220 are on `master` (37 commits past `v0.10.0`); `package.json` is still 0.10.0 and nothing here has reached anyone but Lucas. Whether and when to release is his call (`RELEASING.md`). Open work: nothing in flight. The plan file is `~/.claude/plans/it-s-time-to-work-wild-key.md`.
+**Status: merged, not released.** (Carried on by the entry above, #222–#226.) #204–#220 are on `master` (37 commits past `v0.10.0`); `package.json` is still 0.10.0 and nothing here has reached anyone but Lucas. Whether and when to release is his call (`RELEASING.md`). Open work: nothing in flight. The plan file is `~/.claude/plans/it-s-time-to-work-wild-key.md`.
 
 ### What changed, and the choices behind it
 
@@ -49,7 +95,7 @@ Lucas found the transitions and animations lacklustre and disliked the timer car
 ### Next
 
 - Decide on a **release** (everything above is unreleased: the new home page, the motion work and the fixes).
-- Plan the **Pomodoro card growth** and triage the review's remaining **Lows (L2–L6)** (L3: raw durations and the Goal & streak width transition) in one plan.
+- ~~Plan the **Pomodoro card growth** and triage the review's remaining **Lows (L2–L6)**~~ — done in #222–#226, see the entry above this one. Correction to "Not verified": the local `npm run e2e:desktop` suite *was* run once after this (for #222, 7 passed); it was not run for #214–#221.
 - `.claude/agent-memory/ui-ux-reviewer/MEMORY.md` has an uncommitted change that is the reviewer's own memory, not part of any of these PRs.
 
 ---
