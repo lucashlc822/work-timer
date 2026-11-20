@@ -88,6 +88,44 @@ describe('useFocusIfLost', () => {
     );
     expect(screen.getByLabelText('elsewhere')).toHaveFocus();
   });
+
+  it('takes focus from a page title marked data-focus-yields, but not from an unmarked one', () => {
+    const { rerender } = render(
+      <>
+        <h2 tabIndex={-1} data-focus-yields>
+          Focus
+        </h2>
+        <Swap second={false} />
+      </>,
+    );
+    screen.getByRole('heading').focus();
+    rerender(
+      <>
+        <h2 tabIndex={-1} data-focus-yields>
+          Focus
+        </h2>
+        <Swap second />
+      </>,
+    );
+    expect(screen.getByText('Done')).toHaveFocus();
+  });
+
+  it('keeps focus on a heading that is not marked', () => {
+    const { rerender } = render(
+      <>
+        <h2 tabIndex={-1}>Panel</h2>
+        <Swap second={false} />
+      </>,
+    );
+    screen.getByRole('heading').focus();
+    rerender(
+      <>
+        <h2 tabIndex={-1}>Panel</h2>
+        <Swap second />
+      </>,
+    );
+    expect(screen.getByRole('heading')).toHaveFocus();
+  });
 });
 
 const Panel = ({ headings }: { headings: string[] }) => {
