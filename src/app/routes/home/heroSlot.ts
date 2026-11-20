@@ -36,10 +36,25 @@ export const HERO_SLOT_CAP: Record<HeroKind, string> = {
 /**
  * Room the idle card may still need below it. Its top is anchored so its
  * controls never move under the pointer (TimerScreen), and it grows downward:
- * Custom's slider by ~54 px, Pomodoro's settings by ~68 px. The slot leaves
- * that much free so switching mode neither moves the card nor scrolls the page.
+ * Custom's slider by 65 px, Pomodoro's settings (a 2x2 grid of sliders) by up to
+ * 88 px, measured in a production-like build; the dev build's extra preset row
+ * changes them. Before the grid, Pomodoro grew the card 202 px.
+ *
+ * Plus `LATE_LINES`: the card's progress line and constellation hint arrive from
+ * the local database ~100 ms after the page opens, 36 px in all, and the slot is
+ * frozen from the first reading. Without that allowance the card ended 36 px
+ * taller than the slot thought, the next growth overflowed, and choosing a mode
+ * made the card jump up (88 px at 1280x900). A time window that measured again
+ * while content arrived failed on a loaded machine, whose data arrives later.
+ * The reserve is the larger growth plus both of these, plus 8 px.
  */
-const GROWTH_RESERVE: Record<HeroKind, number> = { idle: 72, running: 0, break: 0, result: 0 };
+const LATE_LINES = 36;
+const GROWTH_RESERVE: Record<HeroKind, number> = {
+  idle: 88 + LATE_LINES + 8,
+  running: 0,
+  break: 0,
+  result: 0,
+};
 
 /** The slot's share of the free room on the timer page. */
 export const SLOT_SHARE = 2 / 3;
