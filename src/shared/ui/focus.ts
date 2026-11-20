@@ -7,9 +7,16 @@ const FOCUSABLE =
 const focusables = (root: HTMLElement): HTMLElement[] =>
   Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
 
-/** Nothing has focus: it fell to the page when the focused element went away. */
+/**
+ * Nothing has focus: it fell to the page when the focused element went away.
+ * An element marked `data-focus-yields` (a page's title, which is only focused
+ * to say where you are) holds no real position either: the next screen may
+ * take focus from it (UI review M4).
+ */
 const focusIsLost = () =>
-  document.activeElement === null || document.activeElement === document.body;
+  document.activeElement === null ||
+  document.activeElement === document.body ||
+  document.activeElement.hasAttribute('data-focus-yields');
 
 /**
  * Modal focus for a dialog: moves focus to `initial` on open, keeps Tab and

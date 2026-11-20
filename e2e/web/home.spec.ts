@@ -89,6 +89,23 @@ test('T4: mid-session, Escape stays; home returns to focus and says how long is 
   await expect(page.getByRole('timer')).toBeVisible();
 });
 
+test('T4b: after Return to focus, a session that finishes puts focus on Done (UI review M4)', async ({
+  page,
+}) => {
+  await signedIn(page, 'home-t4b');
+  await goToTimer(page);
+  await page.getByRole('button', { name: 'Start 25 min' }).click();
+  await expect(page.getByRole('timer')).toContainText('25:00');
+  await homeButton(page).click();
+  await page.getByRole('button', { name: 'Return to focus' }).click();
+  // Back on the timer page, focus rests on its (hidden) title.
+  await expect(timerTitle(page)).toBeFocused();
+
+  await page.clock.fastForward('25:01');
+  await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Done' })).toBeFocused();
+});
+
 test('T5: a session that finishes while home brings the timer page and its moment back', async ({
   page,
 }) => {

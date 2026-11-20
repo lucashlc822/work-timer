@@ -115,7 +115,7 @@ export const TimerTopBar = ({
     >
       <span aria-hidden>← </span>Home
     </button>
-    <h2 ref={headingRef} tabIndex={-1} className="sr-only outline-none">
+    <h2 ref={headingRef} tabIndex={-1} data-focus-yields className="sr-only outline-none">
       Focus
     </h2>
   </div>
