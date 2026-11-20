@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import { db, type TagColor } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
@@ -7,6 +7,7 @@ import { PopoverPanel } from '@/shared/ui/motion';
 
 import { createTag, TagLimitError, TagNameInvalidError } from '../data/tagRepository';
 import { MAX_ACTIVE_TAGS, MAX_TAG_NAME_LENGTH, TAG_NAME_MESSAGES } from '../domain/tags';
+import { placePopover, type Placement } from '../domain/popoverPlacement';
 import { useTags } from '../hooks/useTags';
 import { ColorSwatches } from './ColorSwatches';
 import { TagDot } from './TagDot';
@@ -32,6 +33,8 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+  // Which side of the pill the panel opens on, and how tall it may be (UI review M3).
+  const [placement, setPlacement] = useState<Placement>({ side: 'below', maxHeight: 0 });
 
   const current = active.find((t) => t.id === value) ?? null;
 
@@ -54,6 +57,30 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // Measured before paint, when the panel opens and when its content changes
+  // (managing tags is taller), and again if the window is resized while it is open.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const pill = trigger.current;
+      const panel = root.current?.querySelector<HTMLElement>(`[id="${panelId}"]`);
+      if (pill == null || panel == null) return;
+      const r = pill.getBoundingClientRect();
+      // The panel's own height is capped by the last placement; its content's height is not.
+      setPlacement(
+        placePopover({
+          triggerTop: r.top,
+          triggerBottom: r.bottom,
+          windowHeight: window.innerHeight,
+          contentHeight: panel.scrollHeight,
+        }),
+      );
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open, managing, panelId, all.length, active.length]);
 
   // A picker that becomes disabled (the session ended) must not stay open.
   useEffect(() => {
@@ -94,7 +121,11 @@ export const TagPicker = ({ value, onChange, disabled = false }: Props) => {
             key="tag-popover"
             id={panelId}
             label="Choose a tag"
-            className="bg-night-800 border-night-600 rounded-soft absolute top-full left-1/2 z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-3 border p-3 text-left shadow-lg"
+            origin={placement.side === 'above' ? 'bottom center' : 'top center'}
+            {...(placement.maxHeight > 0 && { maxHeight: placement.maxHeight })}
+            className={`bg-night-800 border-night-600 rounded-soft absolute left-1/2 z-30 flex w-64 -translate-x-1/2 flex-col gap-3 overflow-y-auto border p-3 text-left shadow-lg ${
+              placement.side === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'
+            }`}
           >
             {managing ? (
               <>
