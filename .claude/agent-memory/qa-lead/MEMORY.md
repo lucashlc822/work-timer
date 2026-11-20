@@ -5,3 +5,4 @@
 - [2026-11-12 run (0.9.0)](run_2026-11-12.md) — code green (984 unit/312 pgTAP/72 e2e); bundle +13.7%; cargo audit new high zip advisory 0429.
 - [2026-11-13 run (dd47f10)](run_2026-11-13.md) — desktop e2e 6/6; cargo audit clean; flaky friends.spec.ts:328 (60 s timeout, ~49 s normal).
 - [Known gaps on this machine](tooling_gaps.md) — cargo-audit installed 2026-10-26; zip advisories ignored in src-tauri/.cargo/audit.toml.
+- [2026-11-20 run (e1663f0, pre-0.11.0)](run_2026-11-20.md) — all green, 1143 unit/312 pgTAP/176 e2e; JS +4.0% vs 317 kB baseline; chrono unmaintained warning new.
