@@ -1,3 +1,5 @@
+import { useTweenedNumber } from '@/shared/ui';
+
 import { ringFraction } from '../domain/ring';
 import { useBalance, useProgress } from '../hooks/useStardust';
 import { count, stardust } from './format';
@@ -75,6 +77,7 @@ export const TodayGlance = () => {
 /** The balance, as a tile that opens the Stardust panel. */
 export const StardustTile = ({ onOpen }: { onOpen: () => void }) => {
   const balance = useBalance() ?? 0;
+  const shown = useTweenedNumber(balance);
   return (
     <button
       type="button"
@@ -85,7 +88,7 @@ export const StardustTile = ({ onOpen }: { onOpen: () => void }) => {
       <span aria-hidden className="flex flex-col items-center leading-tight">
         <span className="text-ink-primary text-base font-medium">
           <span className="text-star-warm mr-1">✦</span>
-          {count(balance)}
+          {count(shown)}
         </span>
         {/* The space makes the text read "25 Stardust", as the footer's pill did. */}{' '}
         <span className="text-ink-secondary text-2xs">Stardust</span>

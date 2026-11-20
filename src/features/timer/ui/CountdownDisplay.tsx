@@ -1,3 +1,5 @@
+import { RollingText } from '@/shared/ui';
+
 import { formatRemaining } from '../domain/format';
 
 interface Props {
@@ -43,7 +45,8 @@ export const PlannedTime = ({ seconds }: { seconds: number }) => (
     aria-hidden
     className="text-ink-primary font-mono text-6xl font-light tracking-tight tabular-nums"
   >
-    {formatRemaining(seconds * 1000)}
+    {/* Rolls on a choice (a length, a mode), never per second: this is the idle screen's time. */}
+    <RollingText text={formatRemaining(seconds * 1000)} />
   </p>
 );
 

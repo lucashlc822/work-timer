@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
-import { radioKeyTarget } from '@/shared/ui';
+import { radioKeyTarget, useSlidingIndicator } from '@/shared/ui';
 
 interface Props<T extends string | number> {
   /** The radiogroup's accessible name: "Session type", "Session length". */
@@ -33,6 +33,9 @@ export const SegmentedControl = <T extends string | number>({
   layout = 'rounded-pill flex flex-wrap justify-center',
 }: Props<T>) => {
   const items = useRef<(HTMLButtonElement | null)[]>([]);
+  const track = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  useSlidingIndicator(track, indicator, value);
   const tabStop = options.some((o) => o.value === value) ? value : options[0]?.value;
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -46,10 +49,17 @@ export const SegmentedControl = <T extends string | number>({
 
   return (
     <div
+      ref={track}
       role="radiogroup"
       aria-label={label}
-      className={`border-night-600 bg-night-900/60 gap-1 border p-1 ${layout}`}
+      className={`border-night-600 bg-night-900/60 relative gap-1 border p-1 ${layout}`}
     >
+      {/* The highlight: slides to the selected segment (premium motion PR 9). */}
+      <span
+        ref={indicator}
+        aria-hidden
+        className="bg-night-600 rounded-pill pointer-events-none absolute opacity-0"
+      />
       {options.map((option, index) => {
         const selected = option.value === value;
         return (
@@ -65,10 +75,8 @@ export const SegmentedControl = <T extends string | number>({
             disabled={disabled}
             onClick={() => onChange(option.value)}
             onKeyDown={(e) => onKeyDown(e, index)}
-            className={`rounded-pill ease-gentle px-4 py-1.5 text-sm transition-colors duration-300 disabled:opacity-50 ${
-              selected
-                ? 'bg-night-600 text-ink-primary'
-                : 'text-ink-secondary hover:text-ink-primary'
+            className={`rounded-pill pressable relative z-10 px-4 py-1.5 text-sm disabled:opacity-50 ${
+              selected ? 'text-ink-primary' : 'text-ink-secondary hover:text-ink-primary'
             }`}
           >
             {option.label}
