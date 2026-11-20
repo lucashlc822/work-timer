@@ -705,7 +705,7 @@ const Figure = ({
       <g
         data-figure-body={full ? state.choice.id : undefined}
         style={full ? { opacity: base * (dimmed ? DIMMED : 1) } : { opacity: base }}
-        className={full ? 'ease-gentle transition-opacity duration-500' : undefined}
+        className={full ? 'ease-gentle duration-page-in transition-opacity' : undefined}
       >
         {style === 'nebula' && (
           <>

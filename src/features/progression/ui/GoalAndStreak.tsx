@@ -32,9 +32,12 @@ export const GoalAndStreak = () => {
         aria-valuenow={Math.min(focusMin, goalMin)}
         className="bg-night-700 rounded-pill h-1.5 w-full overflow-hidden"
       >
+        {/* Full width, slid in from the left: only transform animates (a width
+            transition re-laid the bar out every frame). The track clips it, so
+            the right end stays round. */}
         <div
-          className="bg-lavender-400 rounded-pill h-full transition-[width] duration-500"
-          style={{ width: `${fraction * 100}%` }}
+          className="bg-lavender-400 rounded-pill ease-enter duration-page-in h-full w-full transition-transform"
+          style={{ transform: `translateX(${(fraction - 1) * 100}%)` }}
         />
       </div>
 
