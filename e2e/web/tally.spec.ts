@@ -8,7 +8,7 @@ import {
   skipMoment,
   stardustBalance,
 } from '../support/app';
-import { startClockInThePast } from '../support/clock';
+import { startClockAtYesterdayNoon, yesterdayNoon } from '../support/clock';
 import { addCompletedSession } from '../support/friends';
 import { createUser, type TestUser } from '../support/users';
 
@@ -22,8 +22,12 @@ import { createUser, type TestUser } from '../support/users';
  */
 test.use({ viewport: { width: 480, height: 720 } });
 
+/**
+ * The page's day is yesterday, from noon: these tests read "Today N of 60 min",
+ * which a clock merely shifted back gets wrong between midnight and ~03:00.
+ */
 const signedIn = async (page: Page, user: TestUser) => {
-  await startClockInThePast(page);
+  await startClockAtYesterdayNoon(page);
   await page.goto('/');
   await signIn(page, user);
   await goToTimer(page);
@@ -58,8 +62,8 @@ test('the session that reaches the daily goal shows the bonus, and fits the wind
   page,
 }) => {
   const user = await createUser('tally-goal');
-  // 40 minutes already today, ending a little before the page's own clock.
-  await addCompletedSession(user, 40, 125);
+  // 40 minutes already "today" (the page's day), ending 5 minutes before its noon.
+  await addCompletedSession(user, 40, (Date.now() - yesterdayNoon()) / 60_000 + 5);
   await signedIn(page, user);
   await expect(page.getByText('Today 40 of 60 min')).toBeVisible({ timeout: 15_000 });
   await expect.poll(() => stardustBalance(page)).toBe(40);
