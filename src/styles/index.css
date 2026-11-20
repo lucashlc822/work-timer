@@ -14,7 +14,15 @@
        browser to render form controls and scrollbars to match, rather than
        leaving light-mode widgets on a dark page. */
     color-scheme: dark;
+    /* Scrollbars in the night palette, everywhere: the colour inherits, so the
+       page, the panels, the picker and the tag popover all take it. */
+    scrollbar-color: var(--color-night-600) transparent;
     -webkit-text-size-adjust: 100%;
+  }
+
+  /* The width does not inherit, so every scroll container asks for it. */
+  * {
+    scrollbar-width: thin;
   }
 
   body {
