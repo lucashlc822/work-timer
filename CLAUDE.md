@@ -241,8 +241,9 @@ in `NOTES.md`.
   `e2e/web/a11y.spec.ts` (axe) scans every screen; `ENFORCE` in
   `e2e/support/a11y.ts` is true and nothing is acknowledged. `--color-ink-muted`
   is for text on night-900/800 only (not night-700). Bundle size
-  (`npm run perf:size`, against `e2e/perf-baseline.json`, re-set at 0.9.0 =
-  281 kB of JS gzipped; **it only means something for a build that has a
+  (`npm run perf:size`, against `e2e/perf-baseline.json`, re-set by the Motion library
+  (#204, shipped in 0.11.0) = 317 kB of JS gzipped, up from 281 kB at 0.9.0 (the
+  script's kB is 1,024 bytes); **it only means something for a build that has a
   server address** (`.env.production.local` locally; CI's size step sets
   placeholders): with none, Vite drops the sync and sign-in code, ~20%
   smaller) and Lighthouse
