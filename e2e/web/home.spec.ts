@@ -182,6 +182,16 @@ test.describe('the dashboard (PR 5)', () => {
     await expect(page.getByRole('group', { name: 'Today 0 of 60 min' })).toBeVisible();
     await expect(page.getByRole('group', { name: '0-day streak' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add a friend' })).toBeVisible();
+    // Tile labels are 12 px and each sits on one line (UI review L1).
+    for (const label of ['Minutes today', 'Day streak', 'Stardust']) {
+      const box = await page.getByText(label, { exact: true }).evaluate((el) => ({
+        size: getComputedStyle(el).fontSize,
+        lines: Math.round(
+          el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight),
+        ),
+      }));
+      expect(box).toEqual({ size: '12px', lines: 1 });
+    }
   });
 
   test('P2: a finished session fills the ring and starts the streak, and Kite 1 of 4 says 3 to go', async ({
@@ -220,6 +230,12 @@ test.describe('the dashboard (PR 5)', () => {
     await signIn(page, bea);
     await expect(mainNav(page)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('No one is around right now')).toBeVisible({ timeout: 20_000 });
+    // Over the sky this must be the secondary ink, not muted (UI review H1: ~2.6:1).
+    expect(
+      await page
+        .getByText('No one is around right now')
+        .evaluate((el) => getComputedStyle(el).color),
+    ).toBe('rgb(185, 178, 212)');
 
     await shareFocus(ada, 25);
     await expect(page.getByText('Ada is focusing')).toBeVisible({ timeout: 25_000 });
