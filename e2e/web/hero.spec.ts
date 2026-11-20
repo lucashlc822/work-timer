@@ -149,3 +149,33 @@ test('T5: with reduced motion the hero is at its new box at once, without moving
   );
   expect(keyframes.flat()).not.toContain('transform');
 });
+
+for (const size of [
+  { width: 768, height: 1024 },
+  { width: 1920, height: 1080 },
+]) {
+  test(`T6: at ${size.width}x${size.height} the idle hero is large, and Custom neither moves the card nor scrolls (UI review M2)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await withAHero(page, `hero-tall-${size.width}`);
+    const idle = await settledHero(page);
+    // Before: the room for the card to grow came out of the slot, not out of the
+    // empty sky under the card (184 px slot at 1920x1080; 85 px in a dev build).
+    expect(idle).not.toBeNull();
+    expect(idle!.w).toBeGreaterThanOrEqual(200);
+    expect(overlaps(idle!, await timerContent(page))).toBe(false);
+
+    const card = page.locator('[data-timer-card]');
+    const before = (await card.boundingBox())!.y;
+    await page.getByRole('radio', { name: 'Custom' }).click();
+    await expect(
+      page.getByRole('slider', { name: 'Custom session length in minutes' }),
+    ).toBeVisible();
+    await page.waitForTimeout(400);
+    expect(Math.abs((await card.boundingBox())!.y - before)).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+      size.height,
+    );
+  });
+}
