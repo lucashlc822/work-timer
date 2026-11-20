@@ -106,6 +106,11 @@ interface Props {
    * changes, the figure glides from its old box to its new one.
    */
   heroKey?: string;
+  /**
+   * Hero only: fade the whole figure out (a panel is open over it). The ambient sky
+   * is a different layer and stays; nothing is re-laid out or re-seeded.
+   */
+  heroHidden?: boolean;
 }
 
 /** Air left between a header over the sky and the first figure. */
@@ -193,6 +198,7 @@ export const ConstellationLayer = ({
   arriving,
   heroBox,
   heroKey,
+  heroHidden = false,
 }: Props) => {
   // Arrival is behind the timer only.
   const arrive = mode === 'full' ? undefined : arriving;
@@ -246,7 +252,14 @@ export const ConstellationLayer = ({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      className="absolute inset-0"
+      className={`absolute inset-0 ${
+        full
+          ? ''
+          : `ease-standard transition-opacity ${
+              heroHidden ? 'duration-panel-in opacity-0' : 'duration-panel-out'
+            }`
+      }`}
+      data-hero-hidden={!full && heroHidden ? '' : undefined}
       aria-hidden={full ? undefined : true}
       role={full ? 'group' : undefined}
       aria-label={full ? label : undefined}

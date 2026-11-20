@@ -962,7 +962,10 @@ rejected). Don't pre-populate this with guesses.
   closes, focus goes back to the opener at once if it was in a `data-overlay` (or
   lost), never when the exit ends. **A panel reopened while still leaving comes
   back as the same panel**, so it focuses its title again itself; `useFocusHeading`
-  only runs on mount. The page behind fades on the default quick transition.
+  only runs on mount. The page behind fades on the default quick transition. **While a panel or a friend's sky is open the hero figure
+  fades out** (`heroHidden` on `SkyBackdrop`, opacity on the figure's own `svg`,
+  `panelIn` in and `panelOut` back, so it no longer shows through the 92% panel);
+  the starfield stays, and View sky keeps the figure as its own stage.
   **Opening the sky glides the hero constellation from where it was into its grid
   cell, and the others fade in 30 ms apart (capped); closing glides it back**
   (`useSkyEntrance`, `sky/ui/useFigureFlip.ts`, one-shot Web Animations; reduced
