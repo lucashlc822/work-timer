@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { db, getLocalUserId } from '@/shared/db';
 import { systemClock } from '@/shared/lib';
 import { useDialogFocus } from '@/shared/ui';
+import { ModalBackdrop, ModalPanel, useOverlayPresent } from '@/shared/ui/motion';
 
 import { chooseConstellation, type ChoiceDraft } from '../data/skyRepository';
 import { CATALOGUE, catalogueKeysForTier } from '../domain/catalogue';
@@ -98,16 +99,17 @@ export const ConstellationPicker = ({
   const [pending, setPending] = useState<Option | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  useDialogFocus(dialogRef, closeRef);
+  const present = useOverlayPresent();
+  useDialogFocus(dialogRef, closeRef, present);
 
   useEffect(() => {
     void getLocalUserId(db).then(setUserId);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && present) onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, present]);
 
   const forSharing = onPick !== undefined;
   const unlocked = unlockedTiers(sky, boughtTiers);
@@ -133,12 +135,11 @@ export const ConstellationPicker = ({
   };
 
   return (
-    <div className="bg-night-950/75 fixed inset-0 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div
+    <ModalBackdrop className="bg-night-950/80 fixed inset-0 z-40 flex items-center justify-center p-4">
+      <ModalPanel
         ref={dialogRef}
         role="dialog"
-        aria-modal="true"
-        aria-labelledby="picker-title"
+        labelledBy="picker-title"
         className="rounded-soft border-night-600 bg-night-800 flex max-h-full w-full max-w-md flex-col border"
       >
         <header className="border-night-700 flex items-center justify-between border-b px-5 py-3">
@@ -238,7 +239,7 @@ export const ConstellationPicker = ({
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </ModalPanel>
+    </ModalBackdrop>
   );
 };

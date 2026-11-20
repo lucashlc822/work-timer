@@ -971,6 +971,28 @@ rejected). Don't pre-populate this with guesses.
   overlay should scope to it, because the one leaving is still in the DOM for
   ~200 ms.
 
+- **Dialogs, the tag popover and the update notice animate in and out; the one
+  leaving is out of reach** (premium-motion PR 8, 2026-11-19). The shared pieces
+  are in `shared/ui/motion/overlays.tsx`: `ModalBackdrop` (fade, **no backdrop
+  blur**, `inert` and `aria-hidden` while leaving) with `ModalPanel` (rises from
+  0.96) for the four dialogs (End early, Start on your own, the constellation
+  picker, and the picker for a shared one), `PopoverPanel` (scales from 0.95 about
+  its top edge) for the tag picker, and `ToastPanel` (rises 8 px) for both update
+  notices. The caller wraps its conditional in `AnimatePresence` and the dialog
+  calls `useOverlayPresent()` (false once leaving) and passes it to
+  **`useDialogFocus(container, initial, present)`, which hands focus back when the
+  dialog starts to leave**, not when it unmounts; its Escape handler ignores a press
+  while leaving. **Reduced motion is decided in each component** (`useReducedMotion`:
+  opacity only, no scale or y), not left to `MotionConfig`'s own switch, which let
+  a scale through intermittently on a first mount. **`AnimatePresence` only tracks
+  React elements, and a `createPortal(…)` isn't one**: a portalled dialog must be a
+  component (`PickerPortal` in `HomeScreen`) or it never shows. `UpdatePrompt` and
+  `DesktopUpdatePrompt` now sit inside `MotionRoot`. The Escape-goes-home guard
+  ignores a dialog that is `[inert]` (leaving). **Banners fade in (`animate-fade-in`)
+  but leave instantly**: animating their height would move the page, and only
+  transform and opacity animate. e2e that scans a dialog settles first
+  (`settleTransitions`).
+
 - **Home's call to action grows into the timer card, and back** (premium-motion
   PR 7, 2026-11-19; M3's container transform). **Done with a clipped surface, not
   Motion's `layoutId`**: the card lives inside the timer slice, which stays

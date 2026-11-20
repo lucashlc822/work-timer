@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'motion/react';
 import { useCallback, useState } from 'react';
 
 import type { Tier } from '../domain/types';
@@ -78,14 +79,16 @@ export const ConstellationStatus = ({
           {label}
         </button>
       )}
-      {open && (
-        <ConstellationPicker
-          sky={sky}
-          boughtTiers={boughtTiers}
-          ownedPacks={ownedPacks}
-          onClose={close}
-        />
-      )}
+      <AnimatePresence>
+        {open && (
+          <ConstellationPicker
+            sky={sky}
+            boughtTiers={boughtTiers}
+            ownedPacks={ownedPacks}
+            onClose={close}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

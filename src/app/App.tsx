@@ -50,15 +50,16 @@ export const App = () =>
         <AuthGate>
           <RouterProvider router={router} />
         </AuthGate>
+        {/*
+          Each host updates its own way. `UpdatePrompt` is what registers the
+          browser build's service worker, and the desktop app must not have one:
+          its frontend comes from the exe, and a worker registered by one exe kept
+          serving that exe's cached files to the next (see
+          src-tauri/src/no_service_worker.rs). The desktop app is updated by
+          replacing the exe, which `DesktopUpdatePrompt` offers. Inside the root:
+          the notice rises in and settles out like every overlay.
+        */}
+        {isDesktop() ? <DesktopUpdatePrompt /> : <UpdatePrompt />}
       </MotionRoot>
-      {/*
-        Each host updates its own way. `UpdatePrompt` is what registers the
-        browser build's service worker, and the desktop app must not have one:
-        its frontend comes from the exe, and a worker registered by one exe kept
-        serving that exe's cached files to the next (see
-        src-tauri/src/no_service_worker.rs). The desktop app is updated by
-        replacing the exe, which `DesktopUpdatePrompt` offers.
-      */}
-      {isDesktop() ? <DesktopUpdatePrompt /> : <UpdatePrompt />}
     </ErrorBoundary>
   );

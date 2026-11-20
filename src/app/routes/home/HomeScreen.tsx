@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AnimatePresence } from 'motion/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -103,7 +103,11 @@ const renderPackPreview = (packKey: string, labelled?: boolean) => (
 
 /** An open dialog or popover, or focus in a text field: Escape is theirs. */
 const escapeBelongsElsewhere = (): boolean => {
-  if (document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') !== null)
+  if (
+    document.querySelector(
+      '[role="dialog"]:not([inert]), [role="alertdialog"]:not([inert]), [aria-modal="true"]:not([inert])',
+    ) !== null
+  )
     return true;
   const el = document.activeElement;
   return (
@@ -113,6 +117,14 @@ const escapeBelongsElsewhere = (): boolean => {
     (el instanceof HTMLElement && el.isContentEditable)
   );
 };
+
+/**
+ * A dialog portalled to the body. A real component rather than a bare
+ * `createPortal`, because `AnimatePresence` only tracks React elements and a
+ * portal isn't one: its exit would never run, and it would never even show.
+ */
+const PickerPortal = ({ children }: { children: ReactNode }) =>
+  createPortal(children, document.body);
 
 /** An overlay over the page, or 'none'. */
 type View = 'none' | 'sky' | 'stats' | 'stardust' | 'account' | 'friends' | 'friend' | 'together';
@@ -659,17 +671,16 @@ export const HomeScreen = ({ together }: { together: Together }) => {
                   me={me}
                   describe={describeShared}
                   // Portalled: the header's backdrop blur would trap a fixed dialog inside it.
-                  renderPicker={({ onPick, onClose }) =>
-                    createPortal(
+                  renderPicker={({ onPick, onClose }) => (
+                    <PickerPortal key="shared-picker">
                       <SharedPicker
                         boughtTiers={boughtTiers}
                         ownedPacks={ownedPacks}
                         onPick={onPick}
                         onClose={onClose}
-                      />,
-                      document.body,
-                    )
-                  }
+                      />
+                    </PickerPortal>
+                  )}
                 />
               }
             />
@@ -677,13 +688,15 @@ export const HomeScreen = ({ together }: { together: Together }) => {
         )}
       </AnimatePresence>
 
-      {startAlone !== null && (
-        <StartAloneDialog
-          invite={startAlone.invite}
-          onAnswer={together.respond}
-          onClose={closeStartAlone}
-        />
-      )}
+      <AnimatePresence>
+        {startAlone !== null && (
+          <StartAloneDialog
+            invite={startAlone.invite}
+            onAnswer={together.respond}
+            onClose={closeStartAlone}
+          />
+        )}
+      </AnimatePresence>
 
       {away && !inPanel && back}
     </>

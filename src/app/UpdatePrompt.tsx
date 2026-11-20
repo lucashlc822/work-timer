@@ -1,4 +1,7 @@
+import { AnimatePresence } from 'motion/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+
+import { ToastPanel } from '@/shared/ui/motion';
 
 /**
  * Offers a new version rather than installing one.
@@ -14,28 +17,30 @@ export const UpdatePrompt = () => {
     updateServiceWorker,
   } = useRegisterSW();
 
-  if (!needRefresh) return null;
-
   return (
-    <div
-      role="status"
-      className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 border p-3 backdrop-blur"
-    >
-      <p className="text-ink-secondary flex-1 text-sm">A new version is ready.</p>
-      <button
-        type="button"
-        onClick={() => setNeedRefresh(false)}
-        className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm"
-      >
-        Later
-      </button>
-      <button
-        type="button"
-        onClick={() => void updateServiceWorker(true)}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm"
-      >
-        Update
-      </button>
-    </div>
+    <AnimatePresence>
+      {needRefresh && (
+        <ToastPanel
+          key="update"
+          className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 border p-3"
+        >
+          <p className="text-ink-secondary flex-1 text-sm">A new version is ready.</p>
+          <button
+            type="button"
+            onClick={() => setNeedRefresh(false)}
+            className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm"
+          >
+            Later
+          </button>
+          <button
+            type="button"
+            onClick={() => void updateServiceWorker(true)}
+            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm"
+          >
+            Update
+          </button>
+        </ToastPanel>
+      )}
+    </AnimatePresence>
   );
 };

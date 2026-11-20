@@ -1,9 +1,11 @@
+import { AnimatePresence } from 'motion/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 
 import { APP_NAME } from '@/shared/config';
 import { db, hasWorkInFlight, isAccountDbBound } from '@/shared/db';
 import { getRuntime, type AvailableUpdate, type UpdaterPort } from '@/shared/runtime';
+import { ToastPanel } from '@/shared/ui/motion';
 
 /** First look shortly after launch, so a freshly opened app isn't kept waiting. */
 export const FIRST_CHECK_MS = 10_000;
@@ -72,9 +74,8 @@ export const DesktopUpdatePrompt = ({
     };
   }, [enabled, getUpdater, firstCheckMs, everyMs]);
 
-  if (update === null || dismissed || busy !== false) return null;
-
   const install = async () => {
+    if (update === null) return;
     setPhase('installing');
     try {
       await update.install(); // relaunches on success, so there is nothing after this
@@ -87,34 +88,38 @@ export const DesktopUpdatePrompt = ({
   const installing = phase === 'installing';
 
   return (
-    <div
-      role="status"
-      className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 border p-3 backdrop-blur"
-    >
-      <p className="text-ink-secondary flex-1 text-sm">
-        {installing
-          ? 'Updating…'
-          : phase === 'failed'
-            ? "Couldn't update. Try again later."
-            : `${APP_NAME} ${update.version} is ready.`}
-      </p>
-      <button
-        type="button"
-        disabled={installing}
-        onClick={() => setDismissed(true)}
-        className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm disabled:opacity-50"
-      >
-        Later
-      </button>
-      <button
-        type="button"
-        disabled={installing}
-        onClick={() => void install()}
-        className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm disabled:opacity-50"
-      >
-        Restart to update
-      </button>
-    </div>
+    <AnimatePresence>
+      {update !== null && !dismissed && busy === false && (
+        <ToastPanel
+          key="update"
+          className="rounded-soft border-night-600 bg-night-800/95 fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-center gap-3 border p-3"
+        >
+          <p className="text-ink-secondary flex-1 text-sm">
+            {installing
+              ? 'Updating…'
+              : phase === 'failed'
+                ? "Couldn't update. Try again later."
+                : `${APP_NAME} ${update.version} is ready.`}
+          </p>
+          <button
+            type="button"
+            disabled={installing}
+            onClick={() => setDismissed(true)}
+            className="rounded-pill text-ink-muted hover:text-ink-secondary pressable px-3 py-1.5 text-sm disabled:opacity-50"
+          >
+            Later
+          </button>
+          <button
+            type="button"
+            disabled={installing}
+            onClick={() => void install()}
+            className="rounded-pill bg-lavender-400 text-night-900 hover:bg-lavender-300 pressable px-3 py-1.5 text-sm disabled:opacity-50"
+          >
+            Restart to update
+          </button>
+        </ToastPanel>
+      )}
+    </AnimatePresence>
   );
 };
 
