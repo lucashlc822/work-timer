@@ -125,7 +125,13 @@ export const TimerScreen = ({
   };
 
   if (timer.status === 'loading' || !prefs.loaded) {
-    return <p className="text-ink-secondary text-sm">Opening…</p>;
+    // data-timer-loading: the page sets the constellation's space aside only once
+    // this is gone (heroSlot.ts), since a slot measured around it fits no card.
+    return (
+      <p data-timer-loading className="text-ink-secondary text-sm">
+        Opening…
+      </p>
+    );
   }
 
   // The same length again, with the tag and target now showing on the idle
