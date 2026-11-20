@@ -111,6 +111,51 @@ const spareBelow = (section: Element | null): number => {
 };
 
 /**
+ * Whether `section` has its real content on screen: something with a size, and
+ * not just the timer's "Opening…" placeholder (`data-timer-loading`).
+ */
+export const hasContent = (section: Element | null): boolean =>
+  section !== null &&
+  section.querySelector('[data-timer-loading]') === null &&
+  Array.from(section.children).some((child) => child.getBoundingClientRect().height > 0);
+
+/**
+ * True once the timer page has something to measure. Until the timer has read
+ * the store it shows only "Opening…", so a slot frozen before that saw the whole
+ * section as spare room, took its cap, and left the card (which then arrived) too little
+ * space: choosing Custom overflowed the page and the slot gave 145 px back, moving
+ * the card. It showed on a loaded machine, where the read takes longer. Until
+ * then the slot is left flexing, and measured the moment content appears.
+ */
+const useHasContent = (
+  ref: RefObject<HTMLElement | null>,
+  enabled: boolean,
+  kind: HeroKind,
+): boolean => {
+  const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    const section = ref.current?.nextElementSibling ?? null;
+    if (!enabled || section === null) {
+      setReady(false);
+      return;
+    }
+    const check = () => {
+      const now = hasContent(section);
+      setReady(now);
+      return now;
+    };
+    // Watch only until it appears: after that the countdown ticking is not news.
+    if (check() || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => {
+      if (check()) observer.disconnect();
+    });
+    observer.observe(section, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [ref, enabled, kind]);
+  return ready;
+};
+
+/**
  * The slot's height, frozen while the page shows the same thing.
  *
  * The slot takes a share of the room the card leaves (flex), so left alone it
@@ -156,12 +201,13 @@ export const useFrozenSlotHeight = (
 
   // A height is good only for the circumstances it was measured in; anything
   // that changes the room available makes it null again (measure, as flex).
-  const trigger = `${kind}|${windowKey}|${aboveKey}|${overflows}`;
+  const hasPage = useHasContent(ref, enabled, kind);
+  const trigger = `${kind}|${windowKey}|${aboveKey}|${overflows}|${hasPage}`;
   const [measured, setMeasured] = useState<{ trigger: string; height: number } | null>(null);
   const frozen = measured?.trigger === trigger ? measured.height : null;
 
   useLayoutEffect(() => {
-    if (!enabled || frozen !== null || ref.current === null) return;
+    if (!enabled || !hasPage || frozen !== null || ref.current === null) return;
     const slot = ref.current;
     const flexHeight = slot.getBoundingClientRect().height;
     setMeasured({
@@ -174,7 +220,7 @@ export const useFrozenSlotHeight = (
       }),
     });
     // `trigger` covers the slot appearing too: `aboveKey` carries the page.
-  }, [enabled, frozen, ref, trigger, kind]);
+  }, [enabled, hasPage, frozen, ref, trigger, kind]);
 
   return frozen;
 };
