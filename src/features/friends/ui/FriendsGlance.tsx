@@ -47,7 +47,8 @@ export const FriendsGlance = ({
     );
   }
   if (shown.length === 0) {
-    return <p className="text-ink-muted text-xs">No one is around right now</p>;
+    // Secondary, not muted: this sits over the sky, where muted is ~2.6:1 (UI review H1).
+    return <p className="text-ink-secondary text-xs">No one is around right now</p>;
   }
   return (
     <ul
